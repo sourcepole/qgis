@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>585</width>
-    <height>680</height>
+    <width>583</width>
+    <height>695</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -17,15 +17,9 @@
   </property>
   <layout class="QGridLayout" >
    <item row="0" column="0" >
-    <widget class="Q3GroupBox" name="grpInput" >
-     <property name="toolTip" >
-      <string>Browse for the raw data files that are required to create the variables that you have selected. Each month of data should be in a separate file. The files should be numbered e.g. meantemp01.asc, meantemp02.asc ... meantemp12.asc</string>
-     </property>
+    <widget class="QGroupBox" name="grpInput" >
      <property name="title" >
       <string>Select raw data files</string>
-     </property>
-     <property name="orientation" >
-      <enum>Qt::Vertical</enum>
      </property>
      <layout class="QGridLayout" >
       <item row="0" column="0" >
@@ -272,20 +266,13 @@
     </widget>
    </item>
    <item row="1" column="0" >
-    <widget class="Q3GroupBox" name="grpVars" >
+    <widget class="QGroupBox" name="grpVars" >
      <property name="title" >
       <string>Select variables to calculate</string>
      </property>
-     <property name="orientation" >
-      <enum>Qt::Vertical</enum>
-     </property>
      <layout class="QGridLayout" >
       <item row="0" column="0" colspan="2" >
-       <widget class="Q3ListBox" name="lstVariablesToCalc" >
-        <property name="selectionMode" >
-         <enum>Q3ListBox::Multi</enum>
-        </property>
-       </widget>
+       <widget class="QListWidget" name="lstVariablesToCalc" />
       </item>
       <item row="1" column="0" >
        <widget class="QCheckBox" name="cbxSelectAllVars" >
@@ -305,12 +292,9 @@
     </widget>
    </item>
    <item row="2" column="0" >
-    <widget class="Q3GroupBox" name="grpOutput" >
+    <widget class="QGroupBox" name="grpOutput" >
      <property name="title" >
       <string>Output Options</string>
-     </property>
-     <property name="orientation" >
-      <enum>Qt::Vertical</enum>
      </property>
      <layout class="QGridLayout" >
       <item row="0" column="0" >
@@ -401,24 +385,9 @@
     </widget>
    </item>
    <item row="4" column="0" >
-    <widget class="Q3ProgressBar" name="progressTotalJob" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Minimum" hsizetype="Expanding" >
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize" >
-      <size>
-       <width>399</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize" >
-      <size>
-       <width>32767</width>
-       <height>32767</height>
-      </size>
+    <widget class="QProgressBar" name="progressTotalJob" >
+     <property name="value" >
+      <number>24</number>
      </property>
     </widget>
    </item>
@@ -432,24 +401,6 @@
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11" />
- <customwidgets>
-  <customwidget>
-   <class>Q3GroupBox</class>
-   <extends>QGroupBox</extends>
-   <header>Qt3Support/Q3GroupBox</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>Q3ListBox</class>
-   <extends>Q3Frame</extends>
-   <header>q3listbox.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Q3ProgressBar</class>
-   <extends>QFrame</extends>
-   <header>Qt3Support/Q3ProgressBar</header>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>leMeanTemp</tabstop>
   <tabstop>pbtnMeanTemp</tabstop>
@@ -465,7 +416,6 @@
   <tabstop>pbtnFrostDays</tabstop>
   <tabstop>leTotalSolarRadiation</tabstop>
   <tabstop>pbtnTotalSolarRad</tabstop>
-  <tabstop>lstVariablesToCalc</tabstop>
   <tabstop>cbxSelectAllVars</tabstop>
   <tabstop>cboOutputFormat</tabstop>
   <tabstop>leOutputPath</tabstop>

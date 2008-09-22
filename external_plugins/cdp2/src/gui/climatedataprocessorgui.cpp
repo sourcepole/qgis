@@ -31,10 +31,10 @@
 ClimateDataProcessorGui::ClimateDataProcessorGui(QWidget* parent, Qt::WFlags fl)
     : QDialog(parent,fl) 
 {
-  /**
   //required by Qt4 to initialise the ui
   setupUi(this);
   readSettings();
+  /*
   connect(mpClimateImporter, SIGNAL(error(QString)), this, SLOT(error(QString)));
   connect(mpClimateImporter, SIGNAL(message(QString)), this, SLOT(message(QString)));
   connect(mpClimateImporter, SIGNAL(updateProgress(int, int )), this, SLOT(updateProgress(int, int )));
