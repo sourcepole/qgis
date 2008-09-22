@@ -1,0 +1,33 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<!DOCTYPE KDevPrjSession>
+<KDevPrjSession>
+ <DocsAndViews NumberOfDocuments="2" >
+  <Doc0 NumberOfViews="1" URL="file:///home/aps02ts/dev/cpp/plugins/cdp_wizard/dataprocessor.cpp" >
+   <View0 line="63" Type="Source" />
+  </Doc0>
+  <Doc1 NumberOfViews="1" URL="file:///home/aps02ts/dev/cpp/plugins/cdp_wizard/climatedataprocessor.cpp" >
+   <View0 line="2405" Type="Source" />
+  </Doc1>
+ </DocsAndViews>
+ <pluginList>
+  <kdevdebugger>
+   <breakpointList>
+    <breakpoint0 location="/home/aps02ts/dev/cpp/qgis_plugins/cdp_wizard/climatedataprocessor.cpp:369" type="1" condition="" enabled="1" />
+    <breakpoint1 location="/home/aps02ts/dev/cpp/qgis_plugins/cdp_wizard/climatedataprocessor.cpp:437" type="1" condition="" enabled="1" />
+   </breakpointList>
+  </kdevdebugger>
+  <kdevbookmarks>
+   <bookmarks/>
+  </kdevbookmarks>
+  <kdevrbdebugger>
+   <breakpointList/>
+   <watchExpressions/>
+  </kdevrbdebugger>
+  <kdevvalgrind>
+   <executable path="" params="" />
+   <valgrind path="valgrind" params="--tool=memcheck --tool=memcheck --tool=memcheck --leak-check=yes" />
+   <calltree path="calltree" params="" />
+   <kcachegrind path="/usr/bin/kcachegrind" />
+  </kdevvalgrind>
+ </pluginList>
+</KDevPrjSession>

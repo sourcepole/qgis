@@ -1,0 +1,396 @@
+<ui version="4.0" >
+ <class>QgsComposerBase</class>
+ <widget class="QMainWindow" name="QgsComposerBase" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>609</height>
+   </rect>
+  </property>
+  <property name="mouseTracking" >
+   <bool>true</bool>
+  </property>
+  <property name="windowTitle" >
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget" >
+   <property name="mouseTracking" >
+    <bool>true</bool>
+   </property>
+   <layout class="QVBoxLayout" >
+    <property name="spacing" >
+     <number>6</number>
+    </property>
+    <property name="leftMargin" >
+     <number>9</number>
+    </property>
+    <property name="topMargin" >
+     <number>9</number>
+    </property>
+    <property name="rightMargin" >
+     <number>9</number>
+    </property>
+    <property name="bottomMargin" >
+     <number>9</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="mSplitter" >
+      <property name="mouseTracking" >
+       <bool>true</bool>
+      </property>
+      <property name="orientation" >
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QFrame" name="mViewFrame" >
+       <property name="mouseTracking" >
+        <bool>true</bool>
+       </property>
+       <property name="frameShape" >
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow" >
+        <enum>QFrame::Raised</enum>
+       </property>
+      </widget>
+      <widget class="QTabWidget" name="mOptionsTabWidget" >
+       <property name="sizePolicy" >
+        <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize" >
+        <size>
+         <width>150</width>
+         <height>10</height>
+        </size>
+       </property>
+       <property name="maximumSize" >
+        <size>
+         <width>32767</width>
+         <height>32767</height>
+        </size>
+       </property>
+       <property name="currentIndex" >
+        <number>1</number>
+       </property>
+       <widget class="QWidget" name="tab" >
+        <attribute name="title" >
+         <string>General</string>
+        </attribute>
+        <layout class="QGridLayout" >
+         <property name="leftMargin" >
+          <number>9</number>
+         </property>
+         <property name="topMargin" >
+          <number>9</number>
+         </property>
+         <property name="rightMargin" >
+          <number>9</number>
+         </property>
+         <property name="bottomMargin" >
+          <number>9</number>
+         </property>
+         <property name="horizontalSpacing" >
+          <number>6</number>
+         </property>
+         <property name="verticalSpacing" >
+          <number>6</number>
+         </property>
+         <item row="1" column="0" colspan="2" >
+          <widget class="QFrame" name="mCompositionOptionsFrame" >
+           <property name="frameShape" >
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow" >
+            <enum>QFrame::Raised</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" >
+          <widget class="QComboBox" name="mCompositionNameComboBox" >
+           <property name="enabled" >
+            <bool>false</bool>
+           </property>
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" >
+          <widget class="QLabel" name="textLabel1" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text" >
+            <string>Composition</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_2" >
+        <attribute name="title" >
+         <string>Item</string>
+        </attribute>
+        <layout class="QGridLayout" >
+         <property name="leftMargin" >
+          <number>9</number>
+         </property>
+         <property name="topMargin" >
+          <number>9</number>
+         </property>
+         <property name="rightMargin" >
+          <number>9</number>
+         </property>
+         <property name="bottomMargin" >
+          <number>9</number>
+         </property>
+         <property name="horizontalSpacing" >
+          <number>6</number>
+         </property>
+         <property name="verticalSpacing" >
+          <number>6</number>
+         </property>
+         <item row="0" column="0" >
+          <widget class="QStackedWidget" name="mItemStackedWidget" >
+           <widget class="QWidget" name="page" />
+           <widget class="QWidget" name="page_2" />
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" >
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <property name="leftMargin" >
+       <number>0</number>
+      </property>
+      <property name="topMargin" >
+       <number>0</number>
+      </property>
+      <property name="rightMargin" >
+       <number>0</number>
+      </property>
+      <property name="bottomMargin" >
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="helpPButton" >
+        <property name="text" >
+         <string>Help</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation" >
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" >
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="closePButton" >
+        <property name="text" >
+         <string>Close</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QToolBar" name="toolBar" >
+   <property name="orientation" >
+    <enum>Qt::Horizontal</enum>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+   <addaction name="mActionOpenTemplate" />
+   <addaction name="mActionSaveTemplateAs" />
+   <addaction name="mActionExportAsImage" />
+   <addaction name="mActionExportAsSVG" />
+   <addaction name="mActionPrint" />
+   <addaction name="separator" />
+   <addaction name="mActionZoomAll" />
+   <addaction name="mActionZoomIn" />
+   <addaction name="mActionZoomOut" />
+   <addaction name="mActionRefreshView" />
+   <addaction name="separator" />
+   <addaction name="mActionAddNewMap" />
+   <addaction name="mActionAddImage" />
+   <addaction name="mActionAddNewLabel" />
+   <addaction name="mActionAddNewLegend" />
+   <addaction name="mActionAddNewScalebar" />
+   <addaction name="mActionSelectMoveItem" />
+  </widget>
+  <action name="mActionOpenTemplate" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionFileOpen.png</iconset>
+   </property>
+   <property name="text" >
+    <string>&amp;Open Template...</string>
+   </property>
+  </action>
+  <action name="mActionSaveTemplateAs" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionFileSaveAs.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Save Template &amp;As...</string>
+   </property>
+  </action>
+  <action name="mActionPrint" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionFilePrint.png</iconset>
+   </property>
+   <property name="text" >
+    <string>&amp;Print...</string>
+   </property>
+  </action>
+  <action name="mActionZoomAll" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionZoomFullExtent.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Zoom Full</string>
+   </property>
+  </action>
+  <action name="mActionZoomIn" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionZoomIn.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Zoom In</string>
+   </property>
+  </action>
+  <action name="mActionZoomOut" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionZoomOut.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Zoom Out</string>
+   </property>
+  </action>
+  <action name="mActionAddNewMap" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionAddRasterLayer.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Add Map</string>
+   </property>
+   <property name="toolTip" >
+    <string>Add new map</string>
+   </property>
+  </action>
+  <action name="mActionAddNewLabel" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionLabel.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Add Label</string>
+   </property>
+   <property name="toolTip" >
+    <string>Add new label</string>
+   </property>
+  </action>
+  <action name="mActionAddNewLegend" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionAddLegend.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Add Vector Legend</string>
+   </property>
+   <property name="toolTip" >
+    <string>Add new vect legend</string>
+   </property>
+  </action>
+  <action name="mActionSelectMoveItem" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionPan.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Move Item</string>
+   </property>
+   <property name="toolTip" >
+    <string>Select/Move item</string>
+   </property>
+  </action>
+  <action name="mActionExportAsImage" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionExportMapServer.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Export as Image...</string>
+   </property>
+  </action>
+  <action name="mActionExportAsSVG" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionSaveAsSVG.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Export as SVG...</string>
+   </property>
+  </action>
+  <action name="mActionAddNewScalebar" >
+   <property name="icon" >
+    <iconset>../../plugins/scale_bar/icon.xpm</iconset>
+   </property>
+   <property name="text" >
+    <string>Add Scalebar</string>
+   </property>
+   <property name="toolTip" >
+    <string>Add new scalebar</string>
+   </property>
+  </action>
+  <action name="mActionRefreshView" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionDraw.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Refresh</string>
+   </property>
+   <property name="toolTip" >
+    <string>Refresh view</string>
+   </property>
+  </action>
+  <action name="mActionAddImage" >
+   <property name="icon" >
+    <iconset>../themes/default/mActionSaveMapAsImage.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Add Image</string>
+   </property>
+  </action>
+ </widget>
+ <tabstops>
+  <tabstop>mOptionsTabWidget</tabstop>
+  <tabstop>mCompositionNameComboBox</tabstop>
+  <tabstop>mSplitter</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

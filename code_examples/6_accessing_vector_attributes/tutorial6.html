@@ -1,0 +1,116 @@
+<img src="images/tim50x50.png" align="left">In my <a href="http://blog.qgis.org/?q=node/28">last tutorial</a> I showed you how to create temporary objects on the map canvas. Today I will giving you a basic introduction to using QgsFeatureAttribute - which allows your to retrieve the attributes for a feature in a vector layer. The attributes are descriptive data related to the geometry of the feature.
+
+First lets take a look at what we will achieve in this tutorial. 
+<img src="http://blog.qgis.org/files/tutorial6.jpg"/>
+
+
+<!--break-->
+
+
+I suggest looking at the other tutorials before going through this one, though its not essential.
+
+<p>As with my previous tutorials, the entire project can be checked out from the QGIS Subversion repository using the following command:</p>
+
+<pre>svn co https://svn.qgis.org/repos/qgis/trunk/code_examples/6_accessing_vector_attributes
+</pre>
+
+<p>In the working directory for the tutorial code you will find a number of files including c++ sources and a simple data file under data. There is also the .ui file for the main window.</p>
+
+<p><strong>Note:</strong> You will need to edit the .pro file in the above svn directory to match your system. Also at some points in the code there are hard coded paths - you should adjust these as appropriate.
+
+
+<h3>QgsFeatureAttribute</h3>
+
+You can browse the code for QgsFeatureAttribute and related classes using <a href="https://svn.qgis.org/trac/browser/trunk/qgis/src/">the QGIS source browser</a>. Look in the 'core' and 'gui' subdirectories. The classes we are particularly interested in are QgsFeature, QgsFeatureAttribute and QgsProvider. Also for more implementation examples, take a look at <a href="https://svn.qgis.org/trac/browser/trunk/qgis/src/gui/qgsattributetable.cpp">
+  qgsattributetable.cpp</a>. Now on with our demo application....
+
+
+In mainwindow.h you will notice the includes needed to work with feature attributes:
+
+<pre>
+    #include &lt;qgsfeature.h>
+    #include &lt;qgsfeatureattribute.h>
+</pre>
+
+There are two main parts to this tutorial, both implmented in addLayer(). The first part lists the field names for the layer and puts it into our QTextBrowser on the form. The second part prints the values in each field for each feature in our sample data layer. Lets start by looking at the code to print the field names.
+
+<pre>
+  //get the field list associated with the layer
+  std::vector<QgsField> myFields = mypLayer->fields();
+  //we will hold the list of attributes in this string
+  QString myString;
+  //print out the field names first
+  for (unsigned int i = 0; i &lt; myFields.size(); i++ )
+  {
+    //a little logic so we can produce output like : 
+    // "foo","bar","etc"
+    if (i==0)
+    {
+      //                 here is where we actually get the field value
+      myString = "\"" +  myFields[i].name().trimmed() + "\"";
+    }
+    else
+    {
+      myString += ",\"" +  myFields[i].name().trimmed() + "\"";
+    }
+  }
+  textBrowser->append("Field List: " + myString);
+</pre>
+
+If this looks  a little familiar, don't be surprised - I used a similar approach in my <a href="http://blog.qgis.org/?q=node/23">labelling tutorial</a>. The procedure is straight forward - we ask the layer for its fields, which are returned as a vector. Then we loop through the vector adding the name() value of each field to our string. The trimmed() function just strips off any white space on a QString.
+
+Next we want to loop through the features to print out their attributes:
+
+<pre>
+  //get the provider associated with the layer
+  //the provider handles data io and is a plugin in qgis.
+  QgsVectorDataProvider* mypProvider=mypLayer->getDataProvider();
+  //check the provider is valid
+  if(mypProvider)
+  {
+    //create a holder for retrieving features from the provider
+    QgsFeature *mypFeature;
+    //get the provider ready to iterate through it
+    mypProvider->reset();
+    //now iterate through each feature
+    while ((mypFeature = mypProvider->getNextFeature(true)))
+    {
+      //get the attributes of this feature
+      const std::vector < QgsFeatureAttribute >& myAttributes = mypFeature->attributeMap();
+      //now loop through the attributes
+      for (int i = 0; i &lt; myAttributes.size(); i++)
+      {
+        //a little logic so we can produce output like : 
+        // "foo","bar","etc"
+        if (i==0)
+        {
+          //                 here is where we actually get the field value
+          myString = "\"" +  myAttributes[i].fieldValue().trimmed() + "\"";
+        }
+        else
+        {
+          myString += ",\"" +  myAttributes[i].fieldValue().trimmed() + "\"";
+        }
+      }
+      textBrowser->append("Field Values: " + myString); 
+      //clean up before moving on to the next feature
+      delete mypFeature;
+    }
+  }
+
+</pre>
+
+I've added in lots of comments in the code, so it should be pretty easy to understand what is going on. The basic steps are to get the provider for the layer, then ask it for features using getNextFeature() until no more features are returned. You can think of the features like a forward only cursor. You cant randomly jump from one record to the next, only iterate through them sequentially. For each feature we retrieve the list of attributes belonging to that feature and add them to a string to be appended to our QTextBrowser. Once we are done with the feature, we delete it to clean up.
+
+QgsFeature is a cool thing - it lets you know all about the data related to a feature. Whats especially nice in QGIS is that the vector providers are abstracted, so you can use exactly the same procedure to read data from any supported OGR datasource, PostGIS, GPX etc. As more vector providers are added in the future you will automatically gain the ability to read attributes from their features thanks to the standard provider interface. Thats the end of tutorial6!
+
+
+<h3>Mac Specific Notes</h3>
+
+After building the application bundle (qmake; make) you can copy the spatial reference system database into the bundle to avoid 'cant find resource' type errors:
+
+<pre>
+mkdir -p qgis_example6.app/Contents/MacOS/share/qgis/resources/ 
+cp -r /Applications/qgis.app/Contents/MacOS/share/qgis/resources/* \ 
+         qgis_example6.app/Contents/MacOS/share/qgis/resources/
+</pre>

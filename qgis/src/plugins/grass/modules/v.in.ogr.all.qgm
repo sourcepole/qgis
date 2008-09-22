@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE qgisgrassmodule SYSTEM "http://mrcc.com/qgisgrassmodule.dtd">
+
+<qgisgrassmodule label="Import all the OGR/PostGIS vector layers in a given data source" module="v.in.ogr">
+	<flag key="o" answer="on" hidden="yes" />
+	<flag key="z" answer="off" hidden="no" />
+	<flag key="r" answer="off" hidden="no" />
+	<option key="dsn" label="Path to the OGR data source" />
+	<option key="output" />
+	<option key="type" />
+</qgisgrassmodule>

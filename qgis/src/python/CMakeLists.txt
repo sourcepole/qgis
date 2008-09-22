@@ -1,0 +1,38 @@
+IF (WIN32)
+  IF (MSVC)
+    ADD_DEFINITIONS("-DPYTHON_EXPORT=__declspec(dllexport)")
+  ELSE (MSVC)
+    ADD_DEFINITIONS("\"-DPYTHON_EXPORT=__declspec(dllexport)\"")
+  ENDIF (MSVC)
+ELSE (WIN32)
+  # other compilers don't use that MSVC construct
+  ADD_DEFINITIONS(-DPYTHON_EXPORT=)
+ENDIF (WIN32)
+
+SET(QGISPYTHON_SRCS qgispython.cpp qgspythonutilsimpl.cpp)
+
+INCLUDE_DIRECTORIES(
+  ../core
+  ../core/raster
+  ../core/renderer
+  ../core/symbology
+  ../gui
+  ${PYTHON_INCLUDE_PATH})
+
+ADD_LIBRARY (qgispython SHARED ${QGISPYTHON_SRCS})
+
+SET_TARGET_PROPERTIES(qgispython PROPERTIES 
+			VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}
+			SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR})
+
+
+TARGET_LINK_LIBRARIES(qgispython
+  ${QT_QTCORE_LIBRARY} 
+  ${QT_QTGUI_LIBRARY} 
+  ${PYTHON_LIBRARIES}
+  qgis_core
+)
+
+INSTALL(TARGETS qgispython
+  RUNTIME DESTINATION ${QGIS_BIN_DIR}
+  LIBRARY DESTINATION ${QGIS_LIB_DIR})

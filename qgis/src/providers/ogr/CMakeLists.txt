@@ -1,0 +1,28 @@
+
+SET (OGR_SRCS qgsogrprovider.cpp)
+
+INCLUDE_DIRECTORIES(
+  .
+  ../../core
+  ${GDAL_INCLUDE_DIR}
+  ${GEOS_INCLUDE_DIR}
+)
+
+ADD_LIBRARY(ogrprovider MODULE ${OGR_SRCS})
+
+TARGET_LINK_LIBRARIES(ogrprovider
+  ${QT_QTCORE_LIBRARY} 
+  ${QT_QTXML_LIBRARY} 
+  ${GDAL_LIBRARY}
+  ${GEOS_LIBRARY}
+  qgis_core
+)
+IF (MSVC)
+  #needed for linking to gdal which needs odbc
+  SET(TARGET_LINK_LIBRARIES ${TARGET_LINK_LIBRARIE} odbc32 odbccp32)
+ENDIF (MSVC)
+
+INSTALL (TARGETS ogrprovider
+  RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}
+  LIBRARY DESTINATION ${QGIS_PLUGIN_DIR})
+
