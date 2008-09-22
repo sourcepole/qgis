@@ -1,0 +1,30 @@
+#ifndef DOXYGEN_SKIP                                                            
+/* $Id:$ */               
+#endif /* DOXYGEN_SKIP */                                                       
+
+/*! \mainpage Climate Data Processor
+
+\section index_intro Introduction
+\htmlonly Climate Data Processor is a cross platform climate data processing toolkit. 
+The software runs on Linux / Windows and Mac OSX. CDP
+is free software and is based on free software, in particular the 
+QGIS project - a free and open source GIS application.
+
+\section index_maillist Contact Details
+<ul>
+<li>For general enquiries visit <a href="http://linfiniti.com">linfiniti.com</a>.</li>
+<li>The Climate Data Processor is funded by XXXX.</li>
+</ul>
+
+\section index_bugs Bug Reporting
+
+If you think you have found a bug in the software please contact
+<a href="mailto:tim@linfiniti.com">Tim Sutton.
+
+\htmlonly
+<p>
+$Id:$
+</p>
+\endhtmlonly
+
+*/

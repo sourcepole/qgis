@@ -1,0 +1,51 @@
+1) Avoid abbreviations myPosition not myPos (follows Qt convention)
+2) Class members get prefixed by 'm' e.g. QgsPoint mLastPosition
+3) Class members that are pointers get prefixed by 'mp' e.g. QgsPoint * mpLastPosition
+4) Member paramters get prefixed by 'the' e.g. void foo(int theValue);
+5) Member paramters that are pointers get prefixed by 'thep' e.g. void foo(int * thepValue);
+6) Variables with local scope get prefixed with 'my' e.g. QgsPoint myPosition;
+7) Variables with local scope that are pointers get prefixed with 'myp' e.g. QgsPoint * mypPosition;
+8) Widgets drawn with designer get no prefix and use the following prefixes
+   (this is one case where we break the no abbreviations rule)
+   
+   QLineEdit  - 'le' e.g. leName
+   QTextEdit  - 'te' e.g. teName
+   QTextBrowser - 'tb' e.g. tbName
+   QSpinBox - 'spin'
+   QDoubleSpinBox - 'spin' (carries same semantics as above)
+   QLabel - 'lbl'
+   QGroupBox - 'grp'
+   QSplitter - 'splitter'
+   QTreeWidget - 'tree'
+   QTreeView,QTableView,QListView - 'tree' *1
+   QComboBox - 'cbo'
+   QCheckBox - 'cbx'
+   QRadioButton - 'rad'
+   QPushButton - pbn
+
+*1 In general views are interchangeable, so using the same prefix for all 
+  allows easily swapping e.g. a list view for a table view in designer
+  without having to change any code.
+
+10) Using the above scheme, its very easy to identify the scope of any variable
+    for example:
+
+      void foo(
+               QString theName,            <-- method parameter 'the'
+               QgsPoint * thepPoint        <-- method parameter as pointer 'thep'
+               )     
+      {
+        QString myShortName =              <-- Local variable 'my'
+                     theName.subString(0,5);  
+        QgsPoint * mypPoint =              <-- Local variable as pointer 'myp'
+                     roundPoint(thepPoint);
+        drawLabel(
+                  thepPoint,               <-- Method parameter 'thep'
+                  mColor,                  <-- Member variable 'm'
+                  myShortName              <-- Local variable 'my'
+                  );
+        leName->setText(                   <-- Designer variable from ui baseclass 'le'
+                  myShortName
+                  );
+
+      }
