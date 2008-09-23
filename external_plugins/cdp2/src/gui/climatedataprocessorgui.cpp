@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "climatedataprocessorgui.h"
+#include <climatedataprocessorcontroller.h>
 //qt includes
 #include <QSettings>
 #include <QFileDialog>
@@ -47,6 +48,19 @@ ClimateDataProcessorGui::~ClimateDataProcessorGui()
 void ClimateDataProcessorGui::accept()
 {
   writeSettings();
+  ClimateDataProcessorController myController;
+  myController.setMeanTempFileName(leMeanTemp->text());
+  myController.setMinTempFileName(leMinTemp->text());
+  myController.setMaxTempFileName(leMaxTemp->text());
+  myController.setDiurnalTempFileName(leDiurnalTemp->text());
+  myController.setMeanPrecipFileName(leMeanPrecipitation->text());
+  myController.setFrostDaysFileName(leFrostDays->text());
+  myController.setTotalSolarRadFileName(leTotalSolarRadiation->text());
+  myController.setFrostDaysFileName(leFrostDays->text());
+
+  myController.setOutputPath(leOutputPath->text());
+  qDebug(myController.description().toLocal8Bit());
+
   done(1);
 }
 

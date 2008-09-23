@@ -58,8 +58,8 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
                 int theFileStartYear,
                 int theJobStartYear,
                 int theJobEndYear,
-                QString theInputFileTypeString,
-                QString theOutputFileTypeString
+                QString theInputFileType,
+                QString theOutputFileType
                 );
         */
         /** Destructor */
@@ -77,7 +77,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getMeanTempFileName ();
+        const QString  meanTempFileName ();
 
         /** Mutator for filename of the minTemp calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -89,7 +89,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getMinTempFileName ();
+        const QString  minTempFileName ();
 
         /** Mutator for filename of the maxTemp calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -101,7 +101,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getMaxTempFileName ();
+        const QString  maxTempFileName ();
 
         /** Mutator for filename of the diurnalTemp calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -113,7 +113,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getDiurnalTempFileName ();
+        const QString  diurnalTempFileName ();
 
         /** Mutator for filename of the mean precipitation calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -125,7 +125,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getMeanPrecipFileName ();
+        const QString  meanPrecipFileName ();
 
         /** Mutator for filename of the frost days calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -137,7 +137,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getFrostDaysFileName ();
+        const QString  frostDaysFileName ();
 
         /** Mutator for filename of the solar radiation calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -149,7 +149,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getTotalSolarRadFileName ();
+        const QString  totalSolarRadFileName ();
 
         /** Mutator for filename of the wind speed calculation inputs.
         * If the files are in series, the name should be of the first file in the series.
@@ -161,18 +161,18 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  getWindSpeedFileName ();
+        const QString  windSpeedFileName ();
 
         /** Mutator for directory name for the calculation output files.
-        * @param theFilePathString - The name of an existing directory where the
+        * @param theFilePath - The name of an existing directory where the
         * output files will be stored.
         * @return void - No return.
         */
-        void setOutputFilePathString( QString theFilePathString);
+        void setOutputPath( QString theFilePath);
         /** Accessor for the file output path.
         * @return a QString containing the directory name.
         */
-        const QString getOutputFilePathString();
+        const QString outputFilePath();
 
         /**
         * Mutator for int fileStartYear.
@@ -184,7 +184,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         */
         void setFileStartYear( const int theYear);
         /** Accessor for int fileStartYear. */
-        const int getFileStartYear();
+        const int fileStartYear();
 
         /**
         * Mutator for int setJobStartYear.
@@ -199,7 +199,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return int - the current value of the first year in the input
         * files to be read.
         */
-        const int getJobStartYear();
+        const int jobStartYear();
 
         /**
         * Mutator for int jobEndYear.
@@ -214,7 +214,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return int - the current value of the last year in the input
         * files to be read.
         */
-        const int getJobEndYear();
+        const int jobEndYear();
 
         /**
         * Mutator forClimateFileReader::FileType inputFileType.
@@ -245,7 +245,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * Accessor forClimateFileReader::FileType inputFileType.
         * @return aClimateFileReader::FileType indicating the current input file type.
         */
-        const ClimateFileReader::FileType getInputFileType();
+        const ClimateFileReader::FileType inputFileType();
 
         /**
         * Mutator for FileWriter::FileType outputFileType.
@@ -271,7 +271,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * Accessor for FileWriter::FileType outputFileType.
         * @return FileWriter::FileType - the current output file type
         */
-        const FileWriter::FileType getOutputFileType();
+        const FileWriter::FileType outputFileType();
 
 
         /**
@@ -291,7 +291,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * bool indicates true if the user has asked for the calculation to be carried out,
         * false if he hasnt.
         */
-        QMap <QString, bool > getAvailableCalculationsMap();
+        QMap <QString, bool > availableCalculationsMap();
 
         /**
         * Add a calculation to the list of those requested to be carried out by the user.
@@ -323,7 +323,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * execution or not.
         * @return QString - containing the summary description for this climatedataprocessor.
         */
-        QString getDescription();
+        QString description();
 
         /**
         * Mutator for bool filesInSeriesFlag.
@@ -352,7 +352,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @see setFilesInSeriesFlag
         * @return bool - true if files are in series.
         */
-        const bool getFilesInSeriesFlag();
+        const bool filesInSeriesFlag();
 
         /**
         * If the output format requires a header (e.g. Arc/Info ASCII grid, you can
@@ -365,7 +365,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * Accessor for QString outputHeader.
         * @return QString - the currently set file header.
         */
-        const QString getOutputHeader();
+        const QString outputHeader();
 
 
     signals:
@@ -432,12 +432,12 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
 
         // Private attributes
         /** The directory where the processed results will be stored. */
-        QString outputFilePath;
+        QString mOutputPath;
         /** The type of input files to be processed by the climate date processor. */
-        ClimateFileReader::FileType inputFileType;
+        ClimateFileReader::FileType mInputFileType;
 
         /** The type of output files to be produced by the climate date processor. */
-        FileWriter::FileType outputFileType;
+        FileWriter::FileType mOutputFileType;
 
         /** This is a map (associative array) that stores the key/value pairs
          * for the INPUT filetype. The key is the verbose name for the file type
@@ -446,7 +446,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
          * @see makeInputFileTypeMap()
          * @see makeOutputFileTypeMap()
          */
-        QMap <QString,ClimateFileReader::FileType > inputFileTypeMap;
+        QMap <QString,ClimateFileReader::FileType > mInputFileTypeMap;
 
 
         /** This is a map (associative array) that stores the key/value pairs
@@ -456,7 +456,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
          * @see makeInputFileTypeMap()
          * @see makeOutputFileTypeMap()
          */
-        QMap <QString, FileWriter::FileType > outputFileTypeMap;
+        QMap <QString, FileWriter::FileType > mOutputFileTypeMap;
 
         /** This is a map (associative array) that stores which calculations can be performed
          *   given the input files that have been registered with this climatedataprocessor.
@@ -466,7 +466,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
          *   @see addUserCalculation
          */
 
-        QMap <QString, bool > availableCalculationsMap;
+        QMap <QString, bool > mAvailableCalculationsMap;
 
 
         /** A filegroup containing files with mean temperature data. */
@@ -474,66 +474,66 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         /** The file name that contains mean temp data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString meanTempFileName;
+        QString mMeanTempFileName;
 
         /** A filegroup containing files with minimum temperature data. */
-        ClimateFileGroup *minTempFileGroup;
+        ClimateFileGroup * mpMinTempFileGroup;
         /** The file name that contains min temp data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString minTempFileName;
+        QString mMinTempFileName;
 
         /** A filegroup containing files with maximum temperature data. */
-        ClimateFileGroup * maxTempFileGroup;
+        ClimateFileGroup * mpMaxTempFileGroup;
         /** The file name that contains max temp data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString maxTempFileName;
+        QString mMaxTempFileName;
 
         /** A filegroup containing files with diurnal temperature data. */
-        ClimateFileGroup * diurnalTempFileGroup;
+        ClimateFileGroup * mpDiurnalTempFileGroup;
         /** The file name that contains diurnal temp data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString diurnalTempFileName;
+        QString mDiurnalTempFileName;
 
         /** A filegroup containing files with mean precipitation data. */
-        ClimateFileGroup * meanPrecipFileGroup;
+        ClimateFileGroup * mpMeanPrecipFileGroup;
         /** The file name that contains mean precipitation data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString meanPrecipFileName;
+        QString mMeanPrecipFileName;
 
         /** A filegroup containing files with number of frost days data. */
-        ClimateFileGroup * frostDaysFileGroup;
+        ClimateFileGroup * mpFrostDaysFileGroup;
         /** The file name that contains mean frost data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString frostDaysFileName;
+        QString mFrostDaysFileName;
 
         /** A filegroup containing files with solar radiation data. */
-        ClimateFileGroup * totalSolarRadFileGroup;
+        ClimateFileGroup * mpTotalSolarRadFileGroup;
         /** The file name that contains mean solar radiation data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString totalSolarRadFileName;
+        QString mTotalSolarRadFileName;
 
         /** A filegroup containing files with wind speed data. */
-        ClimateFileGroup * windSpeedFileGroup;
+        ClimateFileGroup * mpWindSpeedFileGroup;
         /** The file name that contains wind speed data. If the file type is
         * one where the data is stored in series (a single file per month),
         * this member will store the name of the first file in the series. */
-        QString windSpeedFileName;
+        QString mWindSpeedFileName;
 
         /** For certain input types (notably cres, arcinfo and Reading paleoclimate),
          * each months data is stored in a discrete file. Files should be numbered
          * e.g. meantemp01.asc, meantemp2.asc...meantemp12.asc for each month.
          * This flag lets us know whether data is in a series of seperate files for each month
          * or can all be found in the same file. */
-        bool filesInSeriesFlag;
+        bool mFilesInSeriesFlag;
 
         /** This is a standard header (e.g. arc/info header) that will be appended to any output grids. */
-        QString outputHeader;
+        QString mOutputHeader;
 };
 
 #endif //CLIMATEDATAPROCESSORCONTROLLER
