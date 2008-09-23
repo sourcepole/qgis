@@ -60,6 +60,7 @@ void ClimateDataProcessorGui::accept()
 
   myController.setOutputPath(leOutputPath->text());
   qDebug(myController.description().toLocal8Bit());
+  myController.run();
 
   done(1);
 }
