@@ -349,20 +349,63 @@
  <layoutdefault spacing="6" margin="11" />
  <tabstops>
   <tabstop>leMeanTemp</tabstop>
+  <tabstop>pbnMeanTemp</tabstop>
   <tabstop>leMinTemp</tabstop>
+  <tabstop>pbnMinTemp</tabstop>
   <tabstop>leMaxTemp</tabstop>
+  <tabstop>pbnMaxTemp</tabstop>
   <tabstop>leDiurnalTemp</tabstop>
+  <tabstop>pbnDiurnalTemp</tabstop>
   <tabstop>leMeanPrecipitation</tabstop>
+  <tabstop>pbnMeanPrecipitation</tabstop>
   <tabstop>leFrostDays</tabstop>
+  <tabstop>pbnFrostDays</tabstop>
   <tabstop>leTotalSolarRadiation</tabstop>
+  <tabstop>pbnTotalSolarRad</tabstop>
+  <tabstop>lstVariablesToCalc</tabstop>
   <tabstop>cbxSelectAllVars</tabstop>
   <tabstop>cboOutputFormat</tabstop>
   <tabstop>leOutputPath</tabstop>
+  <tabstop>pbnOutputPath</tabstop>
   <tabstop>cbxSwitchMeridian</tabstop>
   <tabstop>cbxPseudoColour</tabstop>
+  <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources>
   <include location="../resources/resources.qrc" />
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ClimateDataProcessorGuiBase</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>444</x>
+     <y>668</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>582</x>
+     <y>621</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ClimateDataProcessorGuiBase</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>538</x>
+     <y>677</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>582</x>
+     <y>663</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

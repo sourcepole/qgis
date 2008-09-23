@@ -69,8 +69,23 @@ private slots:
   *
   */
   void accept();
-  void on_pbnSelectFile_clicked();
-  void on_pbnSelectDir_clicked();
+  
+  /** Helper method to generically get a file name.
+   * @param theDefaultFile - default file used as a basis for path location
+   * @param theMessage - a prompt message to use when asking for the file name
+   * @return QString - containing the users selected filename or empty 
+   *                  if the user cancelled.
+   */
+  QString getFileName(QString theDefaultFile, QString theMessage);
+
+  /** Helper method to generically get a directory.
+   * @param theDefaultFile - default file used as a basis for path location
+   * @param theMessage - a prompt message to use when asking for the dir
+   * @return QString - containing the users selected dir or empty 
+   *                  if the user cancelled.
+   */
+  QString getDirName(QString theDefaultDir, QString theMessage);
+
   /** Runs when process button is pressed.
   * Does not close the form afterwards.
   */

@@ -50,35 +50,25 @@ void ClimateDataProcessorGui::accept()
   done(1);
 }
 
-void ClimateDataProcessorGui::on_pbnSelectFile_clicked()
+QString ClimateDataProcessorGui::getFileName(QString theDefaultFile, QString theMessage)
 {
-  /**
-  QSettings mySettings;
-  QString myBaseDir = mySettings.value("climateconverter/inputLayersDirectory","/tmp").toString(); //initial dir
-  QStringList myFileNameQStringList = QFileDialog::getOpenFileNames(
-                                        this,
-                                        "Select one or more files",
-                                        myBaseDir, //initial dir
-                                        "Climate Climate Data (*.asc *.mea *.dat)"  //filters to select
-                                      );
-  lstInputFiles->addItems(myFileNameQStringList);
-  QFileInfo myFileInfo(myFileNameQStringList.at(0));
-  QString myBaseString = myFileInfo.dir().path()+QString("/");
-  mySettings.setValue("climateconverter/inputLayersDirectory",myBaseString);
-  */
+  QString myFileName = QFileDialog::getOpenFileName(
+      this,
+      theMessage , //caption
+      QFileInfo(theDefaultFile).absolutePath(), //initial dir
+      "Climate Climate Data (*.asc *.mea *.dat)"  //filters to select
+    );
+  return (myFileName);
 }
 
-void ClimateDataProcessorGui::on_pbnSelectDir_clicked()
+QString ClimateDataProcessorGui::getDirName(QString theDefaultDir, QString theMessage)
 {
-  /**
-  QString myDir = QFileDialog::getExistingDirectory(
-                    this,
-                    "Choose a directory",
-                    mLastDir);
-
-  mLastDir = myDir;
-  leOutputDir->setText(myDir);
-  */
+  QString myFileName = QFileDialog::getExistingDirectory(
+      this,
+      theMessage , //caption
+      theDefaultDir //initial dir
+    );
+  return (myFileName);
 }
 
 void ClimateDataProcessorGui::on_pbnProcess_clicked()
@@ -146,7 +136,12 @@ void ClimateDataProcessorGui::updateProgress (int theCurrentValue, int theMaximu
 
 void ClimateDataProcessorGui::on_pbnMeanTemp_clicked()
 {
-  leMeanTemp->setText("hello world");
+  QString myFileName = 
+    getFileName(leMeanTemp->text(), tr("Choose the mean temp file"));
+  if (!myFileName.isEmpty())
+  {
+    leMeanTemp->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnMinTemp_clicked()
 {
