@@ -47,6 +47,24 @@ public:
   ~ClimateDataProcessorGui();
 
 private slots:
+  /** Auto connect slot to let the user select a mean temp file */
+  void on_pbnMeanTemp_clicked();
+  /** Auto connect slot to let the user select a min temp file */
+  void on_pbnMinTemp_clicked();
+  /** Auto connect slot to let the user select a max temp file */
+  void on_pbnMaxTemp_clicked();
+  /** Auto connect slot to let the user select a diurnal temp file */
+  void on_pbnDiurnalTemp_clicked();
+  /** Auto connect slot to let the user select a mean annual 
+   * precipitation file */
+  void on_pbnMeanPrecipitation_clicked();
+  /** Auto connect slot to let the user select a frost days file */
+  void on_pbnFrostDays_clicked();
+  /** Auto connect slot to let the user select a total solar radiation file */
+  void on_pbnTotalSolarRad_clicked();
+  /** Auto connect slot to let the user select a output path */
+  void on_pbnOutputPath_clicked();
+   
   /** Runs when the close button is pressed and saves current form state
   *
   */

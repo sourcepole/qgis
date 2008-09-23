@@ -143,3 +143,36 @@ void ClimateDataProcessorGui::updateProgress (int theCurrentValue, int theMaximu
   QApplication::processEvents();
   */
 }
+
+void ClimateDataProcessorGui::on_pbnMeanTemp_clicked()
+{
+  leMeanTemp->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnMinTemp_clicked()
+{
+  leMinTemp->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnMaxTemp_clicked()
+{
+  leMaxTemp->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnDiurnalTemp_clicked()
+{
+  leDiurnalTemp->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnMeanPrecipitation_clicked()
+{
+  leMeanPrecipitation->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnFrostDays_clicked()
+{
+  leFrostDays->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnTotalSolarRad_clicked()
+{
+  leTotalSolarRadiation->setText("hello world");
+}
+void ClimateDataProcessorGui::on_pbnOutputPath_clicked()
+{
+  leOutputPath->setText("hello world");
+}
