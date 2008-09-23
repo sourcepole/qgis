@@ -51,19 +51,6 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="2" >
-       <widget class="QPushButton" name="pbtnMeanTemp" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0" >
        <widget class="QLabel" name="lblMinTemp" >
         <property name="text" >
@@ -81,19 +68,6 @@
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2" >
-       <widget class="QPushButton" name="pbtnMinTemp" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
         </property>
        </widget>
       </item>
@@ -117,19 +91,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="2" >
-       <widget class="QPushButton" name="pbtnMaxTemp" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="0" >
        <widget class="QLabel" name="lblDiurnalTemperature" >
         <property name="text" >
@@ -147,19 +108,6 @@
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2" >
-       <widget class="QPushButton" name="pbtnDiurnalTemp" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
         </property>
        </widget>
       </item>
@@ -183,19 +131,6 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="2" >
-       <widget class="QPushButton" name="pbtnMeanPrecipitation" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
       <item row="5" column="0" >
        <widget class="QLabel" name="lblFrostDays" >
         <property name="text" >
@@ -213,19 +148,6 @@
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="2" >
-       <widget class="QPushButton" name="pbtnFrostDays" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
         </property>
        </widget>
       </item>
@@ -249,14 +171,50 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="2" >
-       <widget class="QPushButton" name="pbtnTotalSolarRad" >
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
+      <item row="0" column="2" >
+       <widget class="QToolButton" name="pbnMeanTemp" >
+        <property name="text" >
+         <string>...</string>
         </property>
+       </widget>
+      </item>
+      <item row="1" column="2" >
+       <widget class="QToolButton" name="pbnMinTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2" >
+       <widget class="QToolButton" name="pbnMaxTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2" >
+       <widget class="QToolButton" name="pbnDiurnalTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2" >
+       <widget class="QToolButton" name="pbnMeanPrecipitation" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2" >
+       <widget class="QToolButton" name="pbnFrostDays" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2" >
+       <widget class="QToolButton" name="pbnTotalSolarRad" >
         <property name="text" >
          <string>...</string>
         </property>
@@ -294,7 +252,7 @@
    <item row="2" column="0" >
     <widget class="QGroupBox" name="grpOutput" >
      <property name="title" >
-      <string>Output Options</string>
+      <string>Output options</string>
      </property>
      <layout class="QGridLayout" >
       <item row="0" column="0" >
@@ -327,25 +285,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2" >
-       <widget class="QPushButton" name="pbtnOutputPath" >
-        <property name="minimumSize" >
-         <size>
-          <width>20</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize" >
-         <size>
-          <width>20</width>
-          <height>32767</height>
-         </size>
-        </property>
-        <property name="text" >
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="1" colspan="2" >
        <widget class="QCheckBox" name="cbxSwitchMeridian" >
         <property name="text" >
@@ -357,6 +296,13 @@
        <widget class="QCheckBox" name="cbxPseudoColour" >
         <property name="text" >
          <string>Create pseudocoloured image of each output file</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2" >
+       <widget class="QToolButton" name="pbnOutputPath" >
+        <property name="text" >
+         <string>...</string>
         </property>
        </widget>
       </item>
@@ -403,23 +349,15 @@
  <layoutdefault spacing="6" margin="11" />
  <tabstops>
   <tabstop>leMeanTemp</tabstop>
-  <tabstop>pbtnMeanTemp</tabstop>
   <tabstop>leMinTemp</tabstop>
-  <tabstop>pbtnMinTemp</tabstop>
   <tabstop>leMaxTemp</tabstop>
-  <tabstop>pbtnMaxTemp</tabstop>
   <tabstop>leDiurnalTemp</tabstop>
-  <tabstop>pbtnDiurnalTemp</tabstop>
   <tabstop>leMeanPrecipitation</tabstop>
-  <tabstop>pbtnMeanPrecipitation</tabstop>
   <tabstop>leFrostDays</tabstop>
-  <tabstop>pbtnFrostDays</tabstop>
   <tabstop>leTotalSolarRadiation</tabstop>
-  <tabstop>pbtnTotalSolarRad</tabstop>
   <tabstop>cbxSelectAllVars</tabstop>
   <tabstop>cboOutputFormat</tabstop>
   <tabstop>leOutputPath</tabstop>
-  <tabstop>pbtnOutputPath</tabstop>
   <tabstop>cbxSwitchMeridian</tabstop>
   <tabstop>cbxPseudoColour</tabstop>
  </tabstops>
