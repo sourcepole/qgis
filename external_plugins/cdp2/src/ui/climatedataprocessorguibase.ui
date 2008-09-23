@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>583</width>
-    <height>695</height>
+    <width>990</width>
+    <height>468</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -223,14 +223,18 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0" >
+   <item row="0" column="1" >
     <widget class="QGroupBox" name="grpVars" >
      <property name="title" >
       <string>Select variables to calculate</string>
      </property>
      <layout class="QGridLayout" >
       <item row="0" column="0" colspan="2" >
-       <widget class="QListWidget" name="lstVariablesToCalc" />
+       <widget class="QListWidget" name="lstVariablesToCalc" >
+        <property name="alternatingRowColors" >
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
       <item row="1" column="0" >
        <widget class="QCheckBox" name="cbxSelectAllVars" >
@@ -249,7 +253,7 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="0" >
+   <item rowspan="4" row="1" column="0" >
     <widget class="QGroupBox" name="grpOutput" >
      <property name="title" >
       <string>Output options</string>
@@ -309,7 +313,20 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0" >
+   <item row="1" column="1" >
+    <spacer>
+     <property name="orientation" >
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" >
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="1" >
     <widget class="QLabel" name="lblCurrentTask" >
      <property name="font" >
       <font>
@@ -330,14 +347,14 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0" >
+   <item row="3" column="1" >
     <widget class="QProgressBar" name="progressTotalJob" >
      <property name="value" >
       <number>24</number>
      </property>
     </widget>
    </item>
-   <item row="5" column="0" >
+   <item row="4" column="1" >
     <widget class="QDialogButtonBox" name="buttonBox" >
      <property name="standardButtons" >
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::NoButton|QDialogButtonBox::Ok</set>
