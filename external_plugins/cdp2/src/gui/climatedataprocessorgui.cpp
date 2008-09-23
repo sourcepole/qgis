@@ -145,29 +145,64 @@ void ClimateDataProcessorGui::on_pbnMeanTemp_clicked()
 }
 void ClimateDataProcessorGui::on_pbnMinTemp_clicked()
 {
-  leMinTemp->setText("hello world");
+  QString myFileName = 
+    getFileName(leMinTemp->text(), tr("Choose the min temp file"));
+  if (!myFileName.isEmpty())
+  {
+    leMinTemp->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnMaxTemp_clicked()
 {
-  leMaxTemp->setText("hello world");
+  QString myFileName = 
+    getFileName(leMaxTemp->text(), tr("Choose the max temp file"));
+  if (!myFileName.isEmpty())
+  {
+    leMaxTemp->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnDiurnalTemp_clicked()
 {
-  leDiurnalTemp->setText("hello world");
+  QString myFileName = 
+    getFileName(leDiurnalTemp->text(), tr("Choose the diurnal temp file"));
+  if (!myFileName.isEmpty())
+  {
+    leDiurnalTemp->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnMeanPrecipitation_clicked()
 {
-  leMeanPrecipitation->setText("hello world");
+  QString myFileName = 
+    getFileName(leMeanPrecipitation->text(), tr("Choose the mean precipitation file"));
+  if (!myFileName.isEmpty())
+  {
+    leMeanPrecipitation->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnFrostDays_clicked()
 {
-  leFrostDays->setText("hello world");
+  QString myFileName = 
+    getFileName(leFrostDays->text(), tr("Choose the frost days file"));
+  if (!myFileName.isEmpty())
+  {
+    leFrostDays->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnTotalSolarRad_clicked()
 {
-  leTotalSolarRadiation->setText("hello world");
+  QString myFileName = 
+    getFileName(leTotalSolarRadiation->text(), tr("Choose the total solar radiation file"));
+  if (!myFileName.isEmpty())
+  {
+    leTotalSolarRadiation->setText(myFileName);
+  }
 }
 void ClimateDataProcessorGui::on_pbnOutputPath_clicked()
 {
-  leOutputPath->setText("hello world");
+  QString myFileName = 
+    getDirName(leOutputPath->text(), tr("Choose the output directory"));
+  if (!myFileName.isEmpty())
+  {
+    leOutputPath->setText(myFileName);
+  }
 }
