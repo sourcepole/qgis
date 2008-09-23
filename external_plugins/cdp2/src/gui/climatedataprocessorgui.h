@@ -90,11 +90,14 @@ private slots:
   * Does not close the form afterwards.
   */
   void on_pbnProcess_clicked();
+  void on_cbxSelectAllVars_toggled( bool theFlag );
   void error(QString theError);
   void message(QString theMessage);
   void updateProgress (int theCurrentValue, int theMaximumValue);
 
-private:
+  void prepareList();
+  void updateList();
+private: //non slots
   void readSettings();
   void writeSettings();
   QString mLastDir;

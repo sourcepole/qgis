@@ -21,13 +21,16 @@
 #include "climatedataprocessorgui.h"
 #include <climatedataprocessorcontroller.h>
 //qt includes
-#include <QSettings>
+#include <QDebug>
 #include <QFileDialog>
-#include <QString>
-#include <QMessageBox>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QLineEdit>
+#include <QMap>
+#include <QMessageBox>
+#include <QSettings>
+#include <QString>
+
 
 ClimateDataProcessorGui::ClimateDataProcessorGui(QWidget* parent, Qt::WFlags fl)
     : QDialog(parent,fl) 
@@ -59,10 +62,39 @@ void ClimateDataProcessorGui::accept()
   myController.setFrostDaysFileName(leFrostDays->text());
 
   myController.setOutputPath(leOutputPath->text());
-  qDebug(myController.description().toLocal8Bit());
-  myController.run();
 
-  done(1);
+  //specif which of the available calcs we want to actually do
+  if (! myController.makeAvailableCalculationsMap() )
+  {
+    qDebug ("Error making available calcs map");
+  }
+  else //available calcs map made ok
+  {
+    QMap<QString, bool> myMap = myController.availableCalculationsMap();
+    QMapIterator<QString, bool> myMapIterator(myMap);
+    while (myMapIterator.hasNext())
+    {
+      myMapIterator.next();
+      QString myKey = myMapIterator.key();
+      bool myValue = myMapIterator.value();
+      QListWidgetItem * mypItem = new QListWidgetItem(myKey,lstVariablesToCalc);
+      mypItem->setFlags(mypItem->flags() | Qt::ItemIsUserCheckable);
+      if (myValue)
+      {
+        mypItem->setCheckState(Qt::Checked);
+      }
+      else
+      {
+        mypItem->setCheckState(Qt::Unchecked);
+      }
+    }
+    // Show a summary of the controller state (for debug purposes only)  
+    qDebug(myController.description().toLocal8Bit());
+    myController.run();
+  }
+  
+  
+  //done(1);
 }
 
 QString ClimateDataProcessorGui::getFileName(QString theDefaultFile, QString theMessage)
@@ -140,6 +172,71 @@ void ClimateDataProcessorGui::message(QString theMessage)
   */
 }
 
+void ClimateDataProcessorGui::updateList()
+{
+
+  ClimateDataProcessorController myController;
+  myController.setMeanTempFileName(leMeanTemp->text());
+  myController.setMinTempFileName(leMinTemp->text());
+  myController.setMaxTempFileName(leMaxTemp->text());
+  myController.setDiurnalTempFileName(leDiurnalTemp->text());
+  myController.setMeanPrecipFileName(leMeanPrecipitation->text());
+  myController.setFrostDaysFileName(leFrostDays->text());
+  myController.setTotalSolarRadFileName(leTotalSolarRadiation->text());
+  myController.setFrostDaysFileName(leFrostDays->text());
+
+  myController.setOutputPath(leOutputPath->text());
+
+  //specif which of the available calcs we want to actually do
+  if (! myController.makeAvailableCalculationsMap() )
+  {
+    qDebug ("Error making available calcs map");
+  }
+  else //available calcs map made ok
+  {
+    QMap<QString, bool> myMap = myController.availableCalculationsMap();
+    QMapIterator<QString, bool> myMapIterator(myMap);
+    while (myMapIterator.hasNext())
+    {
+      myMapIterator.next();
+      QString myKey = myMapIterator.key();
+      bool myValue = myMapIterator.value();
+      QListWidgetItem * mypItem = new QListWidgetItem(myKey,lstVariablesToCalc);
+      mypItem->setFlags(mypItem->flags() | Qt::ItemIsUserCheckable);
+      if (myValue)
+      {
+        mypItem->setCheckState(Qt::Checked);
+      }
+      else
+      {
+        mypItem->setCheckState(Qt::Unchecked);
+      }
+    }
+    // Show a summary of the controller state (for debug purposes only)  
+    qDebug(myController.description().toLocal8Bit());
+  }
+}
+
+void ClimateDataProcessorGui::prepareList ()
+{
+
+}
+void ClimateDataProcessorGui::on_cbxSelectAllVars_toggled ( bool theFlag )
+{
+  for ( int myCounter = 0; myCounter < lstVariablesToCalc->count(); myCounter++ )
+  {
+    QListWidgetItem *  mypItem = lstVariablesToCalc->item(myCounter);
+    if (theFlag)
+    {
+      mypItem->setCheckState(Qt::Checked);
+    }
+    else
+    {
+      mypItem->setCheckState(Qt::Unchecked);
+    }
+  }
+}
+
 void ClimateDataProcessorGui::updateProgress (int theCurrentValue, int theMaximumValue)
 {
   /**
@@ -157,6 +254,7 @@ void ClimateDataProcessorGui::on_pbnMeanTemp_clicked()
   {
     leMeanTemp->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnMinTemp_clicked()
 {
@@ -166,6 +264,7 @@ void ClimateDataProcessorGui::on_pbnMinTemp_clicked()
   {
     leMinTemp->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnMaxTemp_clicked()
 {
@@ -175,6 +274,7 @@ void ClimateDataProcessorGui::on_pbnMaxTemp_clicked()
   {
     leMaxTemp->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnDiurnalTemp_clicked()
 {
@@ -184,6 +284,8 @@ void ClimateDataProcessorGui::on_pbnDiurnalTemp_clicked()
   {
     leDiurnalTemp->setText(myFileName);
   }
+  updateList();
+
 }
 void ClimateDataProcessorGui::on_pbnMeanPrecipitation_clicked()
 {
@@ -193,6 +295,7 @@ void ClimateDataProcessorGui::on_pbnMeanPrecipitation_clicked()
   {
     leMeanPrecipitation->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnFrostDays_clicked()
 {
@@ -202,6 +305,7 @@ void ClimateDataProcessorGui::on_pbnFrostDays_clicked()
   {
     leFrostDays->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnTotalSolarRad_clicked()
 {
@@ -211,6 +315,7 @@ void ClimateDataProcessorGui::on_pbnTotalSolarRad_clicked()
   {
     leTotalSolarRadiation->setText(myFileName);
   }
+  updateList();
 }
 void ClimateDataProcessorGui::on_pbnOutputPath_clicked()
 {
@@ -220,4 +325,5 @@ void ClimateDataProcessorGui::on_pbnOutputPath_clicked()
   {
     leOutputPath->setText(myFileName);
   }
+  updateList();
 }
