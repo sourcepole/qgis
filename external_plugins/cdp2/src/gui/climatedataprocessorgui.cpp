@@ -63,29 +63,19 @@ void ClimateDataProcessorGui::accept()
 
   myController.setOutputPath(leOutputPath->text());
 
-  //specif which of the available calcs we want to actually do
+  //specify which of the available calcs we want to actually do
   if (! myController.makeAvailableCalculationsMap() )
   {
     qDebug ("Error making available calcs map");
   }
   else //available calcs map made ok
   {
-    QMap<QString, bool> myMap = myController.availableCalculationsMap();
-    QMapIterator<QString, bool> myMapIterator(myMap);
-    while (myMapIterator.hasNext())
+    for ( int myCounter = 0; myCounter < lstVariablesToCalc->count(); myCounter++ )
     {
-      myMapIterator.next();
-      QString myKey = myMapIterator.key();
-      bool myValue = myMapIterator.value();
-      QListWidgetItem * mypItem = new QListWidgetItem(myKey,lstVariablesToCalc);
-      mypItem->setFlags(mypItem->flags() | Qt::ItemIsUserCheckable);
-      if (myValue)
+      QListWidgetItem * mypItem = lstVariablesToCalc->item(myCounter);
+      if (mypItem->checkState()==Qt::Checked)
       {
-        mypItem->setCheckState(Qt::Checked);
-      }
-      else
-      {
-        mypItem->setCheckState(Qt::Unchecked);
+        myController.addUserCalculation(mypItem->text());
       }
     }
     // Show a summary of the controller state (for debug purposes only)  
@@ -196,6 +186,7 @@ void ClimateDataProcessorGui::updateList()
   {
     QMap<QString, bool> myMap = myController.availableCalculationsMap();
     QMapIterator<QString, bool> myMapIterator(myMap);
+    lstVariablesToCalc->clear();
     while (myMapIterator.hasNext())
     {
       myMapIterator.next();
