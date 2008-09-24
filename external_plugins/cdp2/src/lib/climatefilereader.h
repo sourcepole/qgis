@@ -199,6 +199,17 @@ public:
    * @note This will likely be removed!
    */
   void printBlock(int theBlock);
+  /** Get a world file based on the file reader. This is useful when you 
+      are writing out a new file and want it to have the same positional info
+      and dimensions as the original input file.
+    */
+   const QString  getWorldFile();
+
+  /** Get an ascii grid header file based on the file reader. This is useful when you 
+      are writing out a new file and want it to have the same positional info
+      and dimensions as the original input file.
+    */
+   const QString  getAsciiHeader();
 signals:
   void error (QString theError);
   void message (QString theMessage);

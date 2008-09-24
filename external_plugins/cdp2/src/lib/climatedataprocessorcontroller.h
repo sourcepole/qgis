@@ -161,7 +161,7 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         * @return a QString containing the filename (which will be the first file
         * in the series if the files are in series).
         */
-        const QString  windSpeedFileName ();
+        const QString windSpeedFileName ();
 
         /** Mutator for directory name for the calculation output files.
         * @param theFilePath - The name of an existing directory where the
@@ -274,11 +274,6 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
         const FileWriter::FileType outputFileType();
 
 
-        /**
-        * Set up the filegroups for each filename that has been registered
-        * @return bool - A boolean indicating success or failure of the operation
-        */
-        bool makeFileGroups();
 
         /**  Build a list of which calculations can be performed given the input files
          *    that have been registered. The boolean field indicates whether the user actually
@@ -409,6 +404,11 @@ class CDP_LIB_EXPORT  ClimateDataProcessorController : public QObject {
     private:
 
         // Private methods
+        /**
+        * Set up the filegroups for each filename that has been registered
+        * @return bool - A boolean indicating success or failure of the operation
+        */
+        bool makeFileGroups();
 
         /** This method is intended for debugging purposes only */
         void printVectorAndResult(QVector<float> theVector, float theResult);

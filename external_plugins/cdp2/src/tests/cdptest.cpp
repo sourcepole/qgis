@@ -91,10 +91,6 @@ void CdpTest::runTest()
   myController.setOutputFileType(FileWriter::ESRI_ASCII);
   // Show a summary of the controller state (for debug purposes only)  
   qDebug(myController.description().toLocal8Bit());
-  if (! myController.makeFileGroups() )
-  {
-    QFAIL ("Failed to make file groups");
-  }
   myController.run();
 
 }

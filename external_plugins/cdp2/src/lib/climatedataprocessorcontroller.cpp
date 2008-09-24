@@ -467,11 +467,12 @@ ClimateFileGroup *ClimateDataProcessorController::initialiseFileGroup(QString th
             }
             myCurrentFileName+="."+myExtension;
             qDebug( "initialiseFileGroup - opening file : " + myCurrentFileName.toLocal8Bit() );
-            ClimateFileReader *myClimateFileReader = new ClimateFileReader();
-            myClimateFileReader->initialise(myCurrentFileName,mInputFileType);            
+            ClimateFileReader *mypClimateFileReader = new ClimateFileReader();
+            mypClimateFileReader->initialise(myCurrentFileName,mInputFileType);
+            mOutputHeader=mypClimateFileReader->getAsciiHeader();            
             qDebug( "initialiseFileGroup - *** Adding " + myCurrentFileName.toLocal8Bit()
             + " to file group *********************" );
-            myFileGroup->add(myClimateFileReader);
+            myFileGroup->add(mypClimateFileReader);
 
         }
 
@@ -931,6 +932,7 @@ bool ClimateDataProcessorController::run()
       myNumberOfVariablesInt++;
     }
   }
+  makeFileGroups();
   //
   //work out how many cells need to be processed for each calculations
   //
@@ -1018,38 +1020,9 @@ bool ClimateDataProcessorController::run()
       //set the extension
       myFileName =  mOutputPath + myFileName + ".asc";
       FileWriter * myFileWriter = new FileWriter(myFileName,mOutputFileType);
+      // add check to make sure header was initialised
+      myFileWriter->writeString(mOutputHeader);
 
-      //Use externally defined header if its been set
-      if (!mOutputHeader.isEmpty())
-      {
-        myFileWriter->writeString(mOutputHeader);
-      }
-      //Otherwise calculate one dynamically
-      else
-      {
-        // Use the matrix dimensions to create the ascii file
-        // Warning: this assumes a GLOBAL dataset
-        // Warning: this screws up cellsizes that are not square
-        // Warning: this only works for integers at present
-        QString myHeader(
-            "ncols         " + QString::number (myXDimInt) + "\n" +
-            "nrows         " + QString::number (myYDimInt) + "\n" +
-            "xllcorner     -180\n" +
-            "yllcorner     -90\n"+
-            "cellsize      " + QString::number (360/static_cast<float>(myXDimInt)) + "\n" +
-            "nodata_value  -9999.5\n");
-	qDebug("Header:" + myHeader.toLocal8Bit());
-        myFileWriter->writeString(myHeader);
-        // Formerly this was fixed to the following
-        //QString myHeader=
-        //QString ("ncols         720\n")+
-        //QString ("nrows         360\n")+
-        //QString ("xllcorner     -180\n")+
-        //QString ("yllcorner     -90\n")+
-        //QString ("cellsize      0.5\n")+
-        //QString ("nodata_value  -9999\n");                    myFileWriter->writeString(myHeader);
-
-      }
 
       qDebug( "Added " + myFileWriter->fileName().toLocal8Bit() );
       FileWriterStruct myFileWriterStruct;

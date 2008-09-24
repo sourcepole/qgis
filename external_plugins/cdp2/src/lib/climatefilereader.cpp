@@ -641,3 +641,100 @@ void ClimateFileReader::printBlock(int theBlock)
     }
   }
 }
+const QString  ClimateFileReader::getWorldFile()
+{
+  QString myHeader;
+  if (mFileType==GDAL)
+  {
+    GDALDataset  *gdalDataset = (GDALDataset *) GDALOpen( mFileName.toLocal8Bit(), GA_ReadOnly );
+    if ( gdalDataset == NULL )
+    {
+      return QString("");
+    }
+    //get the geotransform stuff from gdal
+    double myTransform[6];
+    if (gdalDataset->GetGeoTransform(myTransform) != CE_None)
+    {
+      std::cout << "Failed to get geo transform from GDAL, aborting" << std::endl;
+      GDALClose(gdalDataset);
+      return QString("");
+    }
+    else
+    {
+      GDALClose(gdalDataset);
+    }
+
+    myHeader += "Pixel XDim " + QString::number(myTransform[1]) + "\r\n";
+    myHeader += "Rot 0 \r\n";
+    myHeader += "Rot 0 \r\n";
+    myHeader += "Pixel YDim " + QString::number(myTransform[5]) + "\r\n";
+    myHeader += "Origin X   " + QString::number(myTransform[0]) + "\r\n";
+    myHeader += "Origin Y   " + QString::number(myTransform[3]) + "\r\n";
+  }
+  return myHeader;
+}
+
+const QString  ClimateFileReader::getAsciiHeader()
+{
+  QString myHeader;
+  if (mFileType==GDAL)
+  {
+    GDALDataset  *gdalDataset = (GDALDataset *) GDALOpen( mFileName.toLocal8Bit(), GA_ReadOnly );
+    if ( gdalDataset == NULL )
+    {
+      return QString("");
+    }
+
+    //get dimesnions and no data value
+    int myColsInt = gdalDataset->GetRasterXSize();
+    int myRowsInt = gdalDataset->GetRasterYSize();
+    double myNullValue=gdalDataset->GetRasterBand(1)->GetNoDataValue();
+    //get the geotransform stuff from gdal
+    double myTransform[6];
+    if (gdalDataset->GetGeoTransform(myTransform) != CE_None)
+    {
+      std::cout << "Failed to get geo transform from GDAL, aborting" << std::endl;
+      GDALClose(gdalDataset);
+      return QString("");
+    }
+    else
+    {
+      GDALClose(gdalDataset);
+    }
+
+  
+
+    myHeader =  "NCOLS "        + QString::number(myColsInt) + "\r\n";
+    myHeader += "NROWS "        + QString::number(myRowsInt) + "\r\n";
+    float myYTop = myTransform[3];
+    float myXLeft = myTransform[0];
+    float myCellHeight = myTransform[5];
+    float myAbsCellHeight = fabs(myCellHeight);
+    float myHeight = myAbsCellHeight * myRowsInt;
+    float myYBottom = myYTop - myHeight;
+    //qDebug("YTop: " + QString::number(myYTop).toLocal8Bit());
+    //qDebug("XLeft: " + QString::number(myXLeft).toLocal8Bit());
+    //qDebug("CellHeight: " + QString::number(myCellHeight).toLocal8Bit());
+    //qDebug("RowCount: " + QString::number(myRowsInt).toLocal8Bit());
+    //qDebug("YBottom = YTop - (fabs(CellHeight) * fabs(RowsCount))");
+    //qDebug("YBottom: " + QString::number(myYBottom).toLocal8Bit());
+    myHeader += "XLLCORNER "    + QString::number(myXLeft) +  "\r\n";;
+    myHeader += "YLLCORNER "   + QString::number(myYBottom) +  "\r\n";
+    myHeader += "CELLSIZE "     + QString::number(myTransform[1]) +  "\r\n";
+    myHeader += "NODATA_VALUE " + QString::number(myNullValue) +  "\r\n";
+  }
+  else // non gdal
+  {
+        // Use the fixed matrix dimensions to create the ascii file
+        // Warning: this assumes a GLOBAL dataset
+        // Warning: this screws up cellsizes that are not square
+        // Warning: this only works for integers at present
+        myHeader = "ncols         " + QString::number (mXDim) + "\n" +
+            "nrows         " + QString::number (mYDim) + "\n" +
+            "xllcorner     -180\n" +
+            "yllcorner     -90\n"+
+            "cellsize      " + QString::number (360/static_cast<float>(mXDim)) + "\n" +
+            "nodata_value  -9999.5\n";
+  }
+  return myHeader;
+}
