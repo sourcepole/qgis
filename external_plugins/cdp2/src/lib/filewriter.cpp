@@ -66,6 +66,7 @@ FileWriter::FileWriter(QString theFileNameString, FileWriter::FileType theFileFo
 
 FileWriter::~FileWriter()
 {
+  close();
 }
 
 bool FileWriter::writeElement(float theElementFloat)

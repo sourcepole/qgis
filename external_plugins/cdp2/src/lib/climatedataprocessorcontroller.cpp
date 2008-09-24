@@ -1031,19 +1031,14 @@ bool ClimateDataProcessorController::run()
         // Warning: this assumes a GLOBAL dataset
         // Warning: this screws up cellsizes that are not square
         // Warning: this only works for integers at present
-        QString myHeader=
-            QString ("ncols         ") +
-            QString::number (myXDimInt) + 
-            QString ("\n")+
-            QString ("nrows         ") + 
-            QString::number (myYDimInt) + 
-            QString ("\n")+
-            QString ("xllcorner     -180\n")+
-            QString ("yllcorner     -90\n")+
-            QString ("cellsize      ") + 
-            QString::number (360/static_cast<float>(myXDimInt)) +
-            QString ("\n")+
-            QString ("nodata_value  -9999.5\n");
+        QString myHeader(
+            "ncols         " + QString::number (myXDimInt) + "\n" +
+            "nrows         " + QString::number (myYDimInt) + "\n" +
+            "xllcorner     -180\n" +
+            "yllcorner     -90\n"+
+            "cellsize      " + QString::number (360/static_cast<float>(myXDimInt)) + "\n" +
+            "nodata_value  -9999.5\n");
+	qDebug("Header:" + myHeader.toLocal8Bit());
         myFileWriter->writeString(myHeader);
         // Formerly this was fixed to the following
         //QString myHeader=

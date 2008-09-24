@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include <QtTest/QtTest>
 #include <climatedataprocessorcontroller.h>
+#include <climatefilereader.h>
 #include <QImage>
 #include <QList>
 
@@ -71,7 +72,7 @@ void CdpTest::runTest()
   myController.setTotalSolarRadFileName(mSolarRadFile);
   myController.setFrostDaysFileName(mFrostDaysFile);
 
-  myController.setOutputPath( QDir::tempPath() );
+  myController.setOutputPath( QDir::tempPath() + QDir::separator() );
 
   //specify which of the available calcs we want to actually do
   if (! myController.makeAvailableCalculationsMap() )
@@ -86,6 +87,8 @@ void CdpTest::runTest()
     QString myKey = myMapIterator.key();
     myController.addUserCalculation(myKey);
   }
+  myController.setInputFileType(ClimateFileReader::GDAL);
+  myController.setOutputFileType(FileWriter::ESRI_ASCII);
   // Show a summary of the controller state (for debug purposes only)  
   qDebug(myController.description().toLocal8Bit());
   if (! myController.makeFileGroups() )
