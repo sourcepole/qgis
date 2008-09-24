@@ -923,80 +923,80 @@ bool ClimateDataProcessorController::run()
   //create a data processor to do the low level processing
   ClimateDataProcessor myDataProcessor;
   //work out how many variables we are going to calculate
-  int myNumberOfVariablesInt = 0;
+  int myVariableCount = 0;
   QMap<QString, bool>::const_iterator myIter;
   for (myIter=mAvailableCalculationsMap.begin(); myIter != mAvailableCalculationsMap.end(); myIter++)
   {
     if (myIter.value()) //true
     {
-      myNumberOfVariablesInt++;
+      myVariableCount++;
     }
   }
   makeFileGroups();
   //
   //work out how many cells need to be processed for each calculations
   //
-  int myNumberOfCells =0;
-  int myXDimInt= 0;
-  int myYDimInt=0;
+  int myCellCount =0;
+  int myXDim= 0;
+  int myYDim=0;
   if (meanTempFileGroup)
   {
-    myNumberOfCells = meanTempFileGroup->elementCount();
-    myXDimInt=meanTempFileGroup->xDim();
-    myYDimInt=meanTempFileGroup->yDim();
+    myCellCount = meanTempFileGroup->elementCount();
+    myXDim=meanTempFileGroup->xDim();
+    myYDim=meanTempFileGroup->yDim();
   }
   else if (mpMinTempFileGroup)
   {
-    myNumberOfCells = mpMinTempFileGroup->elementCount();
-    myXDimInt=mpMinTempFileGroup->xDim();
-    myYDimInt=mpMinTempFileGroup->yDim();
+    myCellCount = mpMinTempFileGroup->elementCount();
+    myXDim=mpMinTempFileGroup->xDim();
+    myYDim=mpMinTempFileGroup->yDim();
   }
   else if (mpMaxTempFileGroup)
   {
-    myNumberOfCells = mpMaxTempFileGroup->elementCount();
-    myXDimInt=mpMaxTempFileGroup->xDim();
-    myYDimInt=mpMaxTempFileGroup->yDim();
+    myCellCount = mpMaxTempFileGroup->elementCount();
+    myXDim=mpMaxTempFileGroup->xDim();
+    myYDim=mpMaxTempFileGroup->yDim();
   }
   else if (mpDiurnalTempFileGroup)
   {
-    myNumberOfCells = mpDiurnalTempFileGroup->elementCount();
-    myXDimInt=mpDiurnalTempFileGroup->xDim();
-    myYDimInt=mpDiurnalTempFileGroup->yDim();
+    myCellCount = mpDiurnalTempFileGroup->elementCount();
+    myXDim=mpDiurnalTempFileGroup->xDim();
+    myYDim=mpDiurnalTempFileGroup->yDim();
   }
   else if (mpMeanPrecipFileGroup)
   {
-    myNumberOfCells = mpMeanPrecipFileGroup->elementCount();
-    myXDimInt=mpMeanPrecipFileGroup->xDim();
-    myYDimInt=mpMeanPrecipFileGroup->yDim();
+    myCellCount = mpMeanPrecipFileGroup->elementCount();
+    myXDim=mpMeanPrecipFileGroup->xDim();
+    myYDim=mpMeanPrecipFileGroup->yDim();
   }
   else if (mpFrostDaysFileGroup)
   {
-    myNumberOfCells = mpFrostDaysFileGroup->elementCount();
-    myXDimInt=mpFrostDaysFileGroup->xDim();
-    myYDimInt=mpFrostDaysFileGroup->yDim();
+    myCellCount = mpFrostDaysFileGroup->elementCount();
+    myXDim=mpFrostDaysFileGroup->xDim();
+    myYDim=mpFrostDaysFileGroup->yDim();
   }
   else if (mpTotalSolarRadFileGroup)
   {
-    myNumberOfCells = mpTotalSolarRadFileGroup->elementCount();
-    myXDimInt=mpTotalSolarRadFileGroup->xDim();
-    myYDimInt=mpTotalSolarRadFileGroup->yDim();
+    myCellCount = mpTotalSolarRadFileGroup->elementCount();
+    myXDim=mpTotalSolarRadFileGroup->xDim();
+    myYDim=mpTotalSolarRadFileGroup->yDim();
   }
   else if (mpWindSpeedFileGroup)
   {
-    myNumberOfCells = mpWindSpeedFileGroup->elementCount();
-    myXDimInt=mpWindSpeedFileGroup->xDim();
-    myYDimInt=mpWindSpeedFileGroup->yDim();
+    myCellCount = mpWindSpeedFileGroup->elementCount();
+    myXDim=mpWindSpeedFileGroup->xDim();
+    myYDim=mpWindSpeedFileGroup->yDim();
   }
   //check nothing fishy is going on
-  if (myNumberOfCells ==  0)
+  if (myCellCount ==  0)
   {
     return false;
   }
 
 
-  //send singals so progress monitors can set themselves up
-  emit numberOfCellsToCalc(myNumberOfCells);
-  emit numberOfVariablesToCalc(myNumberOfVariablesInt);
+  //send signals so progress monitors can set themselves up
+  emit numberOfCellsToCalc(myCellCount);
+  emit numberOfVariablesToCalc(myVariableCount);
 
 
   //create a filewriter map for storing the OUTPUTS of each selected user calculation
@@ -1077,7 +1077,7 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
@@ -1085,6 +1085,7 @@ bool ClimateDataProcessorController::run()
     }
     qDebug( " ++++++ Emitting variableDone signal! " );
     emit variableDone(myFileWriterStruct.fullFileName);
+    myFileWriter->close();
 
   }
   if (mpDiurnalTempFileGroup && mDiurnalTempFileName != "" &&
@@ -1115,12 +1116,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       ////emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1153,12 +1155,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       ////emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1190,12 +1193,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1233,12 +1237,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1270,12 +1275,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1307,12 +1313,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
 
   }
@@ -1344,12 +1351,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if ( mpMeanPrecipFileGroup &&  mpMinTempFileGroup
@@ -1387,12 +1395,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mpMinTempFileGroup && mMeanPrecipFileName != ""
@@ -1430,12 +1439,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""  &&
@@ -1465,12 +1475,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""  &&
@@ -1500,12 +1511,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""
@@ -1545,12 +1557,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""
@@ -1588,12 +1601,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""   &&
@@ -1623,12 +1637,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""   &&
@@ -1658,12 +1673,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpDiurnalTempFileGroup && mDiurnalTempFileName != ""
@@ -1702,12 +1718,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpDiurnalTempFileGroup && mDiurnalTempFileName != "" && meanTempFileGroup
@@ -1745,12 +1762,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup &&  mMeanPrecipFileName != ""  && mpFrostDaysFileGroup
@@ -1783,12 +1801,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -1820,12 +1839,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (meanTempFileGroup && mMeanTempFileName !="" &&
@@ -1855,12 +1875,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (meanTempFileGroup && mMeanTempFileName !="" && mpFrostDaysFileGroup
@@ -1893,12 +1914,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (meanTempFileGroup && mMeanTempFileName !="" &&
@@ -1928,12 +1950,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (meanTempFileGroup && mMeanTempFileName !="" &&
@@ -1963,12 +1986,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpWindSpeedFileGroup && mWindSpeedFileName != "" &&
@@ -1998,12 +2022,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMinTempFileGroup && mMinTempFileName !="" &&
@@ -2033,12 +2058,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2076,12 +2102,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2119,12 +2146,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2162,12 +2190,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2206,12 +2235,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2249,12 +2279,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2292,12 +2323,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
 
@@ -2336,12 +2368,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpTotalSolarRadFileGroup && mTotalSolarRadFileName != ""
@@ -2379,12 +2412,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (mpMeanPrecipFileGroup && mMeanPrecipFileName != "" &&
@@ -2414,12 +2448,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   if (meanTempFileGroup && mMeanTempFileName != ""
@@ -2449,12 +2484,13 @@ bool ClimateDataProcessorController::run()
         return false;
       }
       myXCountInt++;
-      if (myXCountInt%myXDimInt==0)
+      if (myXCountInt%myXDim==0)
       {
         myFileWriter->writeString("\n");
       }
       //emit cellDone( myFloat );
     }
+    myFileWriter->close();
     emit variableDone(myFileWriterStruct.fullFileName);
   }
   return true;
