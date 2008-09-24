@@ -63,14 +63,31 @@ FIND_PROGRAM(QT_LRELEASE_EXECUTABLE
     )
 
 #############################################################
+# Enable the use of RPATH so that the executeable
+# library search paths are relative to the executeable
+#
+
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+# the RPATH to be used when installing
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+
+#############################################################
 # enable warnings, halt compile on warnings
 IF (PEDANTIC AND NOT MSVC)
   ADD_DEFINITIONS( -Wall -Werror )
 ENDIF (PEDANTIC AND NOT MSVC)
 
-IF (CMAKE_BUILD_TYPE MATCHES Debug)
-  ADD_DEFINITIONS(-DCDP_NO_EXPERIMENTAL)
-ENDIF (CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 #############################################################
