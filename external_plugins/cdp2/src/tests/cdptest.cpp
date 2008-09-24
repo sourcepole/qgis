@@ -26,15 +26,20 @@ class CdpTest: public QObject
 {
   Q_OBJECT;
   private slots:
-  /** Regression test for making sure 
-      available calcs always computes correctly grid layers */
-  void availableCalcsTest(); 
+  void runTest(); 
   void initTestCase();// will be called before the first testfunction is executed.
   void cleanupTestCase();// will be called after the last testfunction was executed.
   void init(){};// will be called before each testfunction is executed.
   void cleanup(){};// will be called after every testfunction.
   private:
   //add private test vars here
+  QString mMeanTempFile;
+  QString mMinTempFile;
+  QString mMaxTempFile;
+  QString mDiurnalTempFile;
+  QString mSolarRadFile;
+  QString mMeanPrecipFile;
+  QString mFrostDaysFile;
 };
 
 void CdpTest::initTestCase()
@@ -42,12 +47,53 @@ void CdpTest::initTestCase()
   QCoreApplication::setOrganizationName("Linfiniti Consulting");
   QCoreApplication::setOrganizationDomain("linfiniti.com");
   QCoreApplication::setApplicationName("ClimateDataProcessor");
+  QString myFileName (TEST_DATA_DIR); //defined in CmakeLists.txt
+  mMeanTempFile = myFileName + QDir::separator() + "meantemp01.asc";
+  mMinTempFile = myFileName + QDir::separator() + "mintemp01.asc";
+  mMaxTempFile = myFileName + QDir::separator() + "maxtemp01.asc";
+  mDiurnalTempFile = myFileName + QDir::separator() + "diurnaltemp01.asc";
+  mSolarRadFile = myFileName + QDir::separator() + "solarrad01.asc";
+  mMeanPrecipFile = myFileName + QDir::separator() + "meanprecip01.asc";
+  mFrostDaysFile = myFileName + QDir::separator() + "frostdays01.asc";
 }
+
 void CdpTest::cleanupTestCase()
 {
 }
-void CdpTest::availableCalcsTest()
+void CdpTest::runTest()
 {
+  ClimateDataProcessorController myController;
+  myController.setMeanTempFileName(mMeanTempFile);
+  myController.setMinTempFileName(mMinTempFile);
+  myController.setMaxTempFileName(mMaxTempFile);
+  myController.setDiurnalTempFileName(mDiurnalTempFile);
+  myController.setMeanPrecipFileName(mMeanPrecipFile);
+  myController.setTotalSolarRadFileName(mSolarRadFile);
+  myController.setFrostDaysFileName(mFrostDaysFile);
+
+  myController.setOutputPath( QDir::tempPath() );
+
+  //specify which of the available calcs we want to actually do
+  if (! myController.makeAvailableCalculationsMap() )
+  {
+    QFAIL ("Error making available calcs map");
+  }
+  QMap<QString, bool> myMap = myController.availableCalculationsMap();
+  QMapIterator<QString, bool> myMapIterator(myMap);
+  while (myMapIterator.hasNext())
+  {
+    myMapIterator.next();
+    QString myKey = myMapIterator.key();
+    myController.addUserCalculation(myKey);
+  }
+  // Show a summary of the controller state (for debug purposes only)  
+  qDebug(myController.description().toLocal8Bit());
+  if (! myController.makeFileGroups() )
+  {
+    QFAIL ("Failed to make file groups");
+  }
+  myController.run();
+
 }
 
 QTEST_MAIN(CdpTest) 
