@@ -1,0 +1,10 @@
+To edit and add text to the article open the article.tex file with your
+favorite editor and start. Images go into the images folder, where you need
+to add it to the Makefile as shown with the example-image.png.
+
+- To create a dvi file type: make
+- To create a pdf file type: make pdf
+
+Before you commit your changes back to svn type 'make clean'
+
+
