@@ -10,7 +10,7 @@
 # with .eps extension:
 #EPS=datenbank_vect.eps
 
-PNG=test-image.eps\
+PNG=community-map.eps\
 	    
 ##### TARGETS #####
 
