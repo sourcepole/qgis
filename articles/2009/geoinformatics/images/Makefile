@@ -11,7 +11,9 @@
 #EPS=datenbank_vect.eps
 
 PNG=community-map.eps\
-	    
+    python-plugin-installer.eps\
+    qgis10.eps\
+    
 ##### TARGETS #####
 
 all:  $(PNG)
