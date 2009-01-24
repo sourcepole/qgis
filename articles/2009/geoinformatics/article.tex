@@ -4,7 +4,8 @@
 
 Quantum GIS (QGIS) is a user friendly Geographic Information System (GIS) and
 an official project of the Open Source Geospatial Foundation (OSGeo). QGIS is
-licensed under the GNU General Public License.
+written in C++ and Python with a QT based GUI. It is licensed inder the GNU
+General Public License (GPL).
 
 \minisec{History}
 
@@ -69,13 +70,16 @@ database management. The integrated GRASS Plugin allows to include the
 complete GRASS functionality of more than 300 modules.
 \end{itemize}
 
-\subsection{Plugins}
+\subsection{Plugin Architecture}
 
-QGIS can be adapted to your special needs with the help of an extensible
+QGIS can be customized to your special needs with the help of an extensible
 plugin architecture. It provides libraries that can be used to create
-QGIS plugins or even new applications with C++ or Python. Most Python plugins
-are managed in external repositories, and can be easily installed using the
-Python Plugin Installer.
+QGIS plugins or even new applications with C++ or Python. 
+
+\subsection{External Python Plugin Repositories}
+
+Most Python plugins are managed in external repositories, and can be easily
+installed using the Python Plugin Installer.
 
 \begin{figure}[h]
    \begin{center}
@@ -83,8 +87,6 @@ Python Plugin Installer.
    \includegraphics[clip=true, width=\textwidth]{python-plugin-installer}
 \end{center}
 \end{figure}
-
-
 
 
 \subsection{Development}
