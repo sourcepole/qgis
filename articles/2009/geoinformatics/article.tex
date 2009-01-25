@@ -2,46 +2,57 @@
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-Quantum GIS (QGIS) is a user friendly Geographic Information System (GIS) and
-an official project of the Open Source Geospatial Foundation (OSGeo). QGIS is
-written in C++ and Python with a QT based GUI. It is licensed inder the GNU
-General Public License (GPL).
+Quantum GIS (QGIS) is a user friendly Geographic Information System (GIS).
+It is written in C++ and Python with a QT based GUI. It is licensed under the
+GNU General Public License (GPL) and an official project of the Open Source
+Geospatial Foundation (OSGeo). The current stable version 1.0 was released in
+January 2009. 
 
 \minisec{History}
 
-QGIS began life in February of 2002, with the first release in June of the
-same year. The initial goal was to create a viewer for PostGIS data that ran
-on GNU/Linux. From those humble beginnings, QGIS has become a true
-cross-platform application that runs on all major versions of unix,
+The QGIS project started in February of 2002, with the first release in June
+of the same year. The initial goal was to create a viewer for PostGIS data
+that ran on GNU/Linux. From those beginnings, QGIS has become a true
+cross-platform application that runs on all major versions of Unix,
 GNU/Linux, as well as Mac OS and MS Windows. It supports numerous vector,
 raster, and database formats and provides a wide variety of core and external
 geoprocessing functionalities.
 
 \subsection{QGIS Open Source Community}
 
-The QGIS project is Open Source and carried out largely by a group of
-developers, translators, documenters, release helpers, bug reporters, and
-promoters. All these volunteers together with a large number of users make up
-the QGIS comunity, which in time has built up a comprehensive, valuable and
-useful code and documentation base free to use and improve for everybody.
+The QGIS project is carried out largely by a group of dedicated developers,
+translators, documenters, release helpers, bug reporters, and promoters. It
+is managed by the Project Steering Committee (PSC), a five member committee
+providing technical guidance, community liason, release management, and
+financial/marketing activities. The work of the QGIS project process is
+spread between numerous people who each have a specific area of
+resposibility. 
+
+All these volunteers together with a large number of users make up the
+world-wide QGIS comunity, which in time has built up a comprehensive,
+valuable and useful code and documentation base free to use and improve for
+everybody.
 
 \begin{figure}[h]
    \begin{center}
    \caption{QGIS Community Map}\label{fig:community-map}\smallskip
-   \includegraphics[clip=true]{community-map}
+   \includegraphics[clip=true, width=10cm]{community-map}
 \end{center}
 \end{figure}
 
-There are several possibilities to get in contact with the QGIS project. 
-A prefered way is is by joining the qgis-users mailing list or the QGIS Forum. 
+With community platforms such as website, wiki, and blog the QGIS project
+provides latest news, release, usage, and development information and also
+allows own contributions after subscription. A prefered first step to contact
+other users for discussions of QGIS in general, as well as specific questions
+regarding its installation and use is by joining the qgis-user mailing list,
+the QGIS Forum or the Internet Relay Chat (IRC).
 
 \subsection{Functionality}
 
-Current QGIS 1.0, released in January 2009, provides a stable API from which
-you can develop custom solutions in Python or C++. Even though 1.0 is fresh,
-there are a number of exciting developments underway in both the core
-application and plugins. QGIS offers a growing number of common GIS
-functionalities provided by core features and plugins. This includes to:
+QGIS offers a growing number of common GIS functionalities provided by core
+features and plugins. They are presented in a friendly graphical user
+interface, clearly seperated in menu bar, tool bar, status bar, map view,
+overview, and map legend (see Figure~\ref{fig:qgis10}).
 
 \begin{figure}[h]
    \begin{center}
@@ -49,6 +60,9 @@ functionalities provided by core features and plugins. This includes to:
    \includegraphics[clip=true, width=\textwidth]{qgis10}
 \end{center}
 \end{figure}
+
+The menu and tool bar give access to all QGIS features and at a glance
+provide following features: 
 
 \begin{itemize}
 \item view and overlay vector and raster layer in different formats and
@@ -72,14 +86,31 @@ complete GRASS functionality of more than 300 modules.
 
 \subsection{Plugin Architecture}
 
-QGIS can be customized to your special needs with the help of an extensible
-plugin architecture. It provides libraries that can be used to create
-QGIS plugins or even new applications with C++ or Python. 
+QGIS has been designed with a plugin architecture and therefore new
+customized features and functions can easily be added to the application.
+Many of the features in QGIS are actually implemented as core or external
+plugins. 
 
-\subsection{External Python Plugin Repositories}
+\textbf{Core Plugins} are maintained by the QGIS Development Team. They are
+written in C++ or Python, are automatically part of every QGIS distribution
+and can be loaded with the Plugin Manager. There are currently 17 core
+plugins available, such as GRASS GIS integration (See
+Figure~\ref{fig:grass-plugin}), Georeferencer, Mapserver Export, Shapefile to
+PostGIS Import Tool, OGR Layer Converter, GPS Tools, Add Delimited Text Layer
+or WFS support:  
 
-Most Python plugins are managed in external repositories, and can be easily
-installed using the Python Plugin Installer.
+\begin{figure}[h]
+   \begin{center}
+   \caption{QGIS Core Plugin (GRASS GIS Integration)}
+    \label{fig:grass-plugin}\smallskip
+   \includegraphics[clip=true, width=14cm]{grass-plugin}
+\end{center}
+\end{figure}
+
+\textbf{External Plugins} are all written in Python. They are stored in
+an official, external repository and maintained by the individual author. The
+user can easily add those Plugins to QGIS with the Python Plugin Installer
+(See Figure~\ref{fig:python-plugin}).
 
 \begin{figure}[h]
    \begin{center}
@@ -90,6 +121,10 @@ installed using the Python Plugin Installer.
 
 
 \subsection{Development}
+
+QGIS 1.0 provides a stable API from which custom solutions in Python or C++
+can be developed. Even though 1.0 is pretty fresh, there are already a number
+of exciting developments underway in both the core application and plugins.
 
 \subsection{Perspective / Conclusion}
 
@@ -107,7 +142,11 @@ Otto Dassau <dassau@nature-consult.de>
 
 For more information, have a look at the following website:
 
-Quantum GIS project: http://qgis.osgeo.org
+Quantum GIS project: http://qgis.org
+\\QGIS Forum: http://forum.qgis.org
+\\QGIS Blog: http://blog.qgis.org
+\\QGIS User Mailing List: http://lists.osgeo.org/mailman/listinfo/qgis-user
+\\QGIS IRC: Channel \#qgis port 6667 at irc.freenode.net
 \\Open Source Geospatial Foundation: http://www.osgeo.org
  
 
