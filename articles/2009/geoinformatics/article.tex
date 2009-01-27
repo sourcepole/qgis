@@ -50,22 +50,41 @@ with other users and for discussions of QGIS in general. In the spirit of open
 process and sharing knowledge, contacting developers directly instead of going through 
 these community based avenues of communication is frowned apon.
 
-\subsection{Functionality}
+\subsection{Graphical User Interface}
 
-QGIS offers a growing number of common GIS functionality provided by core
-features and plugins. They are presented in a friendly graphical user
-interface, clearly seperated into a menu bar, tool bars, status bar, map view,
-overview, and map legend (see Figure~\ref{fig:qgis10}).
+Working with QGIS is simple and intuitive as you are presented with a
+modern and friendly graphical user interface (GUI) based on QT4. All
+functionalities are clearly seperated (see Figure~\ref{fig:qgis10}).
 
 \begin{figure}[h]
    \begin{center}
    \caption{Quantum GIS 1.0.0 'Kore'}\label{fig:qgis10}\smallskip
-   \includegraphics[clip=true, width=\textwidth]{qgis10}
+   \includegraphics[clip=true, width=12cm]{qgis10}
 \end{center}
 \end{figure}
 
-The menu and tool bars give access to all QGIS features and at a glance
-provide following features: 
+A \textbf{menu bar} provides access to QGIS features using a standard
+hierarchical menu, with icons of the corresponding tools as they appear on
+the tool bar and with keyboard shortcuts. The \textbf{tool bar} icons provide
+direct access to functions of the menu bar, plus additional tools for
+interacting with the map view. To make the GUI appear clearer, tool bar icons
+can be switched on and off. The 'business end' of QGIS is the \textbf{map
+view}. Various operations can be performed on the map, such as pan, zoom-in,
+zoom-out, select or query. It is tightly bound to the \textbf{map legend},
+where layer visibility is managed and set to a z-order, meaning layers
+listed nearer the top of the legend are drawn over layers listed lower down.
+The \textbf{map overview} area provides a full extent view of selected layers
+with a rectangle showing the current map extent in the map view. And the
+\textbf{status bar} finally shows the current mouse pointer position in map
+coordinates, view extents of the map view, the progress of rendering or
+analysis activities, the current map scale depending on the defined
+Coordinate Reference System (CRS) and information about available external
+plugin updates.    
+
+\subsection{Functionality}
+
+QGIS offers a growing number of common GIS functionality provided by core
+features and plugins and at a glance provide following features: 
 
 \begin{itemize}
 \item view and overlay vector and raster layer in different formats and
@@ -86,6 +105,14 @@ supported vector layers including overlay, buffer, sampling, geometry and
 database management. The integrated GRASS Plugin allows to include the
 complete GRASS functionality of more than 300 modules.
 \end{itemize}
+
+\begin{figure}[h]
+   \begin{center}
+   \caption{QGIS Geoprocessing Tools}
+    \label{fig:geoprocessing}\smallskip
+   \includegraphics[clip=true, width=8cm]{geoprocessing}
+\end{center}
+\end{figure}
 
 \subsection{Plugin Architecture}
 
@@ -110,18 +137,30 @@ or WFS support:
 \end{center}
 \end{figure}
 
-\textbf{External Plugins} are all written in Python. They are stored in
-an official, external repository and maintained by the individual author. The
-user can easily add those Plugins to QGIS with the Python Plugin Installer
-(See Figure~\ref{fig:python-plugin}).
+\textbf{External Plugins} are all written in Python and devided into official
+and user contributed plugins. The user can easily add those Plugins to QGIS
+with the Python Plugin Installer (See Figure~\ref{fig:python-plugin}).
+
+\begin{itemize}
+\item \textbf{Official} external python plugins are stored in an official,
+moderated repository at \url{http://pyqgis.org/repo/official} as part of the
+official QGIS release and maintained by the individual author.
+\item \textbf{User-Contributed} external python plugins are stored in an
+unofficial repository at \url{http://pyqgis.org/repo/contributed} and contain
+plugins that are not yet mature enough but on the way to the official
+repository.
+\end{itemize}
+
+Beside these two respositories a few QGIS developers provide and maintain
+their own repositories. They can be added to the repository list of the
+Python Plugin Installer.  
 
 \begin{figure}[h]
    \begin{center}
    \caption{QGIS Python Plugin Installer}\label{fig:python-plugin}\smallskip
-   \includegraphics[clip=true, width=\textwidth]{python-plugin-installer}
+   \includegraphics[clip=true, width=14cm]{python-plugin-installer}
 \end{center}
 \end{figure}
-
 
 \subsection{Development}
 

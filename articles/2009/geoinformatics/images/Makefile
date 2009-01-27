@@ -14,7 +14,8 @@ PNG=community-map.eps\
     python-plugin-installer.eps\
     grass-plugin.eps\
     qgis10.eps\
-    
+    geoprocessing.eps\
+   
 ##### TARGETS #####
 
 all:  $(PNG)
