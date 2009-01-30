@@ -23,17 +23,17 @@ geoprocessing functionalities.
 The QGIS project is the work of a group of dedicated developers,
 translators, documenters, release helpers, bug reporters, and promoters. Their 
 contributions are mainly on a voluntary basis, except in a few cases where 
-contributors are able to work on QGIS as part of their daily work. QGIS 
+contributors are able to contribute to QGIS as part of their daily work. QGIS 
 is managed by the Project Steering Committee (PSC), a five member committee
 providing technical guidance, community liason, release management, and
 financial/marketing activities. The work of the QGIS project process is
 spread between numerous people who each have a specific area of
-resposibility, and ad hoc contributors.
+resposibility, and ad-hoc contributors.
 
 These volunteers together with a large number of users make up the
 world-wide QGIS comunity. Over time their efforts have resulted in a comprehensive,
 valuable and useful code and documentation base which is free for everyone 
-to use and improve on.
+to use and improve apon.
 
 \begin{figure}[h]
    \begin{center}
@@ -43,7 +43,7 @@ to use and improve on.
 \end{figure}
 
 With community platforms such as our website, wiki, forums and blog the QGIS project
-provides latest news, release, usage, and development information. In most cases 
+provides current news, release, usage, and development information. In most cases 
 these community web sites permit user contributions after registering. 
 The QGIS-user mailing, forum and Internet Relay Chat (IRC) provide a valuable interface 
 with other users and for discussions of QGIS in general. In the spirit of open 
@@ -54,7 +54,7 @@ these community based avenues of communication is frowned apon.
 
 Working with QGIS is simple and intuitive as you are presented with a
 modern and friendly graphical user interface (GUI) based on QT4. All
-functionalities are clearly seperated (see Figure~\ref{fig:qgis10}).
+functions are clearly separated (see Figure~\ref{fig:qgis10}).
 
 \begin{figure}[h]
    \begin{center}
@@ -123,11 +123,11 @@ plugins.
 
 \textbf{Core Plugins} are maintained by the QGIS Development Team. They are
 written in C++ or Python, are automatically part of every QGIS distribution
-and can be loaded with the Plugin Manager. There are currently 17 core
-plugins available, such as GRASS GIS integration (See
+and can be enabled with the Plugin Manager. There are currently 17 core
+plugins available, including GRASS GIS integration (See
 Figure~\ref{fig:grass-plugin}), Georeferencer, Mapserver Export, Shapefile to
 PostGIS Import Tool, OGR Layer Converter, GPS Tools, Add Delimited Text Layer
-or WFS support:  
+and WFS support.
 
 \begin{figure}[h]
    \begin{center}
@@ -137,22 +137,22 @@ or WFS support:
 \end{center}
 \end{figure}
 
-\textbf{External Plugins} are all written in Python and devided into official
+\textbf{External Plugins} are all written in Python and divided into official
 and user contributed plugins. The user can easily add those Plugins to QGIS
 with the Python Plugin Installer (See Figure~\ref{fig:python-plugin}).
 
 \begin{itemize}
 \item \textbf{Official} external python plugins are stored in an official,
 moderated repository at \url{http://pyqgis.org/repo/official} as part of the
-official QGIS release and maintained by the individual author.
+official QGIS release and maintained by their respective author.
 \item \textbf{User-Contributed} external python plugins are stored in an
 unofficial repository at \url{http://pyqgis.org/repo/contributed} and contain
 plugins that are not yet mature enough but on the way to the official
 repository.
 \end{itemize}
 
-Beside these two respositories a few QGIS developers provide and maintain
-their own repositories. They can be added to the repository list of the
+Beside these two respositories a number of QGIS developers provide and maintain
+their own repositories. These can be added to the repository list of the
 Python Plugin Installer.  
 
 \begin{figure}[h]
@@ -168,35 +168,36 @@ Python Plugin Installer.
 %can be developed. Even though 1.0 is pretty fresh, there are already a number
 %of exciting developments underway in both the core application and plugins.
 
-As QGIS is open source software, it is possible to participate in development
+Since QGIS is open source software, it is possible to participate in the development
 process and also to write new applications that use the libraries of the QGIS
 project. Development with QGIS can be done either in the existing classes of
 QGIS, as plugin extensions or in the form of custom applications that make use
 of the QGIS libraries. As a general note all code in QGIS is licensed under the
 GNU GPL. That means that for all three cases, published software must be
-distributed under the terms of the GPL too. QGIS 1.0 provides a stable API such
-that changes to developed plugins and applications will only be necessary for
-version 2 of QGIS.
+distributed under the terms of the GPL too. QGIS 1.0 provides a stable API which 
+provides an assurance that plugins and applications developed against the 1.0 API 
+will work against future releases in the 1.X release series.
 
 \subsubsection{Development in the core classes of QGIS}
-Changes in the already existing classes may be placed as patches at the bug
-tracker of the QGIS project (https://trac.osgeo.org/qgis/). The code
-maintainers of the QGIS project, each responsible for a certain part of the
-code base, regularly check the tracker.
+Changes to existing classes may be submitted as patches using QGIS Project bug
+tracker (https://trac.osgeo.org/qgis/). The code maintainers of the QGIS
+project, each responsible for a certain part of the code base, regularly check
+the tracker.
 
 \subsubsection{Development of extensions as C++ or Python plugins}
 There is a plugin interface that allows extensions to access the running QGIS
 instance and to use and extend the objects in the core of QGIS. Plugins may be
 written in C++ or in Python. The QGIS documentation contains simple examples
-for both such that it is straightforward to start with plugin programming.
+for both programming languages making it straightforward to start with plugin 
+programming.
 
 \subsubsection{Custom applications that use the QGIS libaries}
-It is also possible to write new applications that provide its own user
+It is also possible to write new applications that provide their own user
 interface and use the QGIS core library for the GIS logic, data access and map
 rendering. 
 
-An example for this approach is the QGIS mapserver project that provides a WMS
-compatible mapserver on top of the QGIS core library. This software has not a
+An example using this approach is the QGIS mapserver project that provides a WMS
+compatible mapserver on top of the QGIS core library. This software has no 
 graphical user interface. It is a FastCGI application that waits until called
 by a webserver. It parses the request parameters and uses QGIS to render a map
 into an offscreen buffer. The content is then returned as binary image back to
@@ -204,9 +205,9 @@ the client.
 
 Another context where this approach would make sense is to provide a mapping
 application for mobile devices. Applications for mobile devices usually need
-different user interfaces compared to applications for desktop computers and
-laptops. Still those applications could use the QGIS libraries as a GIS
-backend.
+different user interfaces to desktop computers applications and
+laptops. The QGIS libraries offer the potential to be used as a GIS backend for 
+applications targeted to mobile devices.
 
 \subsection{Perspective / Conclusion}
 
