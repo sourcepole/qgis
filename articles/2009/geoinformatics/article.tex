@@ -168,20 +168,45 @@ Python Plugin Installer.
 %can be developed. Even though 1.0 is pretty fresh, there are already a number
 %of exciting developments underway in both the core application and plugins.
 
-As QGIS is open source software, it is possible to participate in development process and also to write new applications that use the libraries of the QGIS project. Development with QGIS can be done either in the existing classes of QGIS, as plugin extensions or in the form of custom applications that make use of the QGIS libraries. As a general note all code in QGIS is licensed under the GNU GPL. That means that for all three cases, published software must be distributed under the terms of the GPL too. QGIS 1.0 provides a stable API such that changes to developed plugins and applications will only be necessary for version 2 of QGIS.
+As QGIS is open source software, it is possible to participate in development
+process and also to write new applications that use the libraries of the QGIS
+project. Development with QGIS can be done either in the existing classes of
+QGIS, as plugin extensions or in the form of custom applications that make use
+of the QGIS libraries. As a general note all code in QGIS is licensed under the
+GNU GPL. That means that for all three cases, published software must be
+distributed under the terms of the GPL too. QGIS 1.0 provides a stable API such
+that changes to developed plugins and applications will only be necessary for
+version 2 of QGIS.
 
 \subsubsection{Development in the core classes of QGIS}
-Changes in the already existing classes may be placed as patches at the bug tracker of the QGIS project (https://trac.osgeo.org/qgis/). The code maintainers of the QGIS project, each responsible for a certain part of the code base, regularly check the tracker.
+Changes in the already existing classes may be placed as patches at the bug
+tracker of the QGIS project (https://trac.osgeo.org/qgis/). The code
+maintainers of the QGIS project, each responsible for a certain part of the
+code base, regularly check the tracker.
 
 \subsubsection{Development of extensions as C++ or Python plugins}
-There is a plugin interface that allows extensions to access the running QGIS instance and to use and extend the objects in the core of QGIS. Plugins may be written in C++ or in Python. The QGIS documentation contains simple examples for both such that it is straightforward to start with plugin programming.
+There is a plugin interface that allows extensions to access the running QGIS
+instance and to use and extend the objects in the core of QGIS. Plugins may be
+written in C++ or in Python. The QGIS documentation contains simple examples
+for both such that it is straightforward to start with plugin programming.
 
 \subsubsection{Custom applications that use the QGIS libaries}
-It is also possible to write new applications that provide its own user interface and use the QGIS core library for the GIS logic, data access and map rendering. 
+It is also possible to write new applications that provide its own user
+interface and use the QGIS core library for the GIS logic, data access and map
+rendering. 
 
-An example for this approach is the QGIS mapserver project that provides a WMS compatible mapserver on top of the QGIS core library. This software has not a graphical user interface. It is a FastCGI application that waits until called by a webserver. It parses the request parameters and uses QGIS to render a map into an offscreen buffer. The content is then returned as binary image back to the client.
+An example for this approach is the QGIS mapserver project that provides a WMS
+compatible mapserver on top of the QGIS core library. This software has not a
+graphical user interface. It is a FastCGI application that waits until called
+by a webserver. It parses the request parameters and uses QGIS to render a map
+into an offscreen buffer. The content is then returned as binary image back to
+the client.
 
-Another context where this approach would make sense is to provide a mapping application for mobile devices. Applications for mobile devices usually need different user interfaces compared to applications for desktop computers and laptops. Still those applications could use the QGIS libraries as a GIS backend.
+Another context where this approach would make sense is to provide a mapping
+application for mobile devices. Applications for mobile devices usually need
+different user interfaces compared to applications for desktop computers and
+laptops. Still those applications could use the QGIS libraries as a GIS
+backend.
 
 \subsection{Perspective / Conclusion}
 
