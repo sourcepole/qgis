@@ -14,7 +14,7 @@ The QGIS project started in February of 2002, with the first release in June
 of the same year. The initial goal was to create a viewer for PostGIS data
 that ran on GNU/Linux. From those beginnings, QGIS has become a true
 cross-platform application that runs on all major versions of Unix,
-GNU/Linux, as well as Mac OS and MS Windows. It supports numerous vector,
+GNU/Linux, as well as Mac OSX and MS Windows. It supports numerous vector,
 raster, and database formats and provides a wide variety of core and external
 geoprocessing functionalities.
 
@@ -28,12 +28,12 @@ is managed by the Project Steering Committee (PSC), a five member committee
 providing technical guidance, community liason, release management, and
 financial/marketing activities. The work of the QGIS project process is
 spread between numerous people who each have a specific area of
-resposibility, and ad-hoc contributors.
+responsibility, and ad-hoc contributors.
 
 These volunteers together with a large number of users make up the
 world-wide QGIS comunity. Over time their efforts have resulted in a comprehensive,
 valuable and useful code and documentation base which is free for everyone 
-to use and improve apon.
+to use and improve upon.
 
 \begin{figure}[h]
    \begin{center}
@@ -67,7 +67,7 @@ A \textbf{menu bar} provides access to QGIS features using a standard
 hierarchical menu, with icons of the corresponding tools as they appear on
 the tool bar and with keyboard shortcuts. The \textbf{tool bar} icons provide
 direct access to functions of the menu bar, plus additional tools for
-interacting with the map view. To make the GUI appear clearer, tool bar icons
+interacting with the map view. To make the GUI appear simpler, tool bar icons
 can be switched on and off. The 'business end' of QGIS is the \textbf{map
 view}. Various operations can be performed on the map, such as pan, zoom-in,
 zoom-out, select or query. It is tightly bound to the \textbf{map legend},
@@ -90,7 +90,7 @@ features and plugins and at a glance provide following features:
 \item view and overlay vector and raster layer in different formats and
 projections without conversion to an internal or common format. Supported are
 PostgreSQL/PostGIS, GDAL/OGR supported vector and raster layers such as ESRI
-Shapefile, MapInfo, GML, GeoTiff or Erdas Img., GRASS locations, and
+Shapefile, MapInfo, GML, GeoTiff or Erdas Img., GRASS rasters, vectors, and locations, and
 OGC-compliant WMS and WFS;
 \item interactively explore data, including features such as on the fly
 (OTF) projection, identify/select geometries, view, select and search
@@ -99,11 +99,10 @@ attributes, label features, change vector and raster symbology;
 text lables in a print composer plugin;
 \item create, edit, manage and export vector layers into several formats.
 Raster layer have to be imported into GRASS GIS to be edited and
-exported. 
+exported;
 \item perform spatial geoprocessing on PostgreSQL/PostGIS and other OGR
 supported vector layers including overlay, buffer, sampling, geometry and
-database management. The integrated GRASS Plugin allows to include the
-complete GRASS functionality of more than 300 modules.
+database management. The integrated GRASS Plugin allows to include the GRASS functionality of more than 300 modules.
 \end{itemize}
 
 \begin{figure}[h]
@@ -131,7 +130,7 @@ and WFS support.
 
 \begin{figure}[h]
    \begin{center}
-   \caption{QGIS Core Plugin (GRASS GIS Integration)}
+   \caption{One of the QGIS Core Plugin (GRASS GIS Integration)}
     \label{fig:grass-plugin}\smallskip
    \includegraphics[clip=true, width=14cm]{grass-plugin}
 \end{center}
@@ -153,7 +152,7 @@ repository.
 
 Beside these two respositories a number of QGIS developers provide and maintain
 their own repositories. These can be added to the repository list of the
-Python Plugin Installer.  
+Python Plugin Installer.
 
 \begin{figure}[h]
    \begin{center}
@@ -168,19 +167,19 @@ Python Plugin Installer.
 %can be developed. Even though 1.0 is pretty fresh, there are already a number
 %of exciting developments underway in both the core application and plugins.
 
-Since QGIS is open source software, it is possible to participate in the development
+Since QGIS is open source software, it is possible and encouraged to participate in the development
 process and also to write new applications that use the libraries of the QGIS
 project. Development with QGIS can be done either in the existing classes of
 QGIS, as plugin extensions or in the form of custom applications that make use
-of the QGIS libraries. As a general note all code in QGIS is licensed under the
-GNU GPL. That means that for all three cases, published software must be
+of the QGIS libraries. All code in QGIS is licensed under the
+GNU GPL (\url{http://www.fsf.org/licensing/licenses/gpl.html}). That means that for all three cases, published software must be
 distributed under the terms of the GPL too. QGIS 1.0 provides a stable API which 
 provides an assurance that plugins and applications developed against the 1.0 API 
 will work against future releases in the 1.X release series.
 
 \subsubsection{Development in the core classes of QGIS}
 Changes to existing classes may be submitted as patches using QGIS Project bug
-tracker (https://trac.osgeo.org/qgis/). The code maintainers of the QGIS
+tracker (\url{https://trac.osgeo.org/qgis/}). The code maintainers of the QGIS
 project, each responsible for a certain part of the code base, regularly check
 the tracker.
 
@@ -189,14 +188,14 @@ There is a plugin interface that allows extensions to access the running QGIS
 instance and to use and extend the objects in the core of QGIS. Plugins may be
 written in C++ or in Python. The QGIS documentation contains simple examples
 for both programming languages making it straightforward to start with plugin 
-programming.
+programming. The development of python plugins is especially fast and convenient. Simple plugins require only a few hours of development. As a result, an increasing number of users are contributing new plugins, of either specialized or general use.
 
 \subsubsection{Custom applications that use the QGIS libaries}
 It is also possible to write new applications that provide their own user
 interface and use the QGIS core library for the GIS logic, data access and map
 rendering. 
 
-An example using this approach is the QGIS mapserver project that provides a WMS
+An example using this approach is the QGIS mapserver project (\url{http://karlinapp.ethz.ch}) that provides a WMS
 compatible mapserver on top of the QGIS core library. This software has no 
 graphical user interface. It is a FastCGI application that waits until called
 by a webserver. It parses the request parameters and uses QGIS to render a map
@@ -225,12 +224,12 @@ Otto Dassau <dassau@nature-consult.de>
 
 For more information, have a look at the following website:
 
-Quantum GIS project: http://qgis.org
-\\QGIS Forum: http://forum.qgis.org
-\\QGIS Blog: http://blog.qgis.org
-\\QGIS User Mailing List: http://lists.osgeo.org/mailman/listinfo/qgis-user
-\\QGIS IRC: Channel \#qgis port 6667 at irc.freenode.net
-\\Open Source Geospatial Foundation: http://www.osgeo.org
+Quantum GIS project: \url{http://qgis.org}
+\\QGIS Forum: \url{http://forum.qgis.org}
+\\QGIS Blog: \url{http://blog.qgis.org}
+\\QGIS User Mailing List: \url{http://lists.osgeo.org/mailman/listinfo/qgis-user}
+\\QGIS IRC: Channel \#qgis port 6667 at \url{irc.freenode.net}
+\\Open Source Geospatial Foundation: \url{http://www.osgeo.org}
  
 
 
