@@ -31,7 +31,8 @@ spread between numerous people who each have a specific area of
 responsibility, and ad-hoc contributors.
 
 These volunteers together with a large number of users make up the
-world-wide QGIS community. Over time their efforts have resulted in a comprehensive,
+world-wide QGIS community. Over time their efforts have resulted in a
+comprehensive,
 valuable and useful code and documentation base which is free for everyone 
 to use and improve upon.
 
@@ -42,12 +43,16 @@ to use and improve upon.
 \end{center}
 \end{figure}
 
-With community platforms such as our website, wiki, forums and blog the QGIS project
-provides current news, release, usage, and development information. In most cases 
+With community platforms such as our website, wiki, forums and blog the QGIS
+project
+provides current news, release, usage, and development information. In most
+cases 
 these community web sites permit user contributions after registering. 
-The QGIS-user mailing, forum and Internet Relay Chat (IRC) provide a valuable interface 
+The QGIS-user mailing, forum and Internet Relay Chat (IRC) provide a valuable
+interface 
 with other users and for discussions of QGIS in general. In the spirit of open 
-process and sharing knowledge, contacting developers directly instead of going through 
+process and sharing knowledge, contacting developers directly instead of going
+through 
 these community based avenues of communication is frowned upon.
 
 \subsection{Graphical User Interface}
@@ -90,7 +95,8 @@ features and plugins and at a glance provide following features:
 \item view and overlay vector and raster layer in different formats and
 projections without conversion to an internal or common format. Supported are
 PostgreSQL/PostGIS, GDAL/OGR supported vector and raster layers such as ESRI
-Shapefile, MapInfo, GML, GeoTiff or Erdas Img., GRASS rasters, vectors, and locations, and
+Shapefile, MapInfo, GML, GeoTiff or Erdas Img., GRASS rasters, vectors, and
+locations, and
 OGC-compliant WMS and WFS;
 \item interactively explore data, including features such as on the fly
 (OTF) projection, identify/select geometries, view, select and search
@@ -102,7 +108,10 @@ Raster layer have to be imported into GRASS GIS to be edited and
 exported;
 \item perform spatial geoprocessing on PostgreSQL/PostGIS and other OGR
 supported vector layers including overlay, buffer, sampling, geometry and
-database management. The integrated GRASS Plugin allows to include the GRASS functionality of more than 300 modules.
+database management. The integrated GRASS Plugin allows to easily access more
+than 260 GRASS modules, allowing complex GIS raster and vector analyses,
+including raster algebra, hydrological modelling, interpolating surfaces,
+network analyses, database operations, and much more.
 \end{itemize}
 
 \begin{figure}[h]
@@ -167,14 +176,18 @@ Python Plugin Installer.
 %can be developed. Even though 1.0 is pretty fresh, there are already a number
 %of exciting developments underway in both the core application and plugins.
 
-Since QGIS is open source software, it is possible and encouraged to participate in the development
+Since QGIS is open source software, it is possible and encouraged to participate
+in the development
 process and also to write new applications that use the libraries of the QGIS
 project. Development with QGIS can be done either in the existing classes of
 QGIS, as plugin extensions or in the form of custom applications that make use
 of the QGIS libraries. All code in QGIS is licensed under the
-GNU GPL (\url{http://www.fsf.org/licensing/licenses/gpl.html}). That means that for all three cases, published software must be
-distributed under the terms of the GPL too. QGIS 1.0 provides a stable API which 
-provides an assurance that plugins and applications developed against the 1.0 API 
+GNU GPL (\url{http://www.fsf.org/licensing/licenses/gpl.html}). That means that
+for all three cases, published software must be
+distributed under the terms of the GPL too. QGIS 1.0 provides a stable API
+which 
+provides an assurance that plugins and applications developed against the 1.0
+API 
 will work against future releases in the 1.X release series.
 
 \subsubsection{Development in the core classes of QGIS}
@@ -188,14 +201,18 @@ There is a plugin interface that allows extensions to access the running QGIS
 instance and to use and extend the objects in the core of QGIS. Plugins may be
 written in C++ or in Python. The QGIS documentation contains simple examples
 for both programming languages making it straightforward to start with plugin 
-programming. The development of python plugins is especially fast and convenient. Simple plugins require only a few hours of development. As a result, an increasing number of users are contributing new plugins, of either specialised or general use.
+programming. The development of python plugins is especially fast and
+convenient. Simple plugins require only a few hours of development. As a result,
+an increasing number of users are contributing new plugins, of either
+specialised or general use.
 
 \subsubsection{Custom applications that use the QGIS libaries}
 It is also possible to write new applications that provide their own user
 interface and use the QGIS core library for the GIS logic, data access and map
 rendering. 
 
-An example using this approach is the QGIS mapserver project (\url{http://karlinapp.ethz.ch}) that provides a WMS
+An example using this approach is the QGIS mapserver project
+(\url{http://karlinapp.ethz.ch}) that provides a WMS
 compatible mapserver on top of the QGIS core library. This software has no 
 graphical user interface. It is a FastCGI application that waits until called
 by a webserver. It parses the request parameters and uses QGIS to render a map
@@ -209,7 +226,19 @@ laptops. The QGIS libraries offer the potential to be used as a GIS backend for
 applications targeted to mobile devices.
 
 \subsection{Who uses QGIS}
-QGIS is now widely used by professionals, government and local agencies, universities and students, and amateurs alike, for a large variety of tasks, from simply viewing raster and vector data (especially useful is the capability to deal with PostGIS layers) to running complex and custom analyses through GRASS modules. Often is used to replace or integrate proprietary software, and several migrations have been accomplished or are underway, both in small and in large companies and public administrations. Among the hundreds of people that have attended courses on QGIS use, a common feeling is that the switch from proprietary software is painless, because many tasks and menus are very similar, and the interface is generally judged very intuitive. No doubt thanks to its free and open source licence, it is also used in some of the poorest countries, thus helping to reduce the world digital divide and bring more geoinformatic knowledge where local conditions are more difficult.
+QGIS is now widely used by professionals, government and local agencies,
+universities and students, and amateurs alike, for a large variety of tasks,
+from simply viewing raster and vector data (especially useful is the capability
+to deal with PostGIS layers) to running complex and custom analyses through
+GRASS modules. Often is used to replace or integrate proprietary software, and
+several migrations have been accomplished or are underway, both in small and in
+large companies and public administrations. Among the hundreds of people that
+have attended courses on QGIS use, a common feeling is that the switch from
+proprietary software is painless, because many tasks and menus are very similar,
+and the interface is generally judged very intuitive. No doubt thanks to its
+free and open source licence, it is also used in some of the poorest countries,
+thus helping to reduce the world digital divide and bring more geoinformatic
+knowledge where local conditions are more difficult.
 Professional support is provided by several companies.
 
 \subsection{Perspective / Conclusion}
@@ -231,7 +260,8 @@ For more information, have a look at the following website:
 Quantum GIS project: \url{http://qgis.org}
 \\QGIS Forum: \url{http://forum.qgis.org}
 \\QGIS Blog: \url{http://blog.qgis.org}
-\\QGIS User Mailing List: \url{http://lists.osgeo.org/mailman/listinfo/qgis-user}
+\\QGIS User Mailing List:
+\url{http://lists.osgeo.org/mailman/listinfo/qgis-user}
 \\QGIS IRC: Channel \#qgis port 6667 at \url{irc.freenode.net}
 \\Open Source Geospatial Foundation: \url{http://www.osgeo.org}
 
