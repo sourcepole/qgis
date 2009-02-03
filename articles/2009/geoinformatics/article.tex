@@ -23,7 +23,7 @@ geoprocessing functionalities.
 The QGIS project is the work of a group of dedicated developers,
 translators, documenters, release helpers, bug reporters, and promoters. Their 
 contributions are mainly on a voluntary basis, except in a few cases where 
-contributors are able to contribute to QGIS as part of their daily work. QGIS 
+people are able to contribute to QGIS as part of their daily work. QGIS 
 is managed by the Project Steering Committee (PSC), a five member committee
 providing technical guidance, community liaison, release management, and
 financial/marketing activities. The work of the QGIS project process is
@@ -43,22 +43,19 @@ to use and improve upon.
 \end{center}
 \end{figure}
 
-With community platforms such as our website, wiki, forums and blog the QGIS
-project
-provides current news, release, usage, and development information. In most
-cases 
-these community web sites permit user contributions after registering. 
-The QGIS-user mailing, forum and Internet Relay Chat (IRC) provide a valuable
-interface 
-with other users and for discussions of QGIS in general. In the spirit of open 
-process and sharing knowledge, contacting developers directly instead of going
-through 
-these community based avenues of communication is frowned upon.
+With community platforms such as the website, wiki, forums, and blog, the QGIS
+project provides current news, release, usage, and development information. In
+most cases these community web sites permit user contributions after
+registering.  The QGIS-user mailing, forum and Internet Relay Chat (IRC)
+provide a valuable interface with other users and for discussions of QGIS in
+general. In the spirit of open process and sharing knowledge, contacting
+developers directly instead of going through these community based avenues of
+communication is frowned upon.
 
 \subsection{Graphical User Interface}
 
 Working with QGIS is simple and intuitive as you are presented with a
-modern and friendly graphical user interface (GUI) based on QT4. All
+modern and friendly graphical user interface (GUI) based on Qt4. All
 functions are clearly separated (see Figure~\ref{fig:qgis10}).
 
 \begin{figure}[h]
@@ -79,17 +76,17 @@ zoom-out, select or query. It is tightly bound to the \textbf{map legend},
 where layer visibility is managed and set to a z-order, meaning layers
 listed nearer the top of the legend are drawn over layers listed lower down.
 The \textbf{map overview} area provides a full extent view of selected layers
-with a rectangle showing the current map extent in the map view. And the
-\textbf{status bar} finally shows the current mouse pointer position in map
+with a rectangle showing the current map extent in the map view. And finally, the
+\textbf{status bar} shows the current mouse pointer position in map
 coordinates, view extents of the map view, the progress of rendering or
 analysis activities, the current map scale depending on the defined
-Coordinate Reference System (CRS) and information about available external
+Coordinate Reference System (CRS), and information about available external
 plugin updates.
 
 \subsection{Functionality}
 
-QGIS offers a growing number of common GIS functionality provided by core
-features and plugins and at a glance provide following features: 
+QGIS offers a growing array of common GIS functionality provided by core
+features and plugins, and at a glance provides following features: 
 
 \begin{itemize}
 \item view and overlay vector and raster layer in different formats and
@@ -102,7 +99,7 @@ OGC-compliant WMS and WFS;
 (OTF) projection, identify/select geometries, view, select and search
 attributes, label features, change vector and raster symbology; 
 \item compose print layouts adding map canvas, legend, scalebar, images and
-text lables in a print composer plugin;
+text labels in a print composer plugin;
 \item create, edit, manage and export vector layers into several formats.
 Raster layer have to be imported into GRASS GIS to be edited and
 exported;
@@ -159,7 +156,7 @@ plugins that are not yet mature enough but on the way to the official
 repository.
 \end{itemize}
 
-Beside these two repositories a number of QGIS developers provide and maintain
+In addition to these two repositories, a number of QGIS developers provide and maintain
 their own repositories. These can be added to the repository list of the
 Python Plugin Installer.
 
@@ -191,39 +188,39 @@ API
 will work against future releases in the 1.X release series.
 
 \subsubsection{Development in the core classes of QGIS}
-Changes to existing classes may be submitted as patches using QGIS Project bug
+Changes to existing classes may be submitted as patches using the QGIS Project bug
 tracker (\url{https://trac.osgeo.org/qgis/}). The code maintainers of the QGIS
 project, each responsible for a certain part of the code base, regularly check
 the tracker.
 
 \subsubsection{Development of extensions as C++ or Python plugins}
-There is a plugin interface that allows extensions to access the running QGIS
+The plugin interface allows extensions to access the running QGIS
 instance and to use and extend the objects in the core of QGIS. Plugins may be
 written in C++ or in Python. The QGIS documentation contains simple examples
-for both programming languages making it straightforward to start with plugin 
-programming. The development of python plugins is especially fast and
-convenient. Simple plugins require only a few hours of development. As a result,
+for both programming languages, making it straightforward to get started with plugin 
+programming. The development of Python plugins is especially fast and
+convenient. Simple plugins require only a few hours of development time. As a result,
 an increasing number of users are contributing new plugins, of either
 specialised or general use.
 
-\subsubsection{Custom applications that use the QGIS libaries}
+\subsubsection{Custom applications that use the QGIS libraries}
 It is also possible to write new applications that provide their own user
 interface and use the QGIS core library for the GIS logic, data access and map
 rendering. 
 
-An example using this approach is the QGIS mapserver project
+An example using this approach is the QGIS map server project
 (\url{http://karlinapp.ethz.ch/qgis\_wms}) that provides a WMS
-compatible mapserver on top of the QGIS core library. This software has no 
+compatible map server on top of the QGIS core library. This software has no 
 graphical user interface. It is a FastCGI application that waits until called
-by a webserver. It parses the request parameters and uses QGIS to render a map
-into an offscreen buffer. The content is then returned as binary image back to
+by a web server. It parses the request parameters and uses QGIS to render a map
+into an off-screen buffer. The content is then returned as a binary image back to
 the client.
 
 Another context where this approach would make sense is to provide a mapping
 application for mobile devices. Applications for mobile devices usually need
 different user interfaces to desktop computers applications and
 laptops. The QGIS libraries offer the potential to be used as a GIS backend for 
-applications targeted to mobile devices.
+applications targeting mobile devices.
 
 \subsection{Who uses QGIS}
 QGIS is now widely used by professionals, government and local agencies,
@@ -231,7 +228,7 @@ universities and students, and amateurs alike, for a large variety of tasks,
 from simply viewing raster and vector data (especially useful is the capability
 to deal with PostGIS layers) to running complex and custom analyses through
 GRASS modules. Often QGIS is used to replace or integrate proprietary software, and
-several migrations have been accomplished or are underway, both in small and in
+several migrations have been accomplished or are underway, both in small and 
 large companies and public administrations. Among the hundreds of people that
 have attended courses on QGIS use, a common feeling is that the switch from
 proprietary software is painless, because many tasks and menus are very similar,
@@ -241,18 +238,19 @@ thus helping to reduce the world digital divide and bring more geoinformatic
 knowledge where local conditions are more difficult.
 
 QGIS is also used by many software developers to produce new GIS enabled
-applications. As a Free alternative to GIS toolkits such as ESRI ArcObjects,
-QGIS provides a compelling option. Yet more developers are building custom
+applications. As a free alternative to GIS toolkits such as ESRI ArcObjects,
+QGIS provides a compelling option. Even more developers are building custom
 plugins to suit their own needs and are sharing them via plugin repositories. 
 
 One of the curious aspects of being a Free and Open Source project is that we 
-have very little idea of exactly how many users we have. Since the software can 
+have very little idea of exactly how many people are using QGIS. Since the software can 
 be freely copied and passed around after it is downloaded it is difficult to 
-judge useage numbers. With around 1550 registered users on our community map 
-we can extrapolate a user base in excess of 15000 given a conservative 
+judge usage numbers. With around 1,550 registered users on the community map 
+we can extrapolate a user base in excess of 15,000 given a conservative 
 estimate of a 1\% sign up rate.
 
-Professional support is provided by several companies.
+Professional support for QGIS is provided by a number of companies whose
+services are listed on the project website.
 
 \subsection{Perspective / Conclusion}
 
