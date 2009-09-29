@@ -29,6 +29,7 @@ SET(QGIS_CORE_SRCS
   qgsoverlayobject.cpp
   qgspalgeometry.cpp
   qgspalobjectpositionmanager.cpp
+  qgspluginlayer.cpp
   qgspoint.cpp
   qgsproject.cpp
   qgsprojectfiletransform.cpp
@@ -172,6 +173,7 @@ qgsmaplayer.h
 qgsmaplayerregistry.h
 qgsmaprenderer.h
 qgsmessageoutput.h
+qgspluginlayer.h
 qgsproject.h
 qgsrunprocess.h
 qgsvectorlayer.h
@@ -324,6 +326,7 @@ qgsmaptopixel.h
 qgsmessageoutput.h
 qgsoverlayobjectpositionmanager.h
 qgspalobjectpositionmanager.h
+qgspluginlayer.h
 qgspoint.h
 qgsproject.h
 qgsprojectfiletransform.h
