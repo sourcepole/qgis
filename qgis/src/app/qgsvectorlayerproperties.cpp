@@ -26,6 +26,7 @@
 #include "qgscontexthelp.h"
 #include "qgscontinuouscolordialog.h"
 #include "qgscoordinatetransform.h"
+#include "qgsfieldcalculator.h"
 #include "qgsgraduatedsymboldialog.h"
 #include "qgslabeldialog.h"
 #include "qgslabel.h"
@@ -41,11 +42,8 @@
 #include "qgsconfig.h"
 #include "qgsvectordataprovider.h"
 #include "qgsvectoroverlayplugin.h"
-
-#ifdef HAVE_POSTGRESQL
-#include "qgspgquerybuilder.h"
-#include "../providers/postgres/qgspostgresprovider.h"
-#endif
+#include "qgsquerybuilder.h"
+#include "qgsdatasourceuri.h"
 
 #include <QMessageBox>
 #include <QDir>
@@ -92,6 +90,7 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mAddAttributeButton->setIcon( QgisApp::getThemeIcon( "/mActionNewAttribute.png" ) );
   mDeleteAttributeButton->setIcon( QgisApp::getThemeIcon( "/mActionDeleteAttribute.png" ) );
   mToggleEditingButton->setIcon( QgisApp::getThemeIcon( "/mActionToggleEditing.png" ) );
+  mCalculateFieldButton->setIcon( QgisApp::getThemeIcon( "/mActionCalculateField.png" ) );
 
 
   // Create the Label dialog tab
@@ -356,6 +355,7 @@ void QgsVectorLayerProperties::updateButtons()
     int cap = layer->dataProvider()->capabilities();
     mAddAttributeButton->setEnabled( cap & QgsVectorDataProvider::AddAttributes );
     mDeleteAttributeButton->setEnabled( cap & QgsVectorDataProvider::DeleteAttributes );
+    mCalculateFieldButton->setEnabled(( cap &  QgsVectorDataProvider::AddAttributes ) && ( cap & QgsVectorDataProvider::ChangeAttributeValues ) );
     mToggleEditingButton->setChecked( true );
   }
   else
@@ -363,6 +363,7 @@ void QgsVectorLayerProperties::updateButtons()
     mAddAttributeButton->setEnabled( false );
     mDeleteAttributeButton->setEnabled( false );
     mToggleEditingButton->setChecked( false );
+    mCalculateFieldButton->setEnabled( false );
   }
 }
 
@@ -421,7 +422,7 @@ void QgsVectorLayerProperties::reset( void )
 
   // populate the general information
   txtDisplayName->setText( layer->name() );
-  pbnQueryBuilder->setWhatsThis( tr( "This button opens the PostgreSQL query "
+  pbnQueryBuilder->setWhatsThis( tr( "This button opens the query "
                                      "builder and allows you to create a subset of features to display on "
                                      "the map canvas rather than displaying all features in the layer" ) );
   txtSubsetSQL->setWhatsThis( tr( "The query used to limit the features in the "
@@ -429,22 +430,15 @@ void QgsVectorLayerProperties::reset( void )
                                   "layers. To enter or modify the query, click on the Query Builder button" ) );
 
   //see if we are dealing with a pg layer here
-  if ( layer->providerType() == "postgres" )
-  {
-    grpSubset->setEnabled( true );
-    txtSubsetSQL->setText( layer->subsetString() );
-    // if the user is allowed to type an adhoc query, the app will crash if the query
-    // is bad. For this reason, the sql box is disabled and the query must be built
-    // using the query builder, either by typing it in by hand or using the buttons, etc
-    // on the builder. If the ability to enter a query directly into the box is required,
-    // a mechanism to check it must be implemented.
-    txtSubsetSQL->setEnabled( false );
-    pbnQueryBuilder->setEnabled( true );
-  }
-  else
-  {
-    grpSubset->setEnabled( false );
-  }
+  grpSubset->setEnabled( true );
+  txtSubsetSQL->setText( layer->subsetString() );
+  // if the user is allowed to type an adhoc query, the app will crash if the query
+  // is bad. For this reason, the sql box is disabled and the query must be built
+  // using the query builder, either by typing it in by hand or using the buttons, etc
+  // on the builder. If the ability to enter a query directly into the box is required,
+  // a mechanism to check it must be implemented.
+  txtSubsetSQL->setEnabled( false );
+  pbnQueryBuilder->setEnabled( true );
 
   //get field list for display field combo
   const QgsFieldMap& myFields = layer->pendingFields();
@@ -573,22 +567,17 @@ void QgsVectorLayerProperties::apply()
   //
   // Set up sql subset query if applicable
   //
-#ifdef HAVE_POSTGRESQL
-  //see if we are dealing with a pg layer here
-  if ( layer->providerType() == "postgres" )
-  {
-    grpSubset->setEnabled( true );
-    // set the subset sql for the layer
-    layer->setSubsetString( txtSubsetSQL->toPlainText() );
-    // update the metadata with the updated sql subset
-    QString myStyle = QgsApplication::reportStyleSheet();
-    teMetadata->clear();
-    teMetadata->document()->setDefaultStyleSheet( myStyle );
-    teMetadata->setHtml( metadata() );
-    // update the extents of the layer (fetched from the provider)
-    layer->updateExtents();
-  }
-#endif
+  grpSubset->setEnabled( true );
+  // set the subset sql for the layer
+  layer->setSubsetString( txtSubsetSQL->toPlainText() );
+  // update the metadata with the updated sql subset
+  QString myStyle = QgsApplication::reportStyleSheet();
+  teMetadata->clear();
+  teMetadata->document()->setDefaultStyleSheet( myStyle );
+  teMetadata->setHtml( metadata() );
+  // update the extents of the layer (fetched from the provider)
+  layer->updateExtents();
+
   // set up the scale based layer visibility stuff....
   layer->toggleScaleBasedVisibility( chkUseScaleDependentRendering->isChecked() );
   layer->setMinimumScale( spinMinimumScale->value() );
@@ -677,25 +666,19 @@ void QgsVectorLayerProperties::apply()
 
 void QgsVectorLayerProperties::on_pbnQueryBuilder_clicked()
 {
-#ifdef HAVE_POSTGRESQL
   // launch the query builder using the PostgreSQL connection
   // from the provider
 
-  // cast to postgres provider type
-  QgsPostgresProvider * myPGProvider = ( QgsPostgresProvider * ) layer->dataProvider() ; // FIXME use dynamic cast
-  // create the query builder object using the table name
-  // and postgres connection from the provider
-  QgsDataSourceURI uri( myPGProvider->dataSourceUri() );
-  QgsPgQueryBuilder *pqb = new QgsPgQueryBuilder( &uri, this );
+  QgsQueryBuilder *qb = new QgsQueryBuilder( layer, this );
 
   // Set the sql in the query builder to the same in the prop dialog
   // (in case the user has already changed it)
-  pqb->setSql( txtSubsetSQL->toPlainText() );
+  qb->setSql( txtSubsetSQL->toPlainText() );
   // Open the query builder
-  if ( pqb->exec() )
+  if ( qb->exec() )
   {
     // if the sql is changed, update it in the prop subset text box
-    txtSubsetSQL->setText( pqb->sql() );
+    txtSubsetSQL->setText( qb->sql() );
     //TODO If the sql is changed in the prop dialog, the layer extent should be recalculated
 
     // The datasource for the layer needs to be updated with the new sql since this gets
@@ -703,8 +686,7 @@ void QgsVectorLayerProperties::on_pbnQueryBuilder_clicked()
 
   }
   // delete the query builder object
-  delete pqb;
-#endif
+  delete qb;
 }
 
 void QgsVectorLayerProperties::on_pbnIndex_clicked()
@@ -1114,6 +1096,17 @@ void QgsVectorLayerProperties::on_tblAttributes_cellChanged( int row, int column
       layer->addAttributeAlias( idx, aliasItem->text() );
     }
   }
+}
+
+void QgsVectorLayerProperties::on_mCalculateFieldButton_clicked()
+{
+  if ( !layer )
+  {
+    return;
+  }
+
+  QgsFieldCalculator calc( layer );
+  calc.exec();
 }
 
 QList<QgsVectorOverlayPlugin*> QgsVectorLayerProperties::overlayPlugins() const

@@ -303,6 +303,7 @@ void QgsComposer::open( void )
 void QgsComposer::paintEvent( QPaintEvent* event )
 {
   QMainWindow::paintEvent( event );
+#if 0 //MH: disabled for now as there are segfaults on some systems
   //The cached content of the composer maps need to be recreated it is the first paint event of the composer after reading from XML file.
   //Otherwise the resolution of the composer map is not suitable for screen
   if ( mFirstPaint )
@@ -313,12 +314,13 @@ void QgsComposer::paintEvent( QPaintEvent* event )
       QgsComposerMap* cm = dynamic_cast<QgsComposerMap*>( it.key() );
       if ( cm )
       {
+        mFirstPaint = false;
         cm->cache();
         cm->update();
       }
     }
-    mFirstPaint = false;
   }
+#endif //0
 }
 
 void QgsComposer::activate()
@@ -479,6 +481,7 @@ void QgsComposer::on_mActionExportAsPDF_triggered()
 
   printer.setOutputFormat( QPrinter::PdfFormat );
   printer.setOutputFileName( myOutputFileNameQString );
+  printer.setPaperSize( QSizeF( mComposition->paperWidth(), mComposition->paperHeight() ), QPrinter::Millimeter );
 
   print( printer );
 }
@@ -502,16 +505,6 @@ void QgsComposer::print( QPrinter &printer )
   if ( containsWMSLayer() )
   {
     showWMSPrintingWarning();
-  }
-
-  //try to set most of the print dialog settings based on composer properties
-  if ( mComposition->paperHeight() > mComposition->paperWidth() )
-  {
-    printer.setOrientation( QPrinter::Portrait );
-  }
-  else
-  {
-    printer.setOrientation( QPrinter::Landscape );
   }
 
   //set resolution based on composer setting
@@ -745,7 +738,9 @@ void QgsComposer::on_mActionExportAsSVG_triggered()
   mComposition->setPlotStyle( QgsComposition::Print );
 
   QSvgGenerator generator;
+#if QT_VERSION >= 0x040500
   generator.setTitle( QgsProject::instance()->title() );
+#endif
   generator.setFileName( myOutputFileNameQString );
   //width in pixel
   int width = ( int )( mComposition->paperWidth() * mComposition->printResolution() / 25.4 );
@@ -1021,14 +1016,9 @@ void QgsComposer::restoreWindowState()
   }
 }
 
-void QgsComposer::on_helpPButton_clicked()
+void QgsComposer::on_buttonBox_helpRequested()
 {
   QgsContextHelp::run( context_id );
-}
-
-void QgsComposer::on_closePButton_clicked()
-{
-  close();
 }
 
 void  QgsComposer::writeXML( QDomDocument& doc )
