@@ -1,9 +1,9 @@
 /***************************************************************************
-                          qgsvectorlayer.h  -  description
+                          qgspluginlayer.h  -  description
                              -------------------
-    begin                : Oct 29, 2003
-    copyright            : (C) 2003 by Gary E.Sherman
-    email                : sherman at mrcc.com
+    begin                : Sep 30, 2009
+    copyright            : (C) 2009 by Sourcepole
+    email                : info at sourcepole.ch
  ***************************************************************************/
 
 /***************************************************************************
@@ -22,19 +22,32 @@
 #include "qgis.h"
 #include "qgsmaplayer.h"
 
+#include <QDomNode>
+
 /** \ingroup core
- * Layer rendered by a plugin.
+ * This class provides QGIS with the ability to render layers using QGIS plugins.
+ *
+ * Plugin layers will be saved and loaded in projects with their corresponding plugin parameters.
+ *
+ * Sample usage of the QgsPluginLayer class:
+ *
+ * TODO
+ *
  */
 class CORE_EXPORT QgsPluginLayer : public QgsMapLayer
 {
     Q_OBJECT
 
-public:
-       /** Constructor */
-    QgsPluginLayer( QString lyrname = QString::null, QString source = QString::null );
+  public:
+
+    /** Constructor */
+    QgsPluginLayer( QString pluginId = QString::null, QString lyrname = QString::null, QString source = QString::null );
 
     /** Destructor */
     virtual ~QgsPluginLayer();
+
+    /** \brief This is called when the view on the layer needs to be redrawn */
+    virtual bool draw( QgsRenderContext& rendererContext );
 
     /** True if the layer can be edited */
     virtual bool isEditable() const { return false; };
@@ -45,24 +58,55 @@ public:
     /** Returns true if this layer can be in the same symbology group with another layer */
     virtual bool hasCompatibleSymbology( const QgsMapLayer& ) const { return false; };
 
-    /** Read the symbology for the current layer from the Dom node supplied.
-     * @param QDomNode node that will contain the symbology definition for this layer.
-     * @param errorMessage reference to string that will be updated with any error messages
-     * @return true in case of success.
-    */
+    /** \brief Read the symbology for the current layer from the Dom node supplied */
     virtual bool readSymbology( const QDomNode&, QString& ) { return true; };
 
-    /** Write the symbology for the layer into the docment provided.
-     *  @param QDomNode the node that will have the style element added to it.
-     *  @param QDomDocument the document that will have the QDomNode added.
-     * @param errorMessage reference to string that will be updated with any error messages
-     *  @return true in case of success.
-     */
+    /** \brief Write the symbology for the layer into the docment provided */
     virtual bool writeSymbology( QDomNode&, QDomDocument&, QString& ) const { return true; };
+
+    /**
+     * Get plugin ID
+     */
+    QString pluginId();
+
+    /**
+     * Set plugin ID
+     */
+    void setPluginId( const QString& pluginId );
+
+    /**
+     * Get plugin specific layer properties from project
+     */
+    const QDomNode& pluginProperties();
+
+    /**
+     * Set layer extent
+     */
+    void setExtent( const QgsRectangle& extent );
 
   signals:
 
+    //! emitted when layer is deleted
     void layerDeleted();
+
+    //! emitted when drawing layer
+    void drawLayer( QgsRenderContext& );
+
+    //! emitted when saving layer
+    void writePluginProperties( QDomNode& propertiesNode, QDomDocument& doc );
+
+  protected:
+
+    /** \brief Reads layer specific state from project file Dom node */
+    bool readXml( QDomNode& layerNode );
+
+    /** \brief Write layer specific state to project file Dom node */
+    bool writeXml( QDomNode& layerNode, QDomDocument& doc );
+
+  private:
+
+    QString mPluginId;
+    QDomNode mPluginProperties;
 };
 
 #endif

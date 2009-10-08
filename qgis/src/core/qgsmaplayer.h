@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: qgsmaplayer.h 10920 2009-06-14 14:17:18Z wonder $ */
 
 #ifndef QGSMAPLAYER_H
 #define QGSMAPLAYER_H

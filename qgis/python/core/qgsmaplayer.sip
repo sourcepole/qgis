@@ -22,6 +22,10 @@ class QgsMapLayer : QObject
     {
       sipClass = sipClass_QgsRasterLayer;
     }
+    else if (layer->type() == QgsMapLayer::PluginLayer)
+    {
+      sipClass = sipClass_QgsPluginLayer;
+    }
   }
   else
   {
@@ -35,7 +39,8 @@ public:
     enum LayerType
     {
         VectorLayer,
-        RasterLayer
+        RasterLayer,
+        PluginLayer
     };
 
     /** Constructor

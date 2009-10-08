@@ -24,6 +24,7 @@
 #include "qgsrectangle.h"
 #include "qgsvectorlayer.h"
 #include "qgsrasterlayer.h"
+#include "qgspluginlayer.h"
 #include "qgsmaplayerregistry.h"
 #include "qgsexception.h"
 #include "qgsprojectproperty.h"
@@ -38,7 +39,7 @@
 #include <QTextStream>
 
 
-static const char *const ident_ = "$Id$";
+static const char *const ident_ = "$Id: qgsproject.cpp 11729 2009-09-28 21:38:25Z jef $";
 
 
 
@@ -692,6 +693,10 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
     else if ( type == "raster" )
     {
       mapLayer = new QgsRasterLayer;
+    }
+    else if ( type == "plugin" )
+    {
+      mapLayer = new QgsPluginLayer;
     }
 
     Q_CHECK_PTR( mapLayer );

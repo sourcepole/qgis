@@ -15,7 +15,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: qgslegend.cpp 11693 2009-09-20 23:12:43Z jef $ */
 
 #include "qgsapplication.h"
 #include "qgisapp.h"
@@ -50,7 +50,7 @@
 #include <QPixmap>
 #include <QTreeWidgetItem>
 
-static const char *const ident_ = "$Id$";
+static const char *const ident_ = "$Id: qgslegend.cpp 11693 2009-09-20 23:12:43Z jef $";
 
 const int AUTOSCROLL_MARGIN = 16;
 
@@ -851,7 +851,7 @@ void QgsLegend::legendLayerShowProperties()
     rlp->exec();
     delete rlp; // delete since dialog cannot be reused without updating code
   }
-  else // VECTOR
+  else if ( ml->type() == QgsMapLayer::VectorLayer ) // VECTOR
   {
     QgsVectorLayer* vlayer = dynamic_cast<QgsVectorLayer*>( ml );
 
