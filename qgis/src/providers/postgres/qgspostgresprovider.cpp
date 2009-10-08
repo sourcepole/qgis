@@ -409,6 +409,31 @@ QString QgsPostgresProvider::storageType() const
   return "PostgreSQL database with PostGIS extension";
 }
 
+QString QgsPostgresProvider::fieldExpression( const QgsField &fld ) const
+{
+  const QString &type = fld.typeName();
+  if ( type == "money" )
+  {
+    return QString( "cash_out(%1)" ).arg( quotedIdentifier( fld.name() ) );
+  }
+  else if ( type.startsWith( "_" ) )
+  {
+    return QString( "array_out(%1)" ).arg( quotedIdentifier( fld.name() ) );
+  }
+  else if ( type == "bool" )
+  {
+    return QString( "boolout(%1)" ).arg( quotedIdentifier( fld.name() ) );
+  }
+  else if ( type == "geometry" )
+  {
+    return QString( "asewkt(%1)" ).arg( quotedIdentifier( fld.name() ) );
+  }
+  else
+  {
+    return quotedIdentifier( fld.name() ) + "::text";
+  }
+}
+
 bool QgsPostgresProvider::declareCursor(
   const QString &cursorName,
   const QgsAttributeList &fetchAttributes,
@@ -430,31 +455,10 @@ bool QgsPostgresProvider::declareCursor(
     {
       const QgsField &fld = field( *it );
 
-      const QString &fieldname = fld.name();
-      if ( fieldname == primaryKey )
+      if ( fld.name() == primaryKey )
         continue;
 
-      const QString &type = fld.typeName();
-      if ( type == "money" )
-      {
-        query += QString( ",cash_out(%1)" ).arg( quotedIdentifier( fieldname ) );
-      }
-      else if ( type.startsWith( "_" ) )
-      {
-        query += QString( ",array_out(%1)" ).arg( quotedIdentifier( fieldname ) );
-      }
-      else if ( type == "bool" )
-      {
-        query += QString( ",boolout(%1)" ).arg( quotedIdentifier( fieldname ) );
-      }
-      else if ( type == "geometry" )
-      {
-        query += QString( ",asewkt(%1)" ).arg( quotedIdentifier( fieldname ) );
-      }
-      else
-      {
-        query += "," + quotedIdentifier( fieldname ) + "::text";
-      }
+      query += "," + fieldExpression( fld );
     }
 
     query += " from " + mSchemaTableName;
@@ -685,14 +689,26 @@ bool QgsPostgresProvider::nextFeature( QgsFeature& feature )
 
 QString QgsPostgresProvider::whereClause( int featureId ) const
 {
+  QString whereClause;
+
   if ( primaryKeyType != "tid" )
   {
-    return QString( "%1=%2" ).arg( quotedIdentifier( primaryKey ) ).arg( featureId );
+    whereClause = QString( "%1=%2" ).arg( quotedIdentifier( primaryKey ) ).arg( featureId );
   }
   else
   {
-    return QString( "%1='(%2,%3)'" ).arg( quotedIdentifier( primaryKey ) ).arg( featureId >> 16 ).arg( featureId & 0xffff );
+    whereClause = QString( "%1='(%2,%3)'" ).arg( quotedIdentifier( primaryKey ) ).arg( featureId >> 16 ).arg( featureId & 0xffff );
   }
+
+  if ( !sqlWhereClause.isEmpty() )
+  {
+    if ( !whereClause.isEmpty() )
+      whereClause += " and ";
+
+    whereClause += "(" + sqlWhereClause + ")";
+  }
+
+  return whereClause;
 }
 
 bool QgsPostgresProvider::featureAtId( int featureId, QgsFeature& feature, bool fetchGeometry, QgsAttributeList fetchAttributes )
@@ -1054,10 +1070,15 @@ QString QgsPostgresProvider::getPrimaryKey()
 
         Result result = connectionRO->PQexec( sql );
 
-        if ( PQresultStatus( result ) != PGRES_TUPLES_OK ||
-             PQntuples( result ) != 1 ||
-             QString( PQgetvalue( result, 0, 0 ) ) != "int4" ||
-             !uniqueData( mSchemaName, mTableName, primaryKey ) )
+        QString type;
+        if ( PQresultStatus( result ) == PGRES_TUPLES_OK &&
+             PQntuples( result ) == 1 )
+        {
+          type = PQgetvalue( result, 0, 0 );
+        }
+
+        if (( type != "int4" && type != "oid" ) ||
+            !uniqueData( mSchemaName, mTableName, primaryKey ) )
         {
           primaryKey = "";
         }
@@ -1681,13 +1702,13 @@ void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues
     if ( sqlWhereClause.isEmpty() )
     {
       sql = QString( "select distinct %1 from %2 order by %1" )
-            .arg( quotedIdentifier( fld.name() ) )
+            .arg( fieldExpression( fld ) )
             .arg( mSchemaTableName );
     }
     else
     {
       sql = QString( "select distinct %1 from %2 where %3 order by %1" )
-            .arg( quotedIdentifier( fld.name() ) )
+            .arg( fieldExpression( fld ) )
             .arg( mSchemaTableName )
             .arg( sqlWhereClause );
     }
@@ -1701,7 +1722,7 @@ void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues
     if ( PQresultStatus( res ) == PGRES_TUPLES_OK )
     {
       for ( int i = 0; i < PQntuples( res ); i++ )
-        uniqueValues.append( QString::fromUtf8( PQgetvalue( res, i, 0 ) ) );
+        uniqueValues.append( convertValue( fld.type(), QString::fromUtf8( PQgetvalue( res, i, 0 ) ) ) );
     }
   }
   catch ( PGFieldNotFound )
@@ -1848,13 +1869,13 @@ QVariant QgsPostgresProvider::maximumValue( int index )
     if ( sqlWhereClause.isEmpty() )
     {
       sql = QString( "select max(%1) from %2" )
-            .arg( quotedIdentifier( fld.name() ) )
+            .arg( fieldExpression( fld ) )
             .arg( mSchemaTableName );
     }
     else
     {
       sql = QString( "select max(%1) from %2 where %3" )
-            .arg( quotedIdentifier( fld.name() ) )
+            .arg( fieldExpression( fld ) )
             .arg( mSchemaTableName )
             .arg( sqlWhereClause );
     }
@@ -2901,8 +2922,10 @@ bool QgsPostgresProvider::getGeometryDetails()
   }
   else // something went wrong...
   {
-    log.prepend( tr( "Qgis was unable to determine the type and srid of column %1 in %2. The database communication log was:\n" )
-                 .arg( geometryColumn ).arg( mSchemaTableName ) );
+    log.prepend( tr( "Qgis was unable to determine the type and srid of column %1 in %2. The database communication log was:\n%3" )
+                 .arg( geometryColumn )
+                 .arg( mSchemaTableName )
+                 .arg( QString::fromUtf8( PQresultErrorMessage( result ) ) ) );
     showMessageBox( tr( "Unable to get feature type and srid" ), log );
   }
 
