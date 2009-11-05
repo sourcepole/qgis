@@ -297,4 +297,47 @@ ELSE (APPLE)
 ENDIF (APPLE)
 
 
+#
+# testqgscoordinatereferencesystem
+#
+SET(qgis_coordinatereferencesystemtest_SRCS testqgscoordinatereferencesystem.cpp ${util_SRCS})
+SET(qgis_coordinatereferencesystemtest_MOC_CPPS testqgscoordinatereferencesystem.cpp)
+QT4_WRAP_CPP(qgis_coordinatereferencesystemtest_MOC_SRCS ${qgis_coordinatereferencesystemtest_MOC_CPPS})
+ADD_CUSTOM_TARGET(qgis_coordinatereferencesystemtestmoc ALL DEPENDS ${qgis_coordinatereferencesystemtest_MOC_SRCS})
+ADD_EXECUTABLE(qgis_coordinatereferencesystemtest ${qgis_coordinatereferencesystemtest_SRCS})
+ADD_DEPENDENCIES(qgis_coordinatereferencesystemtest qgis_coordinatereferencesystemtestmoc)
+TARGET_LINK_LIBRARIES(qgis_coordinatereferencesystemtest ${QT_LIBRARIES} qgis_core)
+SET_TARGET_PROPERTIES(qgis_coordinatereferencesystemtest 
+  PROPERTIES INSTALL_RPATH ${QGIS_LIB_DIR}
+  INSTALL_RPATH_USE_LINK_PATH true)
+IF (APPLE)
+  # For Mac OS X, the executable must be at the root of the bundle's executable folder
+  INSTALL(TARGETS qgis_coordinatereferencesystemtest RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
+  ADD_TEST(qgis_coordinatereferencesystemtest ${CMAKE_INSTALL_PREFIX}/qgis_coordinatereferencesystemtest)
+ELSE (APPLE)
+  INSTALL(TARGETS qgis_coordinatereferencesystemtest RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  ADD_TEST(qgis_coordinatereferencesystemtest ${CMAKE_INSTALL_PREFIX}/bin/qgis_coordinatereferencesystemtest)
+ENDIF (APPLE)
+
+#
+# testqgspoint
+#
+SET(qgis_pointtest_SRCS testqgspoint.cpp ${util_SRCS})
+SET(qgis_pointtest_MOC_CPPS testqgspoint.cpp)
+QT4_WRAP_CPP(qgis_pointtest_MOC_SRCS ${qgis_pointtest_MOC_CPPS})
+ADD_CUSTOM_TARGET(qgis_pointtestmoc ALL DEPENDS ${qgis_pointtest_MOC_SRCS})
+ADD_EXECUTABLE(qgis_pointtest ${qgis_pointtest_SRCS})
+ADD_DEPENDENCIES(qgis_pointtest qgis_pointtestmoc)
+TARGET_LINK_LIBRARIES(qgis_pointtest ${QT_LIBRARIES} qgis_core)
+SET_TARGET_PROPERTIES(qgis_pointtest 
+  PROPERTIES INSTALL_RPATH ${QGIS_LIB_DIR}
+  INSTALL_RPATH_USE_LINK_PATH true)
+IF (APPLE)
+  # For Mac OS X, the executable must be at the root of the bundle's executable folder
+  INSTALL(TARGETS qgis_pointtest RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
+  ADD_TEST(qgis_pointtest ${CMAKE_INSTALL_PREFIX}/qgis_pointtest)
+ELSE (APPLE)
+  INSTALL(TARGETS qgis_pointtest RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  ADD_TEST(qgis_pointtest ${CMAKE_INSTALL_PREFIX}/bin/qgis_pointtest)
+ENDIF (APPLE)
 

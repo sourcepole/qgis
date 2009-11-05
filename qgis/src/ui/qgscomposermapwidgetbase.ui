@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>466</width>
-    <height>649</height>
+    <width>482</width>
+    <height>677</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,32 +21,6 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
    <item row="0" column="0">
-    <widget class="QLabel" name="textLabel1">
-     <property name="text">
-      <string>Width</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="buddy">
-      <cstring>mWidthLineEdit</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="Line" name="line1">
-     <property name="frameShape">
-      <enum>QFrame::HLine</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Sunken</enum>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
     <widget class="QGroupBox" name="mMapGroupBox">
      <property name="title">
       <string>Map</string>
@@ -65,7 +39,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="0" column="1" colspan="2">
        <widget class="QLineEdit" name="mWidthLineEdit"/>
       </item>
       <item row="1" column="0">
@@ -75,7 +49,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="1" column="1" colspan="2">
        <widget class="QLineEdit" name="mHeightLineEdit"/>
       </item>
       <item row="2" column="0">
@@ -105,101 +79,129 @@
         </item>
        </layout>
       </item>
-      <item row="2" column="1">
+      <item row="2" column="2">
        <widget class="QLineEdit" name="mScaleLineEdit">
         <property name="inputMask">
          <string/>
         </property>
        </widget>
       </item>
+      <item row="3" column="0" colspan="2">
+       <widget class="QLabel" name="mRotationLabel">
+        <property name="text">
+         <string>Rotation:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QSpinBox" name="mRotationSpinBox">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="1" column="0">
     <widget class="QGroupBox" name="mMapExtentGroupBox">
      <property name="title">
       <string>Map extent</string>
      </property>
-     <layout class="QGridLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="mXMinLabel">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="text">
-         <string>X min</string>
-        </property>
-        <property name="buddy">
-         <cstring>mXMinLineEdit</cstring>
-        </property>
-       </widget>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="mXMinLineEdit"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="mXMinLabel">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string>X min</string>
+          </property>
+          <property name="buddy">
+           <cstring>mXMinLineEdit</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="mYMinLineEdit"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="mYMinLabel">
+          <property name="text">
+           <string>Y min</string>
+          </property>
+          <property name="buddy">
+           <cstring>mYMinLineEdit</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QLineEdit" name="mXMaxLineEdit"/>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLineEdit" name="mYMaxLineEdit"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="mXMaxLabel">
+          <property name="text">
+           <string>X max</string>
+          </property>
+          <property name="buddy">
+           <cstring>mXMaxLineEdit</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="mYMaxLabel">
+          <property name="text">
+           <string>Y max</string>
+          </property>
+          <property name="buddy">
+           <cstring>mYMaxLineEdit</cstring>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="mXMinLineEdit"/>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="mXMaxLabel">
-        <property name="text">
-         <string>X max</string>
-        </property>
-        <property name="buddy">
-         <cstring>mXMaxLineEdit</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3" colspan="2">
-       <widget class="QLineEdit" name="mXMaxLineEdit"/>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="mYMinLabel">
-        <property name="text">
-         <string>Y min</string>
-        </property>
-        <property name="buddy">
-         <cstring>mYMinLineEdit</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="mYMinLineEdit"/>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="mYMaxLabel">
-        <property name="text">
-         <string>Y max</string>
-        </property>
-        <property name="buddy">
-         <cstring>mYMaxLineEdit</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3" colspan="2">
-       <widget class="QLineEdit" name="mYMaxLineEdit"/>
-      </item>
-      <item row="2" column="0" colspan="4">
-       <spacer>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>311</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="2" column="4">
-       <widget class="QPushButton" name="mSetToMapCanvasExtentButton">
-        <property name="text">
-         <string>Set to map canvas extent</string>
-        </property>
-       </widget>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <spacer>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>311</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="mSetToMapCanvasExtentButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Set to map canvas extent</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="mPreviewModeLabel">
@@ -233,18 +235,22 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0">
+   <item row="3" column="0">
     <widget class="QCheckBox" name="mKeepLayerListCheckBox">
      <property name="text">
-      <string>Keep layer list</string>
+      <string>Lock layers for map item</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QGroupBox" name="mGridGroupBox">
-     <property name="title">
-      <string>Grid</string>
+   <item row="4" column="0">
+    <widget class="QCheckBox" name="mShowGridDialogCheckBox">
+     <property name="text">
+      <string>Show composer grid widget</string>
      </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QWidget" name="mGridWidget" native="true">
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
        <widget class="QCheckBox" name="mGridCheckBox">
@@ -262,6 +268,16 @@
       </item>
       <item row="1" column="1" colspan="2">
        <widget class="QComboBox" name="mGridTypeComboBox"/>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLabel" name="mCrossWidthLabel">
+        <property name="text">
+         <string>Cross width:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="4">
+       <widget class="QDoubleSpinBox" name="mCrossWidthSpinBox"/>
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="mIntervalXLabel">
@@ -396,21 +412,18 @@
         </property>
        </widget>
       </item>
+      <item row="8" column="0" colspan="2">
+       <widget class="QLabel" name="mCoordinatePrecisionLabel">
+        <property name="text">
+         <string>Coordinate precision</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="2">
+       <widget class="QSpinBox" name="mCoordinatePrecisionSpinBox"/>
+      </item>
      </layout>
     </widget>
-   </item>
-   <item row="7" column="0">
-    <spacer>
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>458</width>
-       <height>31</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>

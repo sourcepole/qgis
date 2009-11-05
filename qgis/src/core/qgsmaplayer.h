@@ -24,6 +24,7 @@
 
 #include <QObject>
 #include <QUndoStack>
+#include <QImage>
 
 #include "qgsrectangle.h"
 
@@ -79,6 +80,12 @@ class CORE_EXPORT QgsMapLayer : public QObject
      */
     QString const & name() const;
 
+    /** This is the method that does the actual work of 
+     * drawing the layer onto a paint device.
+     * @param QgsRenderContext - describes the extents, 
+     * resolution etc. that should be used when rendering the 
+     * layer.
+     */
     virtual bool draw( QgsRenderContext& rendererContext );
 
     /** Draw labels
@@ -264,6 +271,13 @@ class CORE_EXPORT QgsMapLayer : public QObject
     /** Return pointer to layer's undo stack */
     QUndoStack* undoStack();
 
+    /** Get the QImage used for caching render operations
+     * @note This method was added in QGIS 1.4 **/
+    QImage * cacheImage() { return mpCacheImage; }
+    /** Set the QImage used for caching render operations 
+     * @note This method was added in QGIS 1.4 **/
+    void setCacheImage( QImage * thepImage ); 
+
   public slots:
 
     /** Event handler for when a coordinate transform fails due to bad vertex error */
@@ -361,7 +375,12 @@ class CORE_EXPORT QgsMapLayer : public QObject
     /** A flag that tells us whether to use the above vars to restrict layer visibility */
     bool mScaleBasedVisibility;
 
+    /** Collection of undoable operations for this layer. **/
     QUndoStack mUndoStack;
+
+    /**QImage for caching of rendering operations
+     * @note This property was added in QGIS 1.4 **/
+    QImage * mpCacheImage;
 
 };
 

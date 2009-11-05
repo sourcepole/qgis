@@ -75,6 +75,7 @@ QgsMapLayer::QgsMapLayer( QgsMapLayer::LayerType type,
   mMinScale = 0;
   mMaxScale = 100000000;
   mScaleBasedVisibility = false;
+  mpCacheImage = 0;
 }
 
 
@@ -82,6 +83,10 @@ QgsMapLayer::QgsMapLayer( QgsMapLayer::LayerType type,
 QgsMapLayer::~QgsMapLayer()
 {
   delete mCRS;
+  if ( mpCacheImage ) 
+  { 
+    delete mpCacheImage; 
+  }  
 }
 
 QgsMapLayer::LayerType QgsMapLayer::type() const
@@ -285,7 +290,7 @@ bool QgsMapLayer::writeXML( QDomNode & layer_node, QDomDocument & document )
 
   QString src = source();
 
-  QgsVectorLayer *vlayer = dynamic_cast<QgsVectorLayer *>( this );
+  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( this );
   if ( vlayer && vlayer->providerType() == "spatialite" )
   {
     QgsDataSourceURI uri( src );
@@ -728,4 +733,14 @@ QString QgsMapLayer::saveNamedStyle( const QString theURI, bool & theResultFlag 
 QUndoStack* QgsMapLayer::undoStack()
 {
   return &mUndoStack;
+}
+
+void QgsMapLayer::setCacheImage( QImage * thepImage ) 
+{ 
+  QgsDebugMsg( "cache Image set!" );
+  if ( mpCacheImage ) 
+  { 
+    delete mpCacheImage; 
+  }  
+  mpCacheImage = thepImage; 
 }

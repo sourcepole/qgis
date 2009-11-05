@@ -327,7 +327,6 @@ QgisApp *QgisApp::smInstance = 0;
 QgisApp::QgisApp( QSplashScreen *splash, QWidget * parent, Qt::WFlags fl )
     : QMainWindow( parent, fl ),
     mSplash( splash ),
-    mComposer( 0 ),
     mPythonConsole( NULL ),
     mPythonUtils( NULL )
 {
@@ -372,7 +371,6 @@ QgisApp::QgisApp( QSplashScreen *splash, QWidget * parent, Qt::WFlags fl )
   readSettings();
   updateRecentProjectPaths();
 
-  mComposer = new QgsComposer( this ); // Map composer
   mInternalClipboard = new QgsClipboard; // create clipboard
   mQgisInterface = new QgisAppInterface( this ); // create the interfce
 
@@ -463,7 +461,10 @@ QgisApp::QgisApp( QSplashScreen *splash, QWidget * parent, Qt::WFlags fl )
   show();
   qApp->processEvents();
   //finally show all the application settings as initialised above
-  QgsApplication::showSettings();
+
+  QgsDebugMsg( "\n\n\nApplication Settings:\n--------------------------\n" );
+  QgsDebugMsg( QgsApplication::showSettings() );
+  QgsDebugMsg( "\n--------------------------\n\n\n" );
   mMapCanvas->freeze( false );
 } // QgisApp ctor
 
@@ -499,6 +500,8 @@ QgisApp::~QgisApp()
 
   delete mPythonConsole;
   delete mPythonUtils;
+
+  deletePrintComposers();
 
   // delete map layer registry and provider registry
   QgsApplication::exitQgis();
@@ -588,10 +591,10 @@ void QgisApp::createActions()
   mActionSaveMapAsImage->setStatusTip( tr( "Save map as image" ) );
   connect( mActionSaveMapAsImage, SIGNAL( triggered() ), this, SLOT( saveMapAsImage() ) );
 
-  mActionPrintComposer = new QAction( getThemeIcon( "mActionFilePrint.png" ), tr( "&Print Composer" ), this );
-  shortcuts->registerAction( mActionPrintComposer, tr( "Ctrl+P", "Print Composer" ) );
-  mActionPrintComposer->setStatusTip( tr( "Print Composer" ) );
-  connect( mActionPrintComposer, SIGNAL( triggered() ), this, SLOT( filePrint() ) );
+  mActionNewPrintComposer = new QAction( getThemeIcon( "mActionFilePrint.png" ), tr( "&New Print Composer" ), this );
+  shortcuts->registerAction( mActionNewPrintComposer, tr( "Ctrl+P", "New Print Composer" ) );
+  mActionNewPrintComposer->setStatusTip( tr( "New Print Composer" ) );
+  connect( mActionNewPrintComposer, SIGNAL( triggered() ), this, SLOT( newPrintComposer() ) );
 
   mActionExit = new QAction( getThemeIcon( "mActionFileExit.png" ), tr( "Exit" ), this );
   shortcuts->registerAction( mActionExit, tr( "Ctrl+Q", "Exit QGIS" ) );
@@ -1163,7 +1166,8 @@ void QgisApp::createMenus()
     mActionFileSeparator3 = mFileMenu->addSeparator();
   }
 
-  mFileMenu->addAction( mActionPrintComposer );
+  mFileMenu->addAction( mActionNewPrintComposer );
+  mPrintComposersMenu = mFileMenu->addMenu( tr( "Print Composers" ) );
   mActionFileSeparator4 = mFileMenu->addSeparator();
 
   mFileMenu->addAction( mActionExit );
@@ -1361,7 +1365,7 @@ void QgisApp::createToolBars()
   mFileToolBar->addAction( mActionOpenProject );
   mFileToolBar->addAction( mActionSaveProject );
   mFileToolBar->addAction( mActionSaveProjectAs );
-  mFileToolBar->addAction( mActionPrintComposer );
+  mFileToolBar->addAction( mActionNewPrintComposer );
   mFileToolBar->addAction( mActionAddOgrLayer );
   mFileToolBar->addAction( mActionAddRasterLayer );
 #ifdef HAVE_POSTGRESQL
@@ -1626,7 +1630,7 @@ void QgisApp::setTheme( QString theThemeName )
   mActionOpenProject->setIcon( getThemeIcon( "/mActionFileOpen.png" ) );
   mActionSaveProject->setIcon( getThemeIcon( "/mActionFileSave.png" ) );
   mActionSaveProjectAs->setIcon( getThemeIcon( "/mActionFileSaveAs.png" ) );
-  mActionPrintComposer->setIcon( getThemeIcon( "/mActionFilePrint.png" ) );
+  mActionNewPrintComposer->setIcon( getThemeIcon( "/mActionNewComposer.png" ) );
   mActionSaveMapAsImage->setIcon( getThemeIcon( "/mActionSaveMapAsImage.png" ) );
   mActionExit->setIcon( getThemeIcon( "/mActionFileExit.png" ) );
   mActionAddOgrLayer->setIcon( getThemeIcon( "/mActionAddOgrLayer.png" ) );
@@ -1692,10 +1696,13 @@ void QgisApp::setTheme( QString theThemeName )
   mActionAddWmsLayer->setIcon( getThemeIcon( "/mActionAddWmsLayer.png" ) );
   mActionAddToOverview->setIcon( getThemeIcon( "/mActionInOverview.png" ) );
 
-  if ( mComposer )
+  //change themes of all composers
+  QMap<QString, QgsComposer*>::iterator composerIt = mPrintComposers.begin();
+  for ( ; composerIt != mPrintComposers.end(); ++composerIt )
   {
-    mComposer->setupTheme();
+    composerIt.value()->setupTheme();
   }
+
   emit currentThemeChanged( theThemeName );
 }
 
@@ -2297,14 +2304,14 @@ static void buildSupportedVectorFileFilter_( QString & fileFilters )
   the current working directory if this is the first time invoked
   with the current filter name.
 
+  This method returns true if cancel all was clicked, otherwise false
+
 */
 
 static bool openFilesRememberingFilter_( QString const &filterName,
     QString const &filters, QStringList & selectedFiles, QString& enc, QString &title,
     bool cancelAll = false )
 {
-
-  bool retVal = false;
 
   bool haveLastUsedFilter = false; // by default, there is no last
   // used filter
@@ -2319,28 +2326,36 @@ static bool openFilesRememberingFilter_( QString const &filterName,
   QString lastUsedDir = settings.value( "/UI/" + filterName + "Dir", "." ).toString();
 
   QgsDebugMsg( "Opening file dialog with filters: " + filters );
-
-  QgsEncodingFileDialog* openFileDialog = new QgsEncodingFileDialog( 0,
-      title, lastUsedDir, filters, QString( "" ) );
-
-  // allow for selection of more than one file
-  openFileDialog->setFileMode( QFileDialog::ExistingFiles );
-
-  if ( haveLastUsedFilter )     // set the filter to the last one used
+  if ( !cancelAll )
   {
-    openFileDialog->selectFilter( lastUsedFilter );
+    selectedFiles = QFileDialog::getOpenFileNames( 0, title, lastUsedDir, filters, &lastUsedFilter );
   }
-
-  // Check if we should add a cancel all button
-  if ( cancelAll )
+  else //we have to use non-native dialog to add cancel all button
   {
+    QgsEncodingFileDialog* openFileDialog = new QgsEncodingFileDialog( 0, title, lastUsedDir, filters, QString( "" ) );
+    // allow for selection of more than one file
+    openFileDialog->setFileMode( QFileDialog::ExistingFiles );
+    if ( haveLastUsedFilter )     // set the filter to the last one used
+    {
+      openFileDialog->selectFilter( lastUsedFilter );
+    }
     openFileDialog->addCancelAll();
+    if ( openFileDialog->exec() == QDialog::Accepted )
+    {
+      selectedFiles = openFileDialog->selectedFiles();
+    }
+    else
+    {
+      //cancel or cancel all?
+      if ( openFileDialog->cancelAll() )
+      {
+        return true;
+      }
+    }
   }
 
-  if ( openFileDialog->exec() == QDialog::Accepted )
+  if ( !selectedFiles.isEmpty() )
   {
-    selectedFiles = openFileDialog->selectedFiles();
-    enc = openFileDialog->encoding();
     // Fix by Tim - getting the dirPath from the dialog
     // directly truncates the last node in the dir path.
     // This is a workaround for that
@@ -2350,17 +2365,10 @@ static bool openFilesRememberingFilter_( QString const &filterName,
 
     QgsDebugMsg( "Writing last used dir: " + myPath );
 
-    settings.setValue( "/UI/" + filterName, openFileDialog->selectedFilter() );
+    settings.setValue( "/UI/" + filterName, lastUsedFilter );
     settings.setValue( "/UI/" + filterName + "Dir", myPath );
   }
-  else
-  {
-    // Cancel or cancel all
-    retVal = openFileDialog->cancelAll();
-  }
-
-  delete openFileDialog;
-  return retVal;
+  return false;
 }   // openFilesRememberingFilter_
 
 
@@ -3052,9 +3060,7 @@ void QgisApp::fileExit()
 
   if ( saveDirty() )
   {
-    delete mComposer;
-    mComposer = 0;
-
+    deletePrintComposers();
     mMapCanvas->freeze( true );
     removeAllLayers();
     qApp->exit( 0 );
@@ -3077,8 +3083,7 @@ void QgisApp::fileNew( bool thePromptToSaveFlag )
     return;
   }
 
-  delete mComposer;
-  mComposer = new QgsComposer( this );
+  deletePrintComposers();
 
   if ( thePromptToSaveFlag )
   {
@@ -3281,37 +3286,21 @@ void QgisApp::fileOpen()
     // Retrieve last used project dir from persistent settings
     QSettings settings;
     QString lastUsedDir = settings.value( "/UI/lastProjectDir", "." ).toString();
-
-    QFileDialog * openFileDialog = new QFileDialog( this,
-        tr( "Choose a QGIS project file to open" ),
-        lastUsedDir, tr( "QGis files (*.qgs)" ) );
-    openFileDialog->setFileMode( QFileDialog::ExistingFile );
-
-
-    QString fullPath;
-    if ( openFileDialog->exec() == QDialog::Accepted )
+    QString fullPath = QFileDialog::getOpenFileName( this, tr( "Choose a QGIS project file to open" ), lastUsedDir, tr( "QGis files (*.qgs)" ) );
+    if ( fullPath.isNull() )
     {
-      // Fix by Tim - getting the dirPath from the dialog
-      // directly truncates the last node in the dir path.
-      // This is a workaround for that
-      fullPath = openFileDialog->selectedFiles().first();
-      QFileInfo myFI( fullPath );
-      QString myPath = myFI.path();
-      // Persist last used project dir
-      settings.setValue( "/UI/lastProjectDir", myPath );
-    }
-    else
-    {
-      // if they didn't select anything, just return
-      delete openFileDialog;
       return;
     }
 
-    delete openFileDialog;
+    // Fix by Tim - getting the dirPath from the dialog
+    // directly truncates the last node in the dir path.
+    // This is a workaround for that
+    QFileInfo myFI( fullPath );
+    QString myPath = myFI.path();
+    // Persist last used project dir
+    settings.setValue( "/UI/lastProjectDir", myPath );
 
-    delete mComposer;
-    mComposer = new QgsComposer( this );
-
+    deletePrintComposers();
     // clear out any stuff from previous project
     mMapCanvas->freeze( true );
     removeAllLayers();
@@ -3357,6 +3346,9 @@ void QgisApp::fileOpen()
     // project so that they can check any project
     // specific plug-in state
 
+    //load the composers in the project
+    loadComposersFromProject( fullPath );
+
     // add this to the list of recently used project files
     saveRecentProjectPath( fullPath, settings );
 
@@ -3377,10 +3369,7 @@ bool QgisApp::addProject( QString projectFile )
 
   QApplication::setOverrideCursor( Qt::WaitCursor );
 
-  //clear the composer
-  delete mComposer;
-  mComposer = new QgsComposer( this );
-
+  deletePrintComposers();
   // clear the map canvas
   removeAllLayers();
 
@@ -3451,6 +3440,8 @@ bool QgisApp::addProject( QString projectFile )
   emit projectRead(); // let plug-ins know that we've read in a new
   // project so that they can check any project
   // specific plug-in state
+
+  loadComposersFromProject( projectFile );
 
   // add this to the list of recently used project files
   QSettings settings;
@@ -3563,55 +3554,31 @@ void QgisApp::fileSaveAs()
   // Retrieve last used project dir from persistent settings
   QSettings settings;
   QString lastUsedDir = settings.value( "/UI/lastProjectDir", "." ).toString();
-
-  std::auto_ptr<QFileDialog> saveFileDialog( new QFileDialog( this,
-      tr( "Choose a file name to save the QGIS project file as" ),
-      lastUsedDir, tr( "QGis files (*.qgs)" ) ) );
-
-  saveFileDialog->setFileMode( QFileDialog::AnyFile );
-
-  saveFileDialog->setAcceptMode( QFileDialog::AcceptSave );
-
-  saveFileDialog->setConfirmOverwrite( true );
-
-  // if we don't have a file name, then obviously we need to get one; note
-  // that the project file name is reset to null in fileNew()
-  QFileInfo fullPath;
-
-  if ( saveFileDialog->exec() == QDialog::Accepted )
+  QString saveFilePath = QFileDialog::getSaveFileName( this, tr( "Choose a file name to save the QGIS project file as" ), lastUsedDir, tr( "QGis files (*.qgs)" ) );
+  if ( saveFilePath.isNull() ) //canceled
   {
-    // Fix by Tim - getting the dirPath from the dialog
-    // directly truncates the last node in the dir path.
-    // This is a workaround for that
-    fullPath.setFile( saveFileDialog->selectedFiles().first() );
-    QString myPath = fullPath.path();
-    // Persist last used project dir
-    settings.setValue( "/UI/lastProjectDir", myPath );
-  }
-  else
-  {
-    // if they didn't select anything, just return
-    // delete saveFileDialog; auto_ptr auto deletes
     return;
   }
+  QFileInfo myFI( saveFilePath );
+  QString myPath = myFI.path();
+  settings.setValue( "/UI/lastProjectDir", myPath );
 
   // make sure the .qgs extension is included in the path name. if not, add it...
-  if ( "qgs" != fullPath.suffix() )
+  if ( "qgs" != myFI.suffix() )
   {
-    QString newFilePath = fullPath.filePath() + ".qgs";
-    fullPath.setFile( newFilePath );
+    saveFilePath = myFI.filePath() + ".qgs";
   }
 
   try
   {
-    QgsProject::instance()->setFileName( fullPath.filePath() );
+    QgsProject::instance()->setFileName( saveFilePath );
 
     if ( QgsProject::instance()->write() )
     {
       setTitleBarText_( *this ); // update title bar
       statusBar()->showMessage( tr( "Saved project to: %1" ).arg( QgsProject::instance()->fileName() ) );
       // add this to the list of recently used project files
-      saveRecentProjectPath( fullPath.filePath(), settings );
+      saveRecentProjectPath( saveFilePath, settings );
     }
     else
     {
@@ -3714,13 +3681,41 @@ bool QgisApp::openLayer( const QString & fileName )
   return ok;
 }
 
-void QgisApp::filePrint()
+void QgisApp::newPrintComposer()
 {
   if ( mMapCanvas && mMapCanvas->isDrawing() )
   {
     return;
   }
-  mComposer->open();
+
+  //ask user about name
+  bool composerExists = true;
+  QString composerId;
+  while ( composerExists )
+  {
+    composerId = QInputDialog::getText( 0, tr( "Enter id string for composer" ), tr( "id:" ) );
+    if ( composerId.isNull() )
+    {
+      return;
+    }
+
+    if ( mPrintComposers.contains( composerId ) )
+    {
+      QMessageBox::critical( 0, tr( "Composer id already exists" ), tr( "The entered composer id '%1' already exists. Please enter a different id" ).arg( composerId ) );
+    }
+    else
+    {
+      composerExists = false;
+    }
+  }
+
+  //create new composer object
+  QgsComposer* newComposerObject = new QgsComposer( this, composerId );
+  //add it to the map of existing print composers
+  mPrintComposers.insert( composerId, newComposerObject );
+  //and place action into print composers menu
+  mPrintComposersMenu->addAction( newComposerObject->windowAction() );
+  newComposerObject->open();
 }
 
 void QgisApp::saveMapAsImage()
@@ -4063,7 +4058,7 @@ void QgisApp::attributeTable()
     return;
   }
 
-  QgsVectorLayer * myLayer = dynamic_cast<QgsVectorLayer *>( mMapLegend->currentLayer() );
+  QgsVectorLayer * myLayer = qobject_cast<QgsVectorLayer *>( mMapLegend->currentLayer() );
   QgsAttributeTableDialog *mDialog = new QgsAttributeTableDialog( myLayer );
   mDialog->show();
   // the dialog will be deleted by itself on close
@@ -4094,7 +4089,7 @@ void QgisApp::deleteSelected()
     return;
   }
 
-  QgsVectorLayer* vlayer = dynamic_cast<QgsVectorLayer*>( layer );
+  QgsVectorLayer* vlayer = qobject_cast<QgsVectorLayer *>( layer );
   if ( !vlayer )
   {
     QMessageBox::information( this, tr( "No Vector Layer Selected" ),
@@ -4201,6 +4196,67 @@ QgsGeometry* QgisApp::unionGeometries( const QgsVectorLayer* vl, QgsFeatureList&
   return unionGeom;
 }
 
+QList<QgsComposer*> QgisApp::printComposers()
+{
+  QList<QgsComposer*> composerList;
+  QMap<QString, QgsComposer*>::iterator it = mPrintComposers.begin();
+  for ( ; it != mPrintComposers.end(); ++it )
+  {
+    composerList.push_back( it.value() );
+  }
+  return composerList;
+}
+
+void QgisApp::checkOutComposer( QgsComposer* c )
+{
+  if ( !c )
+  {
+    return;
+  }
+  mPrintComposers.remove( c->id() );
+  mPrintComposersMenu->removeAction( c->windowAction() );
+}
+
+bool QgisApp::loadComposersFromProject( const QString& projectFilePath )
+{
+  //create dom document from file
+  QDomDocument projectDom;
+  QFile projectFile( projectFilePath );
+  if ( !projectFile.open( QIODevice::ReadOnly ) )
+  {
+    return false;
+  }
+
+  if ( !projectDom.setContent( &projectFile, false ) )
+  {
+    return false;
+  }
+
+  //restore each composer
+  QDomNodeList composerNodes = projectDom.elementsByTagName( "Composer" );
+  for ( int i = 0; i < composerNodes.size(); ++i )
+  {
+    QgsComposer* composer = new QgsComposer( this, "" );
+    composer->readXML( composerNodes.at( i ).toElement(), projectDom );
+    mPrintComposers.insert( composer->id(), composer );
+    mPrintComposersMenu->addAction( composer->windowAction() );
+    composer->showMinimized();
+    composer->zoomFull();
+  }
+
+  return true;
+}
+
+void QgisApp::deletePrintComposers()
+{
+  QMap<QString, QgsComposer*>::iterator it = mPrintComposers.begin();
+  for ( ; it != mPrintComposers.end(); ++it )
+  {
+    delete it.value();
+  }
+  mPrintComposers.clear();
+}
+
 void QgisApp::mergeSelectedFeatures()
 {
   //get active layer (hopefully vector)
@@ -4210,7 +4266,7 @@ void QgisApp::mergeSelectedFeatures()
     QMessageBox::information( 0, tr( "No active layer" ), tr( "No active layer found. Please select a layer in the layer list" ) );
     return;
   }
-  QgsVectorLayer* vl = dynamic_cast<QgsVectorLayer*>( activeMapLayer );
+  QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( activeMapLayer );
   if ( !vl )
   {
     QMessageBox::information( 0, tr( "Active layer is not vector" ), tr( "The merge features tool only works on vector layers. Please select a vector layer from the layer list" ) );
@@ -4426,7 +4482,7 @@ void QgisApp::editCut( QgsMapLayer * layerContainingSelection )
   if ( selectionLayer )
   {
     // Test for feature support in this layer
-    QgsVectorLayer* selectionVectorLayer = dynamic_cast<QgsVectorLayer*>( selectionLayer );
+    QgsVectorLayer* selectionVectorLayer = qobject_cast<QgsVectorLayer *>( selectionLayer );
 
     if ( selectionVectorLayer != 0 )
     {
@@ -4455,7 +4511,7 @@ void QgisApp::editCopy( QgsMapLayer * layerContainingSelection )
   if ( selectionLayer )
   {
     // Test for feature support in this layer
-    QgsVectorLayer* selectionVectorLayer = dynamic_cast<QgsVectorLayer*>( selectionLayer );
+    QgsVectorLayer* selectionVectorLayer = qobject_cast<QgsVectorLayer *>( selectionLayer );
 
     if ( selectionVectorLayer != 0 )
     {
@@ -4481,7 +4537,7 @@ void QgisApp::editPaste( QgsMapLayer * destinationLayer )
   if ( pasteLayer )
   {
     // Test for feature support in this layer
-    QgsVectorLayer* pasteVectorLayer = dynamic_cast<QgsVectorLayer*>( pasteLayer );
+    QgsVectorLayer* pasteVectorLayer = qobject_cast<QgsVectorLayer *>( pasteLayer );
 
     if ( pasteVectorLayer != 0 )
     {
@@ -4513,6 +4569,9 @@ void QgisApp::pasteTransformations()
 
 void QgisApp::refreshMapCanvas()
 {
+  //clear all caches first
+  QgsMapLayerRegistry::instance()->clearAllLayerCaches();
+  //then refresh
   mMapCanvas->refresh();
 }
 
@@ -4547,7 +4606,7 @@ void QgisApp::toggleEditing( QgsMapLayer *layer )
   if ( !layer )
     return;
 
-  QgsVectorLayer *vlayer = dynamic_cast<QgsVectorLayer*>( layer );
+  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
   if ( !vlayer )
     return;
 
@@ -4591,6 +4650,7 @@ void QgisApp::toggleEditing( QgsMapLayer *layer )
     }
     else //cancel
     {
+      mActionToggleEditing->setChecked( vlayer->isEditable() );
       return;
     }
   }
@@ -4600,8 +4660,12 @@ void QgisApp::toggleEditing( QgsMapLayer *layer )
   }
 
   if ( layer == mMapLegend->currentLayer() )
+  {
     activateDeactivateLayerRelatedActions( layer );
+  }
 
+  //ensure the toolbar icon state is consistent with the layer editing state
+  mActionToggleEditing->setChecked( vlayer->isEditable() );
   vlayer->triggerRepaint();
 }
 
@@ -4630,7 +4694,14 @@ void QgisApp::showMouseCoordinate( const QgsPoint & p )
   }
   else
   {
-    mCoordsEdit->setText( p.toString( mMousePrecisionDecimalPlaces ) );
+    if ( mMapCanvas->mapUnits() == QGis::DegreesMinutesSeconds )
+    {
+      mCoordsEdit->setText( p.toDegreesMinutesSeconds( mMousePrecisionDecimalPlaces ) );
+    }
+    else
+    {
+      mCoordsEdit->setText( p.toString( mMousePrecisionDecimalPlaces ) );
+    }
     if ( mCoordsEdit->width() > mCoordsEdit->minimumWidth() )
     {
       mCoordsEdit->setMinimumWidth( mCoordsEdit->width() );
@@ -5562,7 +5633,7 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
   /***********Vector layers****************/
   if ( layer->type() == QgsMapLayer::VectorLayer )
   {
-    QgsVectorLayer* vlayer = dynamic_cast<QgsVectorLayer*>( layer );
+    QgsVectorLayer* vlayer = qobject_cast<QgsVectorLayer *>( layer );
     const QgsVectorDataProvider* dprovider = vlayer->dataProvider();
     bool layerHasSelection = ( vlayer->selectedFeatureCount() != 0 );
 
@@ -5614,8 +5685,10 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
       }
 
       //merge tool needs editable layer and provider with the capability of adding and deleting features
-      if ( vlayer->isEditable() && ( dprovider->capabilities() & QgsVectorDataProvider::DeleteFeatures ) \
-           &&  QgsVectorDataProvider::AddFeatures )
+      if ( vlayer->isEditable() &&
+           ( dprovider->capabilities() & QgsVectorDataProvider::DeleteFeatures ) &&
+           ( dprovider->capabilities() & QgsVectorDataProvider::ChangeAttributeValues ) &&
+           ( dprovider->capabilities() & QgsVectorDataProvider::AddFeatures ) )
       {
         mActionMergeFeatures->setEnabled( layerHasSelection );
       }
@@ -5799,7 +5872,7 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
     int identifyMode = settings.value( "/Map/identifyMode", 0 ).toInt();
     if ( identifyMode == 0 )
     {
-      const QgsRasterLayer *rlayer = dynamic_cast<const QgsRasterLayer*>( layer );
+      const QgsRasterLayer *rlayer = qobject_cast<const QgsRasterLayer *>( layer );
       const QgsRasterDataProvider* dprovider = rlayer->dataProvider();
       if ( dprovider )
       {
@@ -6300,7 +6373,7 @@ void QgisApp::updateUndoActions()
   QgsMapLayer* layer = activeLayer();
   if ( layer )
   {
-    QgsVectorLayer* vlayer = dynamic_cast<QgsVectorLayer*>( layer );
+    QgsVectorLayer* vlayer = qobject_cast<QgsVectorLayer *>( layer );
     if ( vlayer && vlayer->isEditable() )
     {
       canUndo = vlayer->undoStack()->canUndo();

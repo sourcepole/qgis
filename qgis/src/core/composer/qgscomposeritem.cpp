@@ -34,7 +34,7 @@
 #define FONT_WORKAROUND_SCALE 10 //scale factor for upscaling fontsize and downscaling painter
 
 QgsComposerItem::QgsComposerItem( QgsComposition* composition, bool manageZValue ): QGraphicsRectItem( 0 ), mComposition( composition ), mBoundingResizeRectangle( 0 ), \
-    mFrame( true ), mItemPositionLocked( false )
+    mFrame( true ), mItemPositionLocked( false ), mLastValidViewScaleFactor( -1 )
 {
   setFlag( QGraphicsItem::ItemIsSelectable, true );
   setAcceptsHoverEvents( true );
@@ -53,7 +53,7 @@ QgsComposerItem::QgsComposerItem( QgsComposition* composition, bool manageZValue
 }
 
 QgsComposerItem::QgsComposerItem( qreal x, qreal y, qreal width, qreal height, QgsComposition* composition, bool manageZValue ): \
-    QGraphicsRectItem( 0, 0, width, height, 0 ), mComposition( composition ), mBoundingResizeRectangle( 0 ), mFrame( true ), mItemPositionLocked( false )
+    QGraphicsRectItem( 0, 0, width, height, 0 ), mComposition( composition ), mBoundingResizeRectangle( 0 ), mFrame( true ), mItemPositionLocked( false ), mLastValidViewScaleFactor( -1 )
 {
   setFlag( QGraphicsItem::ItemIsSelectable, true );
   setAcceptsHoverEvents( true );
@@ -135,6 +135,8 @@ bool QgsComposerItem::_writeXML( QDomElement& itemElem, QDomDocument& doc ) cons
     composerItemElem.setAttribute( "positionLock", "false" );
   }
 
+  composerItemElem.setAttribute( "lastValidViewScaleFactor", mLastValidViewScaleFactor );
+
 
   //frame color
   QDomElement frameColorElem = doc.createElement( "FrameColor" );
@@ -201,6 +203,8 @@ bool QgsComposerItem::_readXML( const QDomElement& itemElem, const QDomDocument&
   {
     return false;
   }
+
+  mLastValidViewScaleFactor = itemElem.attribute( "lastValidViewScaleFactor", "-1" ).toDouble();
 
   setSceneRect( QRectF( x, y, width, height ) );
   setZValue( itemElem.attribute( "zValue" ).toDouble() );
@@ -437,7 +441,7 @@ void QgsComposerItem::changeItemRectangle( const QPointF& currentPosition, const
   }
 
   //test if change item is a composer item. If so, prefer call to  setSceneRect() instead of setTransform() and setRect()
-  QgsComposerItem* changeComposerItem = dynamic_cast<QgsComposerItem*>( changeItem );
+  QgsComposerItem* changeComposerItem = dynamic_cast<QgsComposerItem *>( changeItem );
 
   double mx = 0.0, my = 0.0, rx = 0.0, ry = 0.0;
   QPointF snappedPosition = mComposition->snapPointToGrid( currentPosition );
@@ -717,7 +721,7 @@ double QgsComposerItem::textWidthMillimeters( const QFont& font, const QString& 
 double QgsComposerItem::fontAscentMillimeters( const QFont& font ) const
 {
   QFont metricsFont = scaledFontPixelSize( font );
-  QFontMetrics fontMetrics( metricsFont );
+  QFontMetricsF fontMetrics( metricsFont );
   return ( fontMetrics.ascent() / FONT_WORKAROUND_SCALE );
 }
 
@@ -736,17 +740,18 @@ QFont QgsComposerItem::scaledFontPixelSize( const QFont& font ) const
 
 double QgsComposerItem::horizontalViewScaleFactor() const
 {
-  double result = 1;
+  double result = -1;
   if ( scene() )
   {
     QList<QGraphicsView*> viewList = scene()->views();
-    if ( viewList.size() > 0 )
+    if ( viewList.size() > 0 ) //if not, probably this function was called from non-gui code
     {
-      result = viewList.at( 0 )->transform().m11();
-    }
-    else
-    {
-      return 1; //probably called from non-gui code
+      QGraphicsView* currentView = viewList.at( 0 );
+      if ( currentView->isVisible() )
+      {
+        result = currentView->transform().m11();
+        mLastValidViewScaleFactor = result;
+      }
     }
   }
   return result;

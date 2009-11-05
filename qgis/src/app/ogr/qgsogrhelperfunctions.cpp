@@ -56,8 +56,22 @@ QString createDatabaseURI( QString connectionType, QString host, QString databas
   }
   else if ( connectionType == "Oracle Spatial" )
   {
-    uri = "OCI:" + user + "/" + password
-          + "@" + host + "/" + database;
+    uri = "OCI:" + user;
+
+    if (( !user.isEmpty() && !password.isEmpty() ) ||
+        ( user.isEmpty() && password.isEmpty() ) )
+    {
+      uri += "/";
+      if ( !password.isEmpty() )
+        uri += password;
+    }
+
+    if ( !host.isEmpty() )
+    {
+      uri += "@" + host;
+      if ( !database.isEmpty() )
+        uri += "/" + database;
+    }
   }
   else if ( connectionType == "ODBC" )
   {

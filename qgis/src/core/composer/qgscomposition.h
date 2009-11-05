@@ -16,6 +16,7 @@
 #ifndef QGSCOMPOSITION_H
 #define QGSCOMPOSITION_H
 
+#include <QDomDocument>
 #include <QGraphicsScene>
 #include <QLinkedList>
 
@@ -25,7 +26,6 @@ class QgsPaperItem;
 class QGraphicsRectItem;
 class QgsMapRenderer;
 
-class QDomDocument;
 class QDomElement;
 
 /** \ingroup MapComposer
@@ -36,6 +36,7 @@ class QDomElement;
  * */
 class CORE_EXPORT QgsComposition: public QGraphicsScene
 {
+    Q_OBJECT
   public:
 
     /** \brief Plot type */
@@ -187,6 +188,9 @@ class CORE_EXPORT QgsComposition: public QGraphicsScene
 
     void loadGridAppearanceSettings();
     void saveGridAppearanceSettings();
+
+  signals:
+    void paperSizeChanged();
 };
 
 #endif

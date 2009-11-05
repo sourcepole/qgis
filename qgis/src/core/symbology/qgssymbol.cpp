@@ -217,40 +217,42 @@ void QgsSymbol::setNamedPointSymbol( QString name )
       QgsDebugMsg( "\n\n\n *** Svg Symbol not found on fs ***" );
       QgsDebugMsg( "Name: " + name );
       //see if we can resolve the problem...
-      //by using the qgis svg dir from this local machine
-      //one day when user specified svg are allowed we need
-      //to adjust this logic probably...
-      QString svgPath = QgsApplication::svgPath();
-      QgsDebugMsg( "SvgPath: " + svgPath );
-      QFileInfo myInfo( myTempName );
-      QString myFileName = myInfo.fileName(); // foo.svg
-      QString myLowestDir = myInfo.dir().dirName();
-      QString myLocalPath = svgPath + QDir::separator() +
-                            myLowestDir + QDir::separator() +
-                            myFileName;
-      QgsDebugMsg( "Alternative svg path: " + myLocalPath );
-      if ( QFile( myLocalPath ).exists() )
+      //
+      
+      QStringList svgPaths = QgsApplication::svgPaths();
+      for( int i=0; i<svgPaths.size(); i++) 
       {
-        name = "svg:" + myLocalPath;
-        QgsDebugMsg( "Svg found in alternative path" );
-      }
-      else if ( myInfo.isRelative() )
-      {
-        QFileInfo pfi( QgsProject::instance()->fileName() );
-        if ( pfi.exists() && QFile( pfi.canonicalPath() + QDir::separator() + myTempName ).exists() )
+        QgsDebugMsg( "SvgPath: " + svgPaths[i] );
+        QFileInfo myInfo( myTempName );
+        QString myFileName = myInfo.fileName(); // foo.svg
+        QString myLowestDir = myInfo.dir().dirName();
+        QString myLocalPath = svgPaths[i] + "/" + myLowestDir + "/" + myFileName;
+
+        QgsDebugMsg( "Alternative svg path: " + myLocalPath );
+        if ( QFile( myLocalPath ).exists() )
         {
-          name = "svg:" + pfi.canonicalPath() + QDir::separator() + myTempName;
+          name = "svg:" + myLocalPath;
           QgsDebugMsg( "Svg found in alternative path" );
+        }
+        else if ( myInfo.isRelative() )
+        {
+          QFileInfo pfi( QgsProject::instance()->fileName() );
+          if ( pfi.exists() && QFile( pfi.canonicalPath() + QDir::separator() + myTempName ).exists() )
+          {
+            name = "svg:" + pfi.canonicalPath() + QDir::separator() + myTempName;
+            QgsDebugMsg( "Svg found in alternative path" );
+            break;
+          }
+          else
+          {
+            QgsDebugMsg( "Svg not found in project path" );
+          }
         }
         else
         {
-          QgsDebugMsg( "Svg not found in project path" );
+          //couldnt find the file, no happy ending :-(
+          QgsDebugMsg( "Computed alternate path but no svg there either" );
         }
-      }
-      else
-      {
-        //couldnt find the file, no happy ending :-(
-        QgsDebugMsg( "Computed alternate path but no svg there either" );
       }
     }
   }
@@ -511,11 +513,17 @@ bool QgsSymbol::writeXML( QDomNode & item, QDomDocument & document, const QgsVec
     {
       name = fi.canonicalFilePath();
 
-      QString dir = QFileInfo( QgsApplication::svgPath() ).canonicalFilePath();
+      QStringList svgPaths = QgsApplication::svgPaths();
 
-      if ( !dir.isEmpty() && name.startsWith( dir ) )
+      for(int i=0; i<svgPaths.size(); i++)
       {
-        name = name.mid( dir.size() );
+        QString dir = QFileInfo( svgPaths[i] ).canonicalFilePath();
+
+        if ( !dir.isEmpty() && name.startsWith( dir ) )
+        {
+          name = name.mid( dir.size() );
+	  break;
+        }
       }
     }
 
@@ -548,7 +556,7 @@ bool QgsSymbol::writeXML( QDomNode & item, QDomDocument & document, const QgsVec
   symbol.appendChild( fillcolor );
 
   appendText( symbol, document, "fillpattern", QgsSymbologyUtils::brushStyle2QString( mBrush.style() ) );
-  appendText( symbol, document, "texturepath", mTextureFilePath );
+  appendText( symbol, document, "texturepath", QgsProject::instance()->writePath( mTextureFilePath ) );
 
   return returnval;
 }
@@ -668,7 +676,7 @@ bool QgsSymbol::readXML( QDomNode &synode, const QgsVectorLayer *vl )
 
   QDomNode texturepathnode = synode.namedItem( "texturepath" );
   QDomElement texturepathelement = texturepathnode.toElement();
-  setCustomTexture( texturepathelement.text() );
+  setCustomTexture( QgsProject::instance()->readPath( texturepathelement.text() ) );
 
   //run this after setting the custom texture path, so we override the brush if it isn't the custom pattern brush.
   QDomNode fillpnode = synode.namedItem( "fillpattern" );

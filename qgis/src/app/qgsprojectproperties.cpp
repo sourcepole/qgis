@@ -20,6 +20,7 @@
 #include "qgsprojectproperties.h"
 
 //qgis includes
+#include "qgsavoidintersectionsdialog.h"
 #include "qgscontexthelp.h"
 #include "qgscoordinatetransform.h"
 #include "qgslogger.h"
@@ -34,7 +35,7 @@
 
 //qt includes
 #include <QColorDialog>
-#include <QHeaderView>	// Qt 4.4
+#include <QHeaderView>  // Qt 4.4
 #include "qgslogger.h"
 
 //stdc++ includes
@@ -113,14 +114,16 @@ QgsProjectProperties::QgsProjectProperties( QgsMapCanvas* mapCanvas, QWidget *pa
     mEnableTopologicalEditingCheckBox->setCheckState( Qt::Unchecked );
   }
 
-  int avoidPolygonIntersections = QgsProject::instance()->readNumEntry( "Digitizing", "/AvoidPolygonIntersections", 0 );
-  if ( avoidPolygonIntersections != 0 )
+  bool avoidIntersectionListOk;
+  mAvoidIntersectionsSettings.clear();
+  QStringList avoidIntersectionsList = QgsProject::instance()->readListEntry( "Digitizing", "/AvoidIntersectionsList", &avoidIntersectionListOk );
+  if ( avoidIntersectionListOk )
   {
-    mAvoidIntersectionsCheckBox->setCheckState( Qt::Checked );
-  }
-  else
-  {
-    mAvoidIntersectionsCheckBox->setCheckState( Qt::Unchecked );
+    QStringList::const_iterator avoidIt = avoidIntersectionsList.constBegin();
+    for ( ; avoidIt != avoidIntersectionsList.constEnd(); ++avoidIt )
+    {
+      mAvoidIntersectionsSettings.insert( *avoidIt );
+    }
   }
 
   bool layerIdListOk, enabledListOk, toleranceListOk, toleranceUnitListOk, snapToListOk;
@@ -238,7 +241,7 @@ QgsProjectProperties::QgsProjectProperties( QgsMapCanvas* mapCanvas, QWidget *pa
     }
     else if ( currentLayer->type() == QgsMapLayer::RasterLayer )
     {
-      QgsRasterLayer *rl = dynamic_cast<QgsRasterLayer *>( currentLayer );
+      QgsRasterLayer *rl = qobject_cast<QgsRasterLayer *>( currentLayer );
 
       if ( rl && rl->providerKey() == "wms" )
       {
@@ -289,6 +292,10 @@ void QgsProjectProperties::setMapUnits( QGis::UnitType unit )
   {
     radFeet->setChecked( true );
   }
+  else if ( unit == QGis::DegreesMinutesSeconds )
+  {
+    radDMS->setChecked( true );
+  }
   else
   {
     radDecimalDegrees->setChecked( true );
@@ -325,6 +332,10 @@ void QgsProjectProperties::apply()
   else if ( radFeet->isChecked() )
   {
     mapUnit = QGis::Feet;
+  }
+  else if ( radDMS->isChecked() )
+  {
+    mapUnit = QGis::DegreesMinutesSeconds;
   }
   else
   {
@@ -373,7 +384,7 @@ void QgsProjectProperties::apply()
   // Announce that we may have a new display precision setting
   emit displayPrecisionChanged();
 
-  QgsProject::instance()->writeEntry( "Paths", "/Absolute", cbxAbsolutePath->currentIndex()==0 );
+  QgsProject::instance()->writeEntry( "Paths", "/Absolute", cbxAbsolutePath->currentIndex() == 0 );
 
   //set the colour for selections
   QColor myColour = pbnSelectionColour->color();
@@ -391,8 +402,16 @@ void QgsProjectProperties::apply()
   //write the digitizing settings
   int topologicalEditingEnabled = ( mEnableTopologicalEditingCheckBox->checkState() == Qt::Checked ) ? 1 : 0;
   QgsProject::instance()->writeEntry( "Digitizing", "/TopologicalEditing", topologicalEditingEnabled );
-  int avoidPolygonIntersectionsEnabled = ( mAvoidIntersectionsCheckBox->checkState() == Qt::Checked ) ? 1 : 0;
-  QgsProject::instance()->writeEntry( "Digitizing", "/AvoidPolygonIntersections", avoidPolygonIntersectionsEnabled );
+
+  //store avoid intersection layers
+  QStringList avoidIntersectionList;
+  QSet<QString>::const_iterator avoidIt = mAvoidIntersectionsSettings.constBegin();
+  for ( ; avoidIt != mAvoidIntersectionsSettings.constEnd(); ++avoidIt )
+  {
+    avoidIntersectionList.append( *avoidIt );
+  }
+  QgsProject::instance()->writeEntry( "Digitizing", "/AvoidIntersectionsList", avoidIntersectionList );
+
 
   QMap<QString, LayerEntry>::const_iterator layerEntryIt;
 
@@ -442,7 +461,7 @@ void QgsProjectProperties::apply()
   QStringList noIdentifyLayerList;
   for ( int i = 0; i < twIdentifyLayers->rowCount(); i++ )
   {
-    QCheckBox *cb = dynamic_cast<QCheckBox*>( twIdentifyLayers->cellWidget( i, 2 ) );
+    QCheckBox *cb = qobject_cast<QCheckBox *>( twIdentifyLayers->cellWidget( i, 2 ) );
     if ( cb && !cb->isChecked() )
     {
       QString id = twIdentifyLayers->verticalHeaderItem( i )->data( Qt::UserRole ).toString();
@@ -488,6 +507,15 @@ void QgsProjectProperties::on_buttonBox_helpRequested()
 {
   QgsDebugMsg( "running help" );
   QgsContextHelp::run( context_id );
+}
+
+void QgsProjectProperties::on_mAvoidIntersectionsPushButton_clicked()
+{
+  QgsAvoidIntersectionsDialog d( mMapCanvas, mAvoidIntersectionsSettings );
+  if ( d.exec() == QDialog::Accepted )
+  {
+    d.enabledLayers( mAvoidIntersectionsSettings );
+  }
 }
 
 void QgsProjectProperties::on_mSnappingOptionsPushButton_clicked()

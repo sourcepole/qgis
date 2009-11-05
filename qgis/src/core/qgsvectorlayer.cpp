@@ -1139,7 +1139,7 @@ void QgsVectorLayer::updateFeatureAttributes( QgsFeature &f )
   }
 
   // remove all attributes that will disappear
-  const QgsAttributeMap &map = f.attributeMap();
+  QgsAttributeMap map = f.attributeMap();
   for ( QgsAttributeMap::const_iterator it = map.begin(); it != map.end(); it++ )
     if ( !mUpdatedFields.contains( it.key() ) )
       f.deleteAttribute( it.key() );
@@ -2769,6 +2769,9 @@ bool QgsVectorLayer::commitChanges()
 {
   bool success = true;
 
+  //clear the cache image so markers dont appear anymore on next draw
+  setCacheImage( 0 );
+
   mCommitErrors.clear();
 
   if ( !mDataProvider )
@@ -3091,6 +3094,9 @@ bool QgsVectorLayer::rollBack()
   emit editingStopped();
 
   setModified( FALSE );
+  // invalidate the cache so the layer updates properly to show its original
+  // after the rollback
+  setCacheImage( 0 );
   triggerRepaint();
 
 
@@ -3203,7 +3209,7 @@ bool QgsVectorLayer::addFeatures( QgsFeatureList features, bool makeSelected )
 
 bool QgsVectorLayer::copySymbologySettings( const QgsMapLayer& other )
 {
-  const QgsVectorLayer* vl = dynamic_cast<const QgsVectorLayer*>( &other );
+  const QgsVectorLayer* vl = qobject_cast<const QgsVectorLayer *>( &other );
 
   // exit if both vectorlayer are the same
   if ( this == vl )
@@ -3233,7 +3239,7 @@ bool QgsVectorLayer::hasCompatibleSymbology( const QgsMapLayer& other ) const
 {
   // vector layers are symbology compatible if they have the same type, the same sequence of numerical/ non numerical fields and the same field names
 
-  const QgsVectorLayer* otherVectorLayer = dynamic_cast<const QgsVectorLayer*>( &other );
+  const QgsVectorLayer* otherVectorLayer = qobject_cast<const QgsVectorLayer *>( &other );
   if ( otherVectorLayer )
   {
     if ( otherVectorLayer->type() != type() )
