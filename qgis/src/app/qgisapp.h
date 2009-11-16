@@ -195,10 +195,12 @@ class QgisApp : public QMainWindow
     void removeWindow( QAction *action );
 
     /**Returns the print composers*/
-    QList<QgsComposer*> printComposers();
-    /**Unregisters a composer instance but does _not_ delete it. This method is usually called from within QgsComposer::closeEvent before
-    the composer deletes itself using the Qt::WA_DeleteOnClose flag*/
-    void checkOutComposer( QgsComposer* c );
+    QSet<QgsComposer*> printComposers() const {return mPrintComposers;}
+    /**Creates a new composer and returns a pointer to it*/
+    QgsComposer* createNewComposer();
+    /**Deletes a composer and removes entry from Set*/
+    void deleteComposer( QgsComposer* c );
+
 
     //! Actions to be inserted in menus and toolbars
     QAction *actionNewProject() { return mActionNewProject; }
@@ -224,9 +226,10 @@ class QgisApp : public QMainWindow
     QAction *actionDeleteSelected() { return mActionDeleteSelected; }
     QAction *actionMoveFeature() { return mActionMoveFeature; }
     QAction *actionSplitFeatures() { return mActionSplitFeatures; }
-    QAction *actionAddVertex() { return mActionAddVertex; }
-    QAction *actionDeleteVertex() { return mActionDeleteVertex; }
-    QAction *actionMoveVertex() { return mActionMoveVertex; }
+    //These three tools are deprecated - use node tool rather...
+    //QAction *actionAddVertex() { return mActionAddVertex; }
+    //QAction *actionDeleteVertex() { return mActionDeleteVertex; }
+    //QAction *actionMoveVertex() { return mActionMoveVertex; }
     QAction *actionAddRing() { return mActionAddRing; }
     QAction *actionAddIsland() { return mActionAddIsland; }
     QAction *actionSimplifyFeature() { return mActionSimplifyFeature; }
@@ -336,6 +339,9 @@ class QgisApp : public QMainWindow
     QToolBar *attributesToolBar() { return mAttributesToolBar; }
     QToolBar *pluginToolBar() { return mPluginToolBar; }
     QToolBar *helpToolBar() { return mHelpToolBar; }
+
+    //! run python
+    void runPythonString( const QString &expr );
 
   public slots:
     //! Zoom to full extent
@@ -449,6 +455,7 @@ class QgisApp : public QMainWindow
     void newVectorLayer();
     //! Print the current map view frame
     void newPrintComposer();
+    void showComposerManager();
     //! Add all loaded layers into the overview - overides qgisappbase method
     void addAllToOverview();
     //! Remove all loaded layers from the overview - overides qgisappbase method
@@ -618,6 +625,8 @@ class QgisApp : public QMainWindow
     //! Stops rendering of the main map
     void stopRendering();
 
+    void showStyleManagerV2();
+
   signals:
     /** emitted when a key is pressed and we want non widget sublasses to be able
       to pick up on this (e.g. maplayer) */
@@ -726,6 +735,7 @@ class QgisApp : public QMainWindow
     QAction *mActionProjectProperties;
     QAction *mActionFileSeparator3;
     QAction *mActionNewPrintComposer;
+    QAction *mActionShowComposerManager;
     QAction *mActionFileSeparator4;
     QAction *mActionExit;
 
@@ -743,9 +753,11 @@ class QgisApp : public QMainWindow
     QAction *mActionMoveFeature;
     QAction *mActionReshapeFeatures;
     QAction *mActionSplitFeatures;
+#if 0 // deprecated
     QAction *mActionAddVertex;
     QAction *mActionDeleteVertex;
     QAction *mActionMoveVertex;
+#endif
     QAction *mActionAddRing;
     QAction *mActionAddIsland;
     QAction *mActionEditSeparator2;
@@ -825,6 +837,9 @@ class QgisApp : public QMainWindow
     QAction *mActionCheckQgisVersion;
     QAction *mActionHelpSeparator2;
     QAction *mActionAbout;
+
+    QAction *mActionUseRendererV2;
+    QAction *mActionStyleManagerV2;
 
     // action groups ----------------------------------
     QActionGroup *mMapToolGroup;
@@ -944,7 +959,7 @@ class QgisApp : public QMainWindow
     //! list of recently opened/saved project files
     QStringList mRecentProjectPaths;
     //! Print composers of this project, accessible by id string
-    QMap<QString, QgsComposer*> mPrintComposers;
+    QSet<QgsComposer*> mPrintComposers;
     //! How to determine the number of decimal places used to
     //! display the mouse position
     bool mMousePrecisionAutomatic;
@@ -973,7 +988,7 @@ class QgisApp : public QMainWindow
 
     /* Maptip object
      */
-    QgsMapTip *  mpMaptip;
+    QgsMapTip *mpMaptip;
 
     // Flag to indicate if maptips are on or off
     bool mMapTipsVisible;
@@ -991,6 +1006,7 @@ class QgisApp : public QMainWindow
 
     QgsUndoWidget* mUndoWidget;
 
+    int mLastComposerId;
 };
 
 #endif

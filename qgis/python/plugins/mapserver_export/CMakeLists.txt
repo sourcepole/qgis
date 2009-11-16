@@ -1,9 +1,9 @@
 SET(INSTALLER_FILES
-mapserver_export.png
-__init__.py
-mapserverexportdialog.py
-mapserverexport.py
-ms_export.py
+        mapserver_export.png
+        __init__.py
+        mapserverexportdialog.py
+        mapserverexport.py
+        ms_export.py
 )
 
 PYQT4_WRAP_UI(PYUI_FILES qgsmapserverexportbase.ui)

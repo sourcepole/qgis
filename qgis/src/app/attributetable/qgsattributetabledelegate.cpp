@@ -62,12 +62,7 @@ QWidget *QgsAttributeTableDelegate::createEditor(
   if ( vl == NULL )
     return NULL;
 
-  QWidget *widget = QgsAttributeEditor::createAttributeEditor( parent, vl, fieldIdx( index ), index.model()->data( index, Qt::EditRole ) );
-  widget->adjustSize();
-
-  QgsAttributeTableView *tv = dynamic_cast<QgsAttributeTableView *>( parent->parentWidget() );
-  tv->setRowHeight( index.row(), widget->height() );
-  tv->setColumnWidth( index.column(), widget->width() );
+  QWidget *widget = QgsAttributeEditor::createAttributeEditor( parent, 0, vl, fieldIdx( index ), index.model()->data( index, Qt::EditRole ) );
 
   return widget;
 }

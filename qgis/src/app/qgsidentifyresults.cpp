@@ -38,8 +38,21 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QDockWidget>
+#include <QMenuBar>
 
 #include "qgslogger.h"
+
+static void _runPythonString( const QString &expr )
+{
+  QgisApp::instance()->runPythonString( expr );
+}
+
+void QgsFeatureAction::execute()
+{
+  QList< QPair<QString, QString> > attributes;
+  mResults->retrieveAttributes( mFeatItem, attributes );
+  mLayer->actions()->doAction( mAction, attributes, 0, _runPythonString );
+}
 
 class QgsIdentifyResultsDock : public QDockWidget
 {
@@ -91,14 +104,14 @@ QgsIdentifyResults::QgsIdentifyResults( QgsMapCanvas *canvas, QWidget *parent, Q
     mDock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea );
     mDock->setWidget( this );
     QgisApp::instance()->addDockWidget( Qt::LeftDockWidgetArea, mDock );
-    buttonCancel->hide();
   }
   lstResults->setColumnCount( 2 );
   setColumnText( 0, tr( "Feature" ) );
   setColumnText( 1, tr( "Value" ) );
 
-  connect( buttonCancel, SIGNAL( clicked() ),
-           this, SLOT( close() ) );
+  connect( buttonBox, SIGNAL( helpRequested() ), this, SLOT( helpClicked() ) );
+
+  connect( buttonBox, SIGNAL( clicked() ), this, SLOT( close() ) );
 
   connect( lstResults, SIGNAL( itemExpanded( QTreeWidgetItem* ) ),
            this, SLOT( itemExpanded( QTreeWidgetItem* ) ) );
@@ -147,8 +160,8 @@ void QgsIdentifyResults::addFeature( QgsMapLayer *layer, int fid,
     {
       connect( vlayer, SIGNAL( layerDeleted() ), this, SLOT( layerDestroyed() ) );
       connect( vlayer, SIGNAL( featureDeleted( int ) ), this, SLOT( featureDeleted( int ) ) );
-      connect( vlayer, SIGNAL( editingStarted() ), this, SLOT( addEditAction() ) );
-      connect( vlayer, SIGNAL( editingStopped() ), this, SLOT( removeEditAction() ) );
+      connect( vlayer, SIGNAL( editingStarted() ), this, SLOT( editingToggled() ) );
+      connect( vlayer, SIGNAL( editingStopped() ), this, SLOT( editingToggled() ) );
     }
     else
     {
@@ -176,24 +189,25 @@ void QgsIdentifyResults::addFeature( QgsMapLayer *layer, int fid,
     }
   }
 
-  if ( vlayer && ( vlayer->actions()->size() > 0 || vlayer->isEditable() ) )
+  if ( vlayer )
   {
     QTreeWidgetItem *actionItem = new QTreeWidgetItem( QStringList() << tr( "(Actions)" ) );
     actionItem->setData( 0, Qt::UserRole, "actions" );
     featItem->addChild( actionItem );
 
-    QTreeWidgetItem *twi;
-
-    if ( vlayer->isEditable() )
-    {
-      addEditAction( actionItem );
-    }
+    QTreeWidgetItem *editItem = new QTreeWidgetItem( QStringList() << "" << ( vlayer->isEditable() ? tr( "Edit feature form" ) : tr( "View feature form" ) ) );
+    editItem->setIcon( 0, QgisApp::getThemeIcon( vlayer->isEditable() ? "/mIconEditable.png" : "/mIconEditable.png" ) );
+    editItem->setData( 0, Qt::UserRole, "edit" );
+    actionItem->addChild( editItem );
 
     for ( int i = 0; i < vlayer->actions()->size(); i++ )
     {
-      QgsAttributeAction::aIter iter = vlayer->actions()->retrieveAction( i );
+      const QgsAction &action = vlayer->actions()->at( i );
 
-      twi = new QTreeWidgetItem( QStringList() << "" << iter->name() );
+      if ( !action.runable() )
+        continue;
+
+      QTreeWidgetItem *twi = new QTreeWidgetItem( QStringList() << "" << action.name() );
       twi->setIcon( 0, QgisApp::getThemeIcon( "/mAction.png" ) );
       twi->setData( 0, Qt::UserRole, "action" );
       twi->setData( 0, Qt::UserRole + 1, QVariant::fromValue( i ) );
@@ -202,6 +216,40 @@ void QgsIdentifyResults::addFeature( QgsMapLayer *layer, int fid,
   }
 
   layItem->addChild( featItem );
+}
+
+void QgsIdentifyResults::editingToggled()
+{
+  QTreeWidgetItem *layItem = layerItem( sender() );
+  QgsVectorLayer *vlayer = vectorLayer( layItem );
+  if ( !layItem || !vlayer )
+    return;
+
+  // iterate features
+  int i;
+  for ( i = 0; i < layItem->childCount(); i++ )
+  {
+    QTreeWidgetItem *featItem = layItem->child( i );
+
+    int j;
+    for ( j = 0; j < featItem->childCount() && featItem->child( j )->data( 0, Qt::UserRole ).toString() != "actions"; j++ )
+      QgsDebugMsg( QString( "%1: skipped %2" ).arg( featItem->child( j )->data( 0, Qt::UserRole ).toString() ) );
+
+    if ( j == featItem->childCount() || featItem->child( j )->childCount() < 1 )
+      continue;
+
+    QTreeWidgetItem *actions = featItem->child( j );
+
+    for ( j = 0; i < actions->childCount() && actions->child( j )->data( 0, Qt::UserRole ).toString() != "edit"; j++ )
+      ;
+
+    if ( j == actions->childCount() )
+      continue;
+
+    QTreeWidgetItem *editItem = actions->child( j );
+    editItem->setIcon( 0, QgisApp::getThemeIcon( vlayer->isEditable() ? "/mIconEditable.png" : "/mIconEditable.png" ) );
+    editItem->setText( 1, vlayer->isEditable() ? tr( "Edit feature form" ) : tr( "View feature form" ) );
+  }
 }
 
 // Call to show the dialog box.
@@ -216,20 +264,18 @@ void QgsIdentifyResults::show()
     QTreeWidgetItem *layItem = lstResults->topLevelItem( 0 );
     QTreeWidgetItem *featItem = layItem->child( 0 );
 
-    if ( layItem->childCount() == 1 )
+    if ( layItem->childCount() == 1 && QSettings().value( "/Map/identifyAutoFeatureForm", false ).toBool() )
     {
       QgsVectorLayer *layer = qobject_cast<QgsVectorLayer *>( layItem->data( 0, Qt::UserRole ).value<QObject *>() );
       if ( layer )
       {
         highlightFeature( featItem );
 
-        if ( layer->isEditable() )
-        {
-          // if this is the only feature, it's on a vector layer and that layer is editable:
-          // don't show the edit dialog instead of the results window
-          editFeature( featItem );
-          return;
-        }
+        // if this is the only feature and it's on a vector layer
+        // don't show the form dialog instead of the results window
+        lstResults->setCurrentItem( featItem );
+        featureForm();
+        return;
       }
     }
 
@@ -240,6 +286,7 @@ void QgsIdentifyResults::show()
 
   QDialog::show();
 }
+
 // Slot called when user clicks the Close button
 // (saves the current window size/position)
 void QgsIdentifyResults::close()
@@ -247,6 +294,7 @@ void QgsIdentifyResults::close()
   saveWindowLocation();
   done( 0 );
 }
+
 // Save the current window size/position before closing
 // from window menu or X in titlebar
 void QgsIdentifyResults::closeEvent( QCloseEvent *e )
@@ -256,83 +304,12 @@ void QgsIdentifyResults::closeEvent( QCloseEvent *e )
   close();
 }
 
-void QgsIdentifyResults::addEditAction( QTreeWidgetItem *item )
-{
-  QTreeWidgetItem *editItem = new QTreeWidgetItem( QStringList() << "" << tr( "Edit feature" ) );
-  editItem->setIcon( 0, QgisApp::getThemeIcon( "/mIconEditable.png" ) );
-  editItem->setData( 0, Qt::UserRole, "edit" );
-  item->addChild( editItem );
-}
-
-void QgsIdentifyResults::addOrRemoveEditAction( bool addItem )
-{
-  QTreeWidgetItem *layItem = layerItem( sender() );
-
-  for ( int i = 0; i < layItem->childCount(); i++ )
-  {
-    QTreeWidgetItem *featItem = layItem->child( i );
-    QTreeWidgetItem *actionsItem = 0;
-
-    for ( int j = 0; j < featItem->childCount(); j++ )
-    {
-      QTreeWidgetItem *attrItem = featItem->child( j );
-
-      if ( attrItem->childCount() == 0 || attrItem->data( 0, Qt::UserRole ).toString() != "actions" )
-        continue;
-
-      actionsItem = attrItem;
-      break;
-    }
-
-    if ( addItem )
-    {
-      if ( !actionsItem )
-      {
-        actionsItem = new QTreeWidgetItem( QStringList() << tr( "(Actions)" ) );
-        actionsItem->setData( 0, Qt::UserRole, "actions" );
-        featItem->addChild( actionsItem );
-      }
-
-      addEditAction( actionsItem );
-    }
-    else if ( actionsItem )
-    {
-      for ( int k = 0; k < actionsItem->childCount(); k++ )
-      {
-        QTreeWidgetItem *editItem = actionsItem->child( k );
-        if ( editItem->data( 0, Qt::UserRole ).toString() != "edit" )
-          continue;
-
-        delete editItem;
-
-        if ( actionsItem->childCount() == 0 )
-          delete actionsItem;
-
-        break;
-      }
-    }
-    else
-    {
-      QgsDebugMsg( "actions item not found" );
-    }
-  }
-}
-
-void QgsIdentifyResults::addEditAction()
-{
-  addOrRemoveEditAction( true );
-}
-
-void QgsIdentifyResults::removeEditAction()
-{
-  addOrRemoveEditAction( false );
-}
-
 void QgsIdentifyResults::itemClicked( QTreeWidgetItem *item, int column )
 {
   if ( item->data( 0, Qt::UserRole ).toString() == "edit" )
   {
-    editFeature( item );
+    lstResults->setCurrentItem( item );
+    featureForm();
   }
   else if ( item->data( 0, Qt::UserRole ).toString() == "action" )
   {
@@ -360,39 +337,15 @@ void QgsIdentifyResults::contextMenuEvent( QContextMenuEvent* event )
 
   mActionPopup = new QMenu();
 
-  QAction *a;
-
-  if ( vlayer->isEditable() )
-  {
-    a = mActionPopup->addAction( tr( "Edit feature" ) );
-    a->setEnabled( true );
-    a->setData( QVariant::fromValue( -6 ) );
-  }
-
-  a = mActionPopup->addAction( tr( "Zoom to feature" ) );
-  a->setEnabled( true );
-  a->setData( QVariant::fromValue( -5 ) );
-
-  a = mActionPopup->addAction( tr( "Copy attribute value" ) );
-  a->setEnabled( true );
-  a->setData( QVariant::fromValue( -4 ) );
-
-  a = mActionPopup->addAction( tr( "Copy feature attributes" ) );
-  a->setEnabled( true );
-  a->setData( QVariant::fromValue( -3 ) );
-
+  mActionPopup->addAction( vlayer->isEditable() ? tr( "Edit feature form" ) : tr( "View feature form" ), this, SLOT( featureForm() ) );
+  mActionPopup->addAction( tr( "Zoom to feature" ), this, SLOT( zoomToFeature() ) );
+  mActionPopup->addAction( tr( "Copy attribute value" ), this, SLOT( copyAttributeValue() ) );
+  mActionPopup->addAction( tr( "Copy feature attributes" ), this, SLOT( copyFeatureAttributes() ) );
   mActionPopup->addSeparator();
+  mActionPopup->addAction( tr( "Expand all" ), this, SLOT( expandAll() ) );
+  mActionPopup->addAction( tr( "Collapse all" ), this, SLOT( collapseAll() ) );
 
-  a = mActionPopup->addAction( tr( "Expand all" ) );
-  a->setEnabled( true );
-  a->setData( QVariant::fromValue( -2 ) );
-
-  a = mActionPopup->addAction( tr( "Collapse all" ) );
-  a->setEnabled( true );
-  a->setData( QVariant::fromValue( -1 ) );
-
-  QgsAttributeAction *actions = vlayer->actions();
-  if ( actions && actions->size() > 0 )
+  if ( vlayer->actions()->size() > 0 )
   {
     mActionPopup->addSeparator();
 
@@ -400,21 +353,20 @@ void QgsIdentifyResults::contextMenuEvent( QContextMenuEvent* event )
     // created for each new Identify Results dialog box, and that the
     // contents of the popup menu doesn't change during the time that
     // such a dialog box is around.
-    a = mActionPopup->addAction( tr( "Run action" ) );
+    QAction *a = mActionPopup->addAction( tr( "Run action" ) );
     a->setEnabled( false );
 
-    QgsAttributeAction::aIter iter = actions->begin();
-    for ( int i = 0; iter != actions->end(); ++iter, ++i )
+    for ( int i = 0; i < vlayer->actions()->size(); i++ )
     {
-      QAction* a = mActionPopup->addAction( iter->name() );
-      a->setEnabled( true );
-      // The menu action stores an integer that is used later on to
-      // associate an menu action with an actual qgis action.
-      a->setData( QVariant::fromValue( i ) );
+      const QgsAction &action = vlayer->actions()->at( i );
+
+      if ( !action.runable() )
+        continue;
+
+      QgsFeatureAction *a = new QgsFeatureAction( action.name(), this, vlayer, i, featureItem( item ) );
+      mActionPopup->addAction( action.name(), a, SLOT( execute() ) );
     }
   }
-
-  connect( mActionPopup, SIGNAL( triggered( QAction* ) ), this, SLOT( popupItemSelected( QAction* ) ) );
 
   mActionPopup->popup( event->globalPos() );
 }
@@ -438,69 +390,6 @@ void QgsIdentifyResults::setColumnText( int column, const QString & label )
 {
   QTreeWidgetItem* header = lstResults->headerItem();
   header->setText( column, label );
-}
-
-// Run the action that was selected in the popup menu
-void QgsIdentifyResults::popupItemSelected( QAction* menuAction )
-{
-  QTreeWidgetItem *item = lstResults->currentItem();
-  if ( item == 0 )
-    return;
-
-  int action = menuAction->data().toInt();
-
-  if ( action < 0 )
-  {
-    switch ( action )
-    {
-      case -6:
-        editFeature( item );
-        break;
-
-      case -5:
-        zoomToFeature( item );
-        break;
-
-      case -4:
-      case -3:
-      {
-        QClipboard *clipboard = QApplication::clipboard();
-        QString text;
-
-        if ( action == -4 )
-        {
-          text = item->data( 1, Qt::DisplayRole ).toString();
-        }
-        else
-        {
-          std::vector< std::pair<QString, QString> > attributes;
-          retrieveAttributes( item, attributes );
-
-          for ( std::vector< std::pair<QString, QString> >::iterator it = attributes.begin(); it != attributes.end(); it++ )
-          {
-            text += QString( "%1: %2\n" ).arg( it->first ).arg( it->second );
-          }
-        }
-
-        QgsDebugMsg( QString( "set clipboard: %1" ).arg( text ) );
-        clipboard->setText( text );
-      }
-      break;
-
-      case -2:
-        lstResults->expandAll();
-        break;
-
-      case -1:
-        lstResults->collapseAll();
-        break;
-
-    }
-  }
-  else
-  {
-    doAction( item, action );
-  }
 }
 
 void QgsIdentifyResults::expandColumnsToFit()
@@ -555,7 +444,7 @@ void QgsIdentifyResults::clearRubberBand()
 
 void QgsIdentifyResults::doAction( QTreeWidgetItem *item, int action )
 {
-  std::vector< std::pair<QString, QString> > attributes;
+  QList< QPair<QString, QString> > attributes;
   QTreeWidgetItem *featItem = retrieveAttributes( item, attributes );
   if ( !featItem )
     return;
@@ -629,7 +518,7 @@ QgsVectorLayer *QgsIdentifyResults::vectorLayer( QTreeWidgetItem *item )
 }
 
 
-QTreeWidgetItem *QgsIdentifyResults::retrieveAttributes( QTreeWidgetItem *item, std::vector< std::pair<QString, QString> > &attributes )
+QTreeWidgetItem *QgsIdentifyResults::retrieveAttributes( QTreeWidgetItem *item, QList< QPair<QString, QString> > &attributes )
 {
   QTreeWidgetItem *featItem = featureItem( item );
 
@@ -639,13 +528,13 @@ QTreeWidgetItem *QgsIdentifyResults::retrieveAttributes( QTreeWidgetItem *item, 
     QTreeWidgetItem *item = featItem->child( i );
     if ( item->childCount() > 0 )
       continue;
-    attributes.push_back( std::make_pair( item->data( 0, Qt::DisplayRole ).toString(), item->data( 1, Qt::DisplayRole ).toString() ) );
+    attributes << QPair<QString, QString>( item->data( 0, Qt::DisplayRole ).toString(), item->data( 1, Qt::DisplayRole ).toString() );
   }
 
   return featItem;
 }
-
-void QgsIdentifyResults::on_buttonHelp_clicked()
+// Slot for showing help
+void QgsIdentifyResults::helpClicked()
 {
   QgsContextHelp::run( context_id );
 }
@@ -694,8 +583,8 @@ void QgsIdentifyResults::disconnectLayer( QObject *layer )
   {
     disconnect( vlayer, SIGNAL( layerDeleted() ), this, SLOT( layerDestroyed() ) );
     disconnect( vlayer, SIGNAL( featureDeleted( int ) ), this, SLOT( featureDeleted( int ) ) );
-    disconnect( vlayer, SIGNAL( editingStarted() ), this, SLOT( addEditAction() ) );
-    disconnect( vlayer, SIGNAL( editingStopped() ), this, SLOT( removeEditAction() ) );
+    disconnect( vlayer, SIGNAL( editingStarted() ), this, SLOT( changeEditAction() ) );
+    disconnect( vlayer, SIGNAL( editingStopped() ), this, SLOT( changeEditAction() ) );
   }
   else
   {
@@ -773,8 +662,10 @@ void QgsIdentifyResults::highlightFeature( QTreeWidgetItem *item )
   }
 }
 
-void QgsIdentifyResults::zoomToFeature( QTreeWidgetItem *item )
+void QgsIdentifyResults::zoomToFeature()
 {
+  QTreeWidgetItem *item = lstResults->currentItem();
+
   QgsVectorLayer *layer = vectorLayer( item );
   if ( !layer )
     return;
@@ -809,11 +700,12 @@ void QgsIdentifyResults::zoomToFeature( QTreeWidgetItem *item )
   mCanvas->refresh();
 }
 
-
-void QgsIdentifyResults::editFeature( QTreeWidgetItem *item )
+void QgsIdentifyResults::featureForm()
 {
-  QgsVectorLayer *layer = vectorLayer( item );
-  if ( !layer || !layer->isEditable() )
+  QTreeWidgetItem *item = lstResults->currentItem();
+
+  QgsVectorLayer *vlayer = vectorLayer( item );
+  if ( !vlayer )
     return;
 
   QTreeWidgetItem *featItem = featureItem( item );
@@ -823,13 +715,35 @@ void QgsIdentifyResults::editFeature( QTreeWidgetItem *item )
   int fid = featItem->data( 0, Qt::UserRole ).toInt();
 
   QgsFeature f;
-  if ( ! layer->featureAtId( fid, f ) )
+  if ( !vlayer->featureAtId( fid, f ) )
     return;
 
   QgsAttributeMap src = f.attributeMap();
 
-  layer->beginEditCommand( tr( "Attribute changed" ) );
-  QgsAttributeDialog *ad = new QgsAttributeDialog( layer, &f );
+  vlayer->beginEditCommand( tr( "Attribute changed" ) );
+  QgsAttributeDialog *ad = new QgsAttributeDialog( vlayer, &f );
+
+  if ( !vlayer->isEditable() && vlayer->actions()->size() > 0 )
+  {
+    ad->dialog()->setContextMenuPolicy( Qt::ActionsContextMenu );
+
+    QAction *a = new QAction( tr( "Run actions" ), ad->dialog() );
+    a->setEnabled( false );
+    ad->dialog()->addAction( a );
+
+    for ( int i = 0; i < vlayer->actions()->size(); i++ )
+    {
+      const QgsAction &action = vlayer->actions()->at( i );
+
+      if ( !action.runable() )
+        continue;
+
+      QgsFeatureAction *a = new QgsFeatureAction( action.name(), this, vlayer, i, featItem );
+      ad->dialog()->addAction( a );
+      connect( a, SIGNAL( triggered() ), a, SLOT( execute() ) );
+    }
+  }
+
   if ( ad->exec() )
   {
     const QgsAttributeMap &dst = f.attributeMap();
@@ -837,16 +751,51 @@ void QgsIdentifyResults::editFeature( QTreeWidgetItem *item )
     {
       if ( !src.contains( it.key() ) || it.value() != src[it.key()] )
       {
-        layer->changeAttributeValue( f.id(), it.key(), it.value() );
+        vlayer->changeAttributeValue( f.id(), it.key(), it.value() );
       }
     }
-    layer->endEditCommand();
+    vlayer->endEditCommand();
   }
   else
   {
-    layer->destroyEditCommand();
+    vlayer->destroyEditCommand();
   }
 
   delete ad;
   mCanvas->refresh();
+}
+
+void QgsIdentifyResults::expandAll()
+{
+  lstResults->expandAll();
+}
+
+void QgsIdentifyResults::collapseAll()
+{
+  lstResults->collapseAll();
+}
+
+void QgsIdentifyResults::copyAttributeValue()
+{
+  QClipboard *clipboard = QApplication::clipboard();
+  QString text = lstResults->currentItem()->data( 1, Qt::DisplayRole ).toString();
+  QgsDebugMsg( QString( "set clipboard: %1" ).arg( text ) );
+  clipboard->setText( text );
+}
+
+void QgsIdentifyResults::copyFeatureAttributes()
+{
+  QClipboard *clipboard = QApplication::clipboard();
+  QString text;
+
+  QList< QPair<QString, QString> > attributes;
+  retrieveAttributes( lstResults->currentItem(), attributes );
+
+  for ( QList< QPair<QString, QString> >::iterator it = attributes.begin(); it != attributes.end(); it++ )
+  {
+    text += QString( "%1: %2\n" ).arg( it->first ).arg( it->second );
+  }
+
+  QgsDebugMsg( QString( "set clipboard: %1" ).arg( text ) );
+  clipboard->setText( text );
 }

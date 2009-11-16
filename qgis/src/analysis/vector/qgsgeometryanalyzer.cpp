@@ -28,262 +28,251 @@
 #include "qgsdistancearea.h"
 #include <QProgressDialog>
 
-
-
-bool QgsGeometryAnalyzer::singlepartsToMultipart( QgsVectorLayer* layer,
-    const QString& shapefileName,
-    const QString& fileEncoding,
-    const int fieldIndex )
+bool QgsGeometryAnalyzer::simplify( QgsVectorLayer* layer, const QString& shapefileName, \
+                                  double tolerance, bool onlySelectedFeatures, QProgressDialog* p )
 {
-  return false;
-  /*
-    QgsVectorDataProvider* provider = layer->dataProvider();
-    QgsAttributeList allAttrs = provider->attributeIndexes();
-    provider->select( allAttrs, QgsRectangle(), true );
-    const QgsCoordinateReferenceSystem* outputCRS;
-    outputCRS = &layer->srs();
-    QgsVectorFileWriter* writer = new QgsVectorFileWriter( shapefileName,
-    fileEncoding, provider->fields(), provider->geometryType(), outputCRS );
+  if ( !layer )
+  {
+    return false;
+  }
 
-    QgsGeometry inGeom;
-    QgsGeometry outGeom;
-    QList<QVariant> unique;
-    provider->uniqueValues( index, unique )
-    if ( unique->size() < layer->featureCount() )
+  QgsVectorDataProvider* dp = layer->dataProvider();
+  if ( !dp )
+  {
+    return false;
+  }
+
+  QGis::WkbType outputType = dp->geometryType();
+  const QgsCoordinateReferenceSystem crs = layer->srs();
+
+  QgsVectorFileWriter vWriter( shapefileName, dp->encoding(), dp->fields(), outputType, &crs );
+  QgsFeature currentFeature;
+
+  //take only selection
+  if ( onlySelectedFeatures )
+  {
+    //use QgsVectorLayer::featureAtId
+    const QgsFeatureIds selection = layer->selectedFeaturesIds();
+    if ( p )
     {
-      QList<QgsGeometry> multiGeom;
-      bool first;
-      QgsAttributeMap atMap;
-
-      for ( int it = unique.begin(); it != unique.end(); ++it )
-      {
-        provider->select( allAttrs, QgsRectangle(), true );
-        first = true;
-        while ( provider->nextFeature( inFeat ) )
-        {
-          if ( inFeat.attributeMap()[ index ].toString().trimmed() == it.toString().trimmed() )
-          {
-            if (first)
-            {
-              atMap = inFeat.attributeMap();
-              first = false;
-            }
-            inGeom = inFeat.geometry();
-            multiGeom << inGeom.asGeometryCollection()
-          }
-            outFeat.setAttributeMap( atMap );
-            outGeom = convertGeometry( multifeature, vtype );
-            outFeat.setGeometry( outGeom );
-            writer.addFeature( outFeat );
-        }
-      }
-      delete writer;
-      return true;
-  */
-}
-
-bool QgsGeometryAnalyzer::multipartToSingleparts( QgsVectorLayer* layer,
-    const QString& shapefileName,
-    const QString& fileEncoding )
-{
-  return false;
-  /*
-  QgsVectorDataProvider* provider = layer->dataProvider();
-  QgsAttributeList allAttrs = provider->attributeIndexes();
-  provider->select( allAttrs, QgsRectangle(), true );
-  const QgsCoordinateReferenceSystem* outputCRS;
-  outputCRS = &layer->srs();
-  QgsVectorFileWriter* writer = new QgsVectorFileWriter( shapefileName,
-  fileEncoding, provider->fields(), provider->geometryType(), outputCRS );
-    inFeat = QgsFeature()
-    outFeat = QgsFeature()
-    inGeom = QgsGeometry()
-    outGeom = QgsGeometry()
-    nFeat = vprovider.featureCount()
-    nElement = 0
-    self.emit( SIGNAL( "runStatus(PyQt_PyObject)" ), 0 )
-    self.emit( SIGNAL( "runRange(PyQt_PyObject)" ), ( 0, nFeat ) )
-    while vprovider.nextFeature( inFeat )
-      nElement += 1
-      self.emit( SIGNAL( "runStatus(PyQt_PyObject)" ), nElement )
-      inGeom = inFeat.geometry()
-      atMap = inFeat.attributeMap()
-      featList = self.extractAsSingle( inGeom )
-      outFeat.setAttributeMap( atMap )
-      for i in featList:
-        outFeat.setGeometry( i )
-        writer.addFeature( outFeat )
-    del writer
-    return True
-
-  */
-}
-
-bool QgsGeometryAnalyzer::extractNodes( QgsVectorLayer* layer,
-                                        const QString& shapefileName,
-                                        const QString& fileEncoding )
-{
-  return false;
-  /*
-    QgsVectorDataProvider* provider = layer->dataProvider();
-    QgsAttributeList allAttrs = provider->attributeIndexes();
-    provider->select( allAttrs, QgsRectangle(), true );
-    const QgsCoordinateReferenceSystem* outputCRS;
-    outputCRS = &layer->srs();
-    QgsVectorFileWriter* writer = new QgsVectorFileWriter( shapefileName,
-    fileEncoding, provider->fields(), provider->geometryType(), outputCRS );
-
-    QgsFeature inFeat;
-    QgsFeature outFeat;
-
-    QgsGeometry outGeom;
-    QList<QgsPoint> pointList;
-    QgsPoint geomPoint;
-    QList<QgsPoint>::iterator it;
-    while ( provider->nextFeature( inFeat ) )
-    {
-      pointList = extractPoints( inFeat.geometry() );
-      outFeat.setAttributeMap( inFeat.attributeMap() );
-      for (it = pointList.begin(); it != pointList.end(); ++it )
-      {
-        geomPoint = QgsGeometry::fromPoint( it );
-        outFeat.setGeometry( geomPoint );
-        writer.addFeature( outFeat );
-      }
+      p->setMaximum( selection.size() );
     }
-    delete writer;
-    return true;
-  */
-}
 
-bool QgsGeometryAnalyzer::polygonsToLines( QgsVectorLayer* layer,
-    const QString& shapefileName,
-    const QString& fileEncoding )
-{
-  return false;
-  /*
-    QgsVectorDataProvider* provider = layer->dataProvider();
-    QgsAttributeList allAttrs = provider->attributeIndexes();
-    provider->select( allAttrs, QgsRectangle(), true );
-    QgsVectorFileWriter* writer = new QgsVectorFileWriter( shapefileName,
-        fileEncoding, provider->fields(), QGis::WKBPoint, provider->crs() );
-
-
-
-    QgsFeature inFeat;
-    QgsFeature outFeat;
-    QgsGeometry inGeom;
-    QgsGeometry outGeom;
-    QList<QgsPolyline> lineList;
-
-    while ( provider->nextFeature( inFeat ) )
+    int processedFeatures = 0;
+    QgsFeatureIds::const_iterator it = selection.constBegin();
+    for ( ; it != selection.constEnd(); ++it )
     {
-      lineList = QgsGeometryAnalyzer::extractLines( inFeat.geometry() );
-      outFeat.setAttributeMap( inFeat.attributeMap() );
-      for ( line = lineList.begin(); line != lineList.end(); line++ )
+      if ( p )
       {
-        outFeat.setGeometry( outGeom.fromPolyline( line ) );
-        writer.addFeature( outFeat );
+        p->setValue( processedFeatures );
       }
+
+      if ( p && p->wasCanceled() )
+      {
+        break;
+      }
+      if ( !layer->featureAtId( *it, currentFeature, true, true ) )
+      {
+        continue;
+      }
+      simplifyFeature( currentFeature, &vWriter, tolerance );
+      ++processedFeatures;
     }
-    delete writer;
-    return true;
-    */
-}
 
-bool QgsGeometryAnalyzer::exportGeometryInformation( QgsVectorLayer* layer,
-    const QString& shapefileName,
-    const QString& fileEncoding )
-{
-  return false;
-#if 0
-  QgsVectorDataProvider* provider = layer->dataProvider();
-  QgsAttributeList allAttrs = provider->attributeIndexes();
-  provider->select( allAttrs, QgsRectangle(), true );
-  QgsCoordinateReferenceSystem outputCRS = layer->srs();
-  int index1;
-  int index2;
-  //( fields, index1, index2 ) = self.checkGeometryFields( self.vlayer )
-
-  QgsVectorFileWriter writer = QgsVectorFileWriter( shapefileName,
-                               fileEncoding, provider->fields(), provider->geometryType(), &outputCRS );
-
-  QgsFeature inFeat;
-  QgsFeature outFeat;
-  QgsGeometry* inGeom;
-  QList<double> attrs;
-
-  while ( provider->nextFeature( inFeat ) )
-  {
-    inGeom = inFeat.geometry();
-    outFeat.setAttributeMap( inFeat.attributeMap() );
-    attrs = QgsGeometryAnalyzer::simpleMeasure( inGeom );
-    outFeat.setGeometry( inGeom );
-    outFeat.setAttributeMap( inFeat.attributeMap() );
-    outFeat.addAttribute( index1, QVariant( attrs[0] ) ); // FIXME: index1 unset
-    outFeat.addAttribute( index2, QVariant( attrs[1] ) ); // FIXME: index2 unset
-    writer.addFeature( outFeat );
+    if ( p )
+    {
+      p->setValue( selection.size() );
+    }
   }
-  return true;
-#endif
-}
-bool QgsGeometryAnalyzer::simplifyGeometry( QgsVectorLayer* layer,
-    const QString shapefileName,
-    const QString fileEncoding,
-    const double tolerance )
-{
-  QgsVectorDataProvider* provider = layer->dataProvider();
-  QgsAttributeList allAttrs = provider->attributeIndexes();
-  provider->select( allAttrs, QgsRectangle(), true );
-  QgsCoordinateReferenceSystem outputCRS = layer->srs();
-  QgsVectorFileWriter writer = QgsVectorFileWriter( shapefileName,
-                               fileEncoding, provider->fields(), provider->geometryType(), &outputCRS );
-
-  QgsFeature inFeat;
-  QgsFeature outFeat;
-  QgsGeometry* inGeom;
-
-  while ( provider->nextFeature( inFeat ) )
+  //take all features
+  else
   {
-    inGeom = inFeat.geometry();
-    outFeat.setAttributeMap( inFeat.attributeMap() );
-    outFeat.setGeometry( inGeom->simplify( tolerance ) );
-    writer.addFeature( outFeat );
+    layer->select( layer->pendingAllAttributesList(), QgsRectangle(), true, false );
+
+
+    int featureCount = layer->featureCount();
+    if ( p )
+    {
+      p->setMaximum( featureCount );
+    }
+    int processedFeatures = 0;
+
+    while ( layer->nextFeature( currentFeature ) )
+    {
+      if ( p )
+      {
+        p->setValue( processedFeatures );
+      }
+      if ( p && p->wasCanceled() )
+      {
+        break;
+      }
+      simplifyFeature( currentFeature, &vWriter, tolerance );
+      ++processedFeatures;
+    }
+    if ( p )
+    {
+      p->setValue( featureCount );
+    }
   }
 
   return true;
-
 }
 
-bool QgsGeometryAnalyzer::polygonCentroids( QgsVectorLayer* layer,
-    const QString& shapefileName,
-    const QString& fileEncoding )
+void QgsGeometryAnalyzer::simplifyFeature( QgsFeature& f, QgsVectorFileWriter* vfw, double tolerance )
 {
-  QgsVectorDataProvider* provider = layer->dataProvider();
-  QgsAttributeList allAttrs = provider->attributeIndexes();
-  provider->select( allAttrs, QgsRectangle(), true );
-  QgsCoordinateReferenceSystem outputCRS = layer->srs();
-  QgsVectorFileWriter writer = QgsVectorFileWriter( shapefileName,
-                               fileEncoding, provider->fields(), provider->geometryType(), &outputCRS );
+  QgsGeometry* featureGeometry = f.geometry();
+  QgsGeometry* tmpGeometry = 0;
 
-  QgsFeature inFeat;
-  QgsFeature outFeat;
-  QgsGeometry* inGeom;
-
-  while ( provider->nextFeature( inFeat ) )
+  if ( !featureGeometry )
   {
-    inGeom = inFeat.geometry();
-    outFeat.setAttributeMap( inFeat.attributeMap() );
-    outFeat.setGeometry( inGeom->centroid() );
-    writer.addFeature( outFeat );
+    return;
   }
+  // simplify feature
+  tmpGeometry = featureGeometry->simplify( tolerance );
+
+  QgsFeature newFeature;
+  newFeature.setGeometry( tmpGeometry );
+  newFeature.setAttributeMap( f.attributeMap() );
+
+  //add it to vector file writer
+  if ( vfw )
+  {
+    vfw->addFeature( newFeature );
+  }
+}
+
+bool QgsGeometryAnalyzer::centroids( QgsVectorLayer* layer, const QString& shapefileName, \
+                                  bool onlySelectedFeatures, QProgressDialog* p )
+{
+  if ( !layer )
+  {
+    return false;
+  }
+
+  QgsVectorDataProvider* dp = layer->dataProvider();
+  if ( !dp )
+  {
+    return false;
+  }
+
+  QGis::WkbType outputType = QGis::WKBPoint;
+  const QgsCoordinateReferenceSystem crs = layer->srs();
+
+  QgsVectorFileWriter vWriter( shapefileName, dp->encoding(), dp->fields(), outputType, &crs );
+  QgsFeature currentFeature;
+
+  //take only selection
+  if ( onlySelectedFeatures )
+  {
+    //use QgsVectorLayer::featureAtId
+    const QgsFeatureIds selection = layer->selectedFeaturesIds();
+    if ( p )
+    {
+      p->setMaximum( selection.size() );
+    }
+
+    int processedFeatures = 0;
+    QgsFeatureIds::const_iterator it = selection.constBegin();
+    for ( ; it != selection.constEnd(); ++it )
+    {
+      if ( p )
+      {
+        p->setValue( processedFeatures );
+      }
+
+      if ( p && p->wasCanceled() )
+      {
+        break;
+      }
+      if ( !layer->featureAtId( *it, currentFeature, true, true ) )
+      {
+        continue;
+      }
+      centroidFeature( currentFeature, &vWriter );
+      ++processedFeatures;
+    }
+
+    if ( p )
+    {
+      p->setValue( selection.size() );
+    }
+  }
+  //take all features
+  else
+  {
+    layer->select( layer->pendingAllAttributesList(), QgsRectangle(), true, false );
+
+    int featureCount = layer->featureCount();
+    if ( p )
+    {
+      p->setMaximum( featureCount );
+    }
+    int processedFeatures = 0;
+
+    while ( layer->nextFeature( currentFeature ) )
+    {
+      if ( p )
+      {
+        p->setValue( processedFeatures );
+      }
+      if ( p && p->wasCanceled() )
+      {
+        break;
+      }
+      centroidFeature( currentFeature, &vWriter );
+      ++processedFeatures;
+    }
+    if ( p )
+    {
+      p->setValue( featureCount );
+    }
+  }
+
   return true;
 }
 
-bool QgsGeometryAnalyzer::layerExtent( QgsVectorLayer* layer,
-                                       const QString& shapefileName,
-                                       const QString& fileEncoding )
+
+void QgsGeometryAnalyzer::centroidFeature( QgsFeature& f, QgsVectorFileWriter* vfw )
 {
+  QgsGeometry* featureGeometry = f.geometry();
+  QgsGeometry* tmpGeometry = 0;
+
+  if ( !featureGeometry )
+  {
+    return;
+  }
+
+  tmpGeometry = featureGeometry->centroid();
+
+  QgsFeature newFeature;
+  newFeature.setGeometry( tmpGeometry );
+  newFeature.setAttributeMap( f.attributeMap() );
+
+  //add it to vector file writer
+  if ( vfw )
+  {
+    vfw->addFeature( newFeature );
+  }
+}
+
+bool QgsGeometryAnalyzer::extent( QgsVectorLayer* layer, const QString& shapefileName, \
+                                  bool onlySelectedFeatures, QProgressDialog* p )
+{
+  if ( !layer )
+  {
+    return false;
+  }
+
+  QgsVectorDataProvider* dp = layer->dataProvider();
+  if ( !dp )
+  {
+    return false;
+  }
+
+  QGis::WkbType outputType = QGis::WKBPolygon;
+  const QgsCoordinateReferenceSystem crs = layer->srs();
+
   QgsFieldMap fields;
   fields.insert( 0 , QgsField( QString( "MINX" ), QVariant::Double ) );
   fields.insert( 1 , QgsField( QString( "MINY" ), QVariant::Double ) );
@@ -296,46 +285,51 @@ bool QgsGeometryAnalyzer::layerExtent( QgsVectorLayer* layer,
   fields.insert( 8 , QgsField( QString( "HEIGHT" ), QVariant::Double ) );
   fields.insert( 9 , QgsField( QString( "WIDTH" ), QVariant::Double ) );
 
-  QgsVectorDataProvider* provider = layer->dataProvider();
-  QgsCoordinateReferenceSystem outputCRS = layer->srs();
-  QgsVectorFileWriter writer = QgsVectorFileWriter( shapefileName,
-                               fileEncoding, provider->fields(), provider->geometryType(), &outputCRS );
+  QgsVectorFileWriter vWriter( shapefileName, dp->encoding(), fields, outputType, &crs );
 
   QgsRectangle rect;
-  rect = layer->extent();
+  if ( onlySelectedFeatures )  // take only selection
+  {
+    rect = layer->boundingBoxOfSelected();
+  }
+  else
+  {
+    rect = layer->extent();
+  }
+
   double minx = rect.xMinimum();
   double miny = rect.yMinimum();
   double maxx = rect.xMaximum();
   double maxy = rect.yMaximum();
   double height = rect.height();
   double width = rect.width();
-
   double cntx = minx + ( width / 2.0 );
   double cnty = miny + ( height / 2.0 );
   double area = width * height;
   double perim = ( 2 * width ) + ( 2 * height );
 
   QgsFeature feat;
-  QgsAttributeMap atMap;
-  atMap.insert( 0 , QVariant( minx ) );
-  atMap.insert( 1 , QVariant( miny ) );
-  atMap.insert( 2 , QVariant( maxx ) );
-  atMap.insert( 3 , QVariant( maxy ) );
-  atMap.insert( 4 , QVariant( cntx ) );
-  atMap.insert( 5 , QVariant( cnty ) );
-  atMap.insert( 6 , QVariant( area ) );
-  atMap.insert( 7 , QVariant( perim ) );
-  atMap.insert( 8 , QVariant( height ) );
-  atMap.insert( 9 , QVariant( width ) );
-  feat.setAttributeMap( atMap );
+  QgsAttributeMap map;
+  map.insert( 0 , QVariant( minx ) );
+  map.insert( 1 , QVariant( miny ) );
+  map.insert( 2 , QVariant( maxx ) );
+  map.insert( 3 , QVariant( maxy ) );
+  map.insert( 4 , QVariant( cntx ) );
+  map.insert( 5 , QVariant( cnty ) );
+  map.insert( 6 , QVariant( area ) );
+  map.insert( 7 , QVariant( perim ) );
+  map.insert( 8 , QVariant( height ) );
+  map.insert( 9 , QVariant( width ) );
+  feat.setAttributeMap( map );
   feat.setGeometry( QgsGeometry::fromRect( rect ) );
-  writer.addFeature( feat );
+  vWriter.addFeature( feat );
   return true;
 }
 
 QList<double> QgsGeometryAnalyzer::simpleMeasure( QgsGeometry* mpGeometry )
 {
   QList<double> list;
+  double perim;
   if ( mpGeometry->wkbType() == QGis::WKBPoint )
   {
     QgsPoint pt = mpGeometry->asPoint();
@@ -348,11 +342,11 @@ QList<double> QgsGeometryAnalyzer::simpleMeasure( QgsGeometry* mpGeometry )
     list.append( measure.measure( mpGeometry ) );
     if ( mpGeometry->type() == QGis::Polygon )
     {
-      list.append( perimeterMeasure( mpGeometry, measure ) );
+      perim = perimeterMeasure( mpGeometry, measure );
+      list.append( perim );
     }
   }
   return list;
-
 }
 
 double QgsGeometryAnalyzer::perimeterMeasure( QgsGeometry* geometry, QgsDistanceArea& measure )
@@ -383,232 +377,357 @@ double QgsGeometryAnalyzer::perimeterMeasure( QgsGeometry* geometry, QgsDistance
   return value;
 }
 
-QgsFieldMap QgsGeometryAnalyzer::checkGeometryFields( QgsVectorLayer* layer, int& index1, int& index2 )
+bool QgsGeometryAnalyzer::convexHull( QgsVectorLayer* layer, const QString& shapefileName,
+                                      bool onlySelectedFeatures, int uniqueIdField, QProgressDialog* p )
 {
-  return QgsFieldMap();
-  /*  QgsVectorDataProvider* provider = layer->dataProvider();
-    QgsAttributeList allAttrs = provider->attributeIndexes();
-  //  provider->select( allAttrs, QgsRectangle(), true );
-    QgsFieldMap fields = provider->fields()
-    QGis::GeometryType geomType = layer->geometryType();
+  if ( !layer )
+  {
+    return false;
+  }
+  QgsVectorDataProvider* dp = layer->dataProvider();
+  if ( !dp )
+  {
+    return false;
+  }
+  bool useField = false;
+  if ( uniqueIdField == -1 )
+  {
+    uniqueIdField = 0;
+  }
+  else
+  {
+    useField = true;
+  }
+  QgsFieldMap fields;
+  fields.insert( 0 , QgsField( QString( "UID" ), QVariant::String ) );
+  fields.insert( 1 , QgsField( QString( "AREA" ), QVariant::Double ) );
+  fields.insert( 2 , QgsField( QString( "PERIM" ), QVariant::Double ) );
 
-    for i in fieldList.keys()
-      nameList.append( fieldList[ i ].name().toLower() )
-    if geomType == QGis.Polygon:
-      plp = "Poly"
-      ( found, index1 ) = self.checkForField( nameList, "AREA" )
-      if not found:
-        field = QgsField( "AREA", QVariant.Double, "double", 10, 6, "Polygon area" )
-        index1 = len( fieldList.keys() )
-        fieldList[ index1 ] = field
-      ( found, index2 ) = self.checkForField( nameList, "PERIMETER" )
+  QGis::WkbType outputType = QGis::WKBPolygon;
+  const QgsCoordinateReferenceSystem crs = layer->srs();
 
-      if not found:
-        field = QgsField( "PERIMETER", QVariant.Double, "double", 10, 6, "Polygon perimeter" )
-        index2 = len( fieldList.keys() )
-        fieldList[ index2 ] = field
-    elif geomType == QGis.Line:
-      plp = "Line"
-      (found, index1) = self.checkForField(nameList, "LENGTH")
-      if not found:
-        field = QgsField("LENGTH", QVariant.Double, "double", 10, 6, "Line length")
-        index1 = len(fieldList.keys())
-        fieldList[index1] = field
-      index2 = index1
-    else:
-      plp = "Point"
-      (found, index1) = self.checkForField(nameList, "XCOORD")
-      if not found:
-        field = QgsField("XCOORD", QVariant.Double, "double", 10, 6, "Point x coordinate")
-        index1 = len(fieldList.keys())
-        fieldList[index1] = field
-      (found, index2) = self.checkForField(nameList, "YCOORD")
-      if not found:
-        field = QgsField("YCOORD", QVariant.Double, "double", 10, 6, "Point y coordinate")
-        index2 = len(fieldList.keys())
-        fieldList[index2] = field
-    return (fieldList, index1, index2)
-    */
-}
+  QgsVectorFileWriter vWriter( shapefileName, dp->encoding(), fields, outputType, &crs );
+  QgsFeature currentFeature;
+  QgsGeometry* dissolveGeometry; //dissolve geometry
+  QMultiMap<QString, int> map;
 
-QgsGeometry* QgsGeometryAnalyzer::extractLines( QgsGeometry* geometry )
-{
-  return NULL;
-  /*
-    QGis::WkbType wkbType = geometry.wkbType();
-    QList<QgsPolyline> lineList;
-    QgsMultiPolygon polyList
-    if ( geometry.type() == QGis::Polygon )
+  if ( onlySelectedFeatures )
+  {
+    //use QgsVectorLayer::featureAtId
+    const QgsFeatureIds selection = layer->selectedFeaturesIds();
+    QgsFeatureIds::const_iterator it = selection.constBegin();
+    for ( ; it != selection.constEnd(); ++it )
     {
-      if ( geometry.isMultipart() )
+//      if ( p )
+//      {
+//        p->setValue( processedFeatures );
+//      }
+//      if ( p && p->wasCanceled() )
+//      {
+//        // break; // it may be better to do something else here?
+//        return false;
+//      }
+      if ( !layer->featureAtId( *it, currentFeature, true, true ) )
       {
-        polyList = geometry.asMultiPolygon();
-        for ( polygon = polyList.begin(); polygon != polyList.end(); polygon++ )
-        {
-          for ( lines = polygon.begin(); lines != polygon.end(); lines++ )
-          {
-            lineList << lines;
-          }
-        }
-        else
-        {
-          lineList = geometry.asPolygon();
-        }
+        continue;
       }
+      map.insert( currentFeature.attributeMap()[ uniqueIdField ].toString(), currentFeature.id() );
     }
-    return lineList
-    */
-}
-QgsGeometry* QgsGeometryAnalyzer::extractAsSingle( QgsGeometry* geometry )
-{
-  return NULL;
-  /*
-      multi_geom = QgsGeometry()
-      temp_geom = []
-      if geom.type() == 0:
-        if geom.isMultipart()
-          multi_geom = geom.asMultiPoint()
-          for i in multi_geom:
-            temp_geom.append( QgsGeometry().fromPoint ( i ) )
-        else:
-          temp_geom.append( geom )
-      elif geom.type() == 1:
-        if geom.isMultipart()
-          multi_geom = geom.asMultiPolyline()
-          for i in multi_geom:
-            temp_geom.append( QgsGeometry().fromPolyline( i ) )
-        else:
-          temp_geom.append( geom )
-      elif geom.type() == 2:
-        if geom.isMultipart()
-          multi_geom = geom.asMultiPolygon()
-          for i in multi_geom:
-            temp_geom.append( QgsGeometry().fromPolygon( i ) )
-        else:
-          temp_geom.append( geom )
-      return temp_geom
-
-  */
-}
-
-QgsGeometry* QgsGeometryAnalyzer::extractAsMulti( QgsGeometry* geometry )
-{
-  return NULL;
-  /*
-    if ( geometry->mGeos == NULL )
+  }
+  else
+  {
+    layer->select( layer->pendingAllAttributesList(), QgsRectangle(), true, false );
+    while ( layer->nextFeature( currentFeature ) )
     {
-      geometry->exportWkbToGeos();
+  //    if ( p )
+  //    {
+  //      p->setValue( processedFeatures );
+  //    }
+  //    if ( p && p->wasCanceled() )
+  //    {
+  //      // break; // it may be better to do something else here?
+  //      return false;
+  //    }
+      map.insert( currentFeature.attributeMap()[ uniqueIdField ].toString(), currentFeature.id() );
     }
-    if ( !geometry->mGeos )
-    {
-      return 0;
-    }
-      return fromGeosGeom( GEOSIntersection( mGeos, geometry->mGeos ) );
-
-    for ( int i = 0; i < geometry.size(); i++ )
-      geomarr[i] = geometry->mGeos[i];
-
-    GEOSGeometry *geom = 0;
-
-    try
-    {
-      geom = GEOSGeom_createCollection( typeId, geomarr, geoms.size() );
-    }
-    catch ( GEOSException &e )
-    {
-      Q_UNUSED( e );
-    }
-
-    delete [] geomarr;
-
-    return geom;
   }
 
-      temp_geom = []
-      if geom.type() == 0:
-        if geom.isMultipart()
-          return geom.asMultiPoint()
-        else:
-          return [ geom.asPoint() ]
-      elif geom.type() == 1:
-        if geom.isMultipart()
-          return geom.asMultiPolyline()
-        else:
-          return [ geom.asPolyline() ]
-      else:
-        if geom.isMultipart()
-          return geom.asMultiPolygon()
-        else:
-          return [ geom.asPolygon() ]
-
-  */
-
-}
-
-QgsGeometry* QgsGeometryAnalyzer::convertGeometry( QgsGeometry* geometry )
-{
-  return NULL;
-  /*
-    if vType == 0:
-      return QgsGeometry().fromMultiPoint(geom_list)
-    elif vType == 1:
-      return QgsGeometry().fromMultiPolyline(geom_list)
-    else:
-      return QgsGeometry().fromMultiPolygon(geom_list)
-  */
-}
-
-QList<QgsPoint> QgsGeometryAnalyzer::extractPoints( QgsGeometry* geometry )
-{
-  return QList<QgsPoint>();
-  /*  QGis::WkbType wkbType = geometry.wkbType();
-    QList<QgsPoint> pointList;
-    QList<QgsPolyline> lineList;
-    switch ( wkbType )
+  QMultiMap<QString, int>::const_iterator jt = map.constBegin();
+  while ( jt != map.constEnd() )
+  {
+    QString currentKey = jt.key();
+    int processedFeatures = 0;
+    //take only selection
+    if ( onlySelectedFeatures )
     {
-      case QGis::WKBPoint25D:
-      case QGis::WKBPoint:
-      case QGis::WKBMultiLineString25D:
-      case QGis::WKBMultiLineString:
-      {
-        geometry->convertToMultitype();
-        pointList = geometry.asMultiPoint();
-        break;
-      }
-      case QGis::WKBLineString25D:
-      case QGis::WKBLineString:
-      case QGis::WKBMultiLineString25D:
-      case QGis::WKBMultiLineString:
-      {
-        geometry->convertToMultitype();
-        lineList = geometry.asMultiPolyline();
-        for ( line = lineList.begin(); line != lineList.end(); line++ )
+        //use QgsVectorLayer::featureAtId
+       const QgsFeatureIds selection = layer->selectedFeaturesIds();
+        if ( p )
         {
-          pointList << line;
+          p->setMaximum( selection.size() );
         }
-        break;
-      }
-      case QGis::WKBPolygon25D:
-      case QGis::WKBPolygon:
-      case QGis::WKBMultiPolygon25D:
-      case QGis::WKBMultiPolygon:
-      {
-        geometry->convertToMultitype();
-        QgsPolygon polyList = geometry.asMultiPolygon();
-        for ( lineList = polyList.begin(); lineList != polyList.end(); lineList++ )
+        processedFeatures = 0;
+        while ( jt != map.constEnd() && ( jt.key() == currentKey || !useField ) )
         {
-          for ( line = lineList.begin(); line != lineList.end(); line++ )
+          if ( p && p->wasCanceled() )
           {
-            pointList << line;
+            break;
           }
+          if ( selection.contains( jt.value() ) )
+          {
+            if ( p )
+            {
+              p->setValue( processedFeatures );
+            }
+            if ( !layer->featureAtId( jt.value(), currentFeature, true, true ) )
+            {
+              continue;
+            }
+            convexFeature( currentFeature, processedFeatures, &dissolveGeometry );
+            ++processedFeatures;
+          }
+          ++jt;
         }
-        break;
-      }
-      default:
-        break;
+        QList<double> values;
+        dissolveGeometry = dissolveGeometry->convexHull();
+        values = simpleMeasure( dissolveGeometry );
+        QgsAttributeMap attributeMap;
+        attributeMap.insert( 0 , QVariant( currentKey ) );
+        attributeMap.insert( 1 , values[ 0 ] );
+        attributeMap.insert( 2 , values[ 1 ] );
+        QgsFeature dissolveFeature;
+        dissolveFeature.setAttributeMap( attributeMap );
+        dissolveFeature.setGeometry( dissolveGeometry );
+        vWriter.addFeature( dissolveFeature );
     }
-    return pointList;
-    */
+    //take all features
+    else
+    {
+      int featureCount = layer->featureCount();
+      if ( p )
+      {
+        p->setMaximum( featureCount );
+      }
+      processedFeatures = 0;
+      while ( jt != map.constEnd() && ( jt.key() == currentKey || !useField ) )
+      {
+        if ( p )
+        {
+          p->setValue( processedFeatures );
+        }
+
+        if ( p && p->wasCanceled() )
+        {
+          break;
+        }
+        if ( !layer->featureAtId( jt.value(), currentFeature, true, true ) )
+        {
+          continue;
+        }
+        convexFeature( currentFeature, processedFeatures, &dissolveGeometry );
+        ++processedFeatures;
+        ++jt;
+      }
+        QList<double> values;
+        // QgsGeometry* tmpGeometry = 0;
+        dissolveGeometry = dissolveGeometry->convexHull();
+        // values = simpleMeasure( tmpGeometry );
+        values = simpleMeasure( dissolveGeometry );
+        QgsAttributeMap attributeMap;
+        attributeMap.insert( 0 , QVariant( currentKey ) );
+        attributeMap.insert( 1 , QVariant( values[ 0 ] ) );
+        attributeMap.insert( 2 , QVariant( values[ 1 ] ) );
+        QgsFeature dissolveFeature;
+        dissolveFeature.setAttributeMap( attributeMap );
+        dissolveFeature.setGeometry( dissolveGeometry );
+        vWriter.addFeature( dissolveFeature );
+    }
+  }
+  return true;
+}
+
+
+void QgsGeometryAnalyzer::convexFeature( QgsFeature& f, int nProcessedFeatures, QgsGeometry** dissolveGeometry)
+{
+  QgsGeometry* featureGeometry = f.geometry();
+  QgsGeometry* tmpGeometry = 0;
+  QgsGeometry* convexGeometry = 0;
+
+  if ( !featureGeometry )
+  {
+    return;
+  }
+
+  convexGeometry = featureGeometry->convexHull();
+
+  if ( nProcessedFeatures == 0 )
+  {
+    *dissolveGeometry = convexGeometry;
+  }
+  else
+  {
+    tmpGeometry = *dissolveGeometry;
+    *dissolveGeometry = ( *dissolveGeometry )->combine( convexGeometry );
+    delete tmpGeometry;
+    delete convexGeometry;
+  }
+}
+
+bool QgsGeometryAnalyzer::dissolve( QgsVectorLayer* layer, const QString& shapefileName,
+                                      bool onlySelectedFeatures, int uniqueIdField, QProgressDialog* p )
+{
+  if ( !layer )
+  {
+    return false;
+  }
+  QgsVectorDataProvider* dp = layer->dataProvider();
+  if ( !dp )
+  {
+    return false;
+  }
+  bool useField = false;
+  if ( uniqueIdField == -1 )
+  {
+    uniqueIdField = 0;
+  }
+  else
+  {
+    useField = true;
+  }
+
+  QGis::WkbType outputType = dp->geometryType();
+  const QgsCoordinateReferenceSystem crs = layer->srs();
+
+  QgsVectorFileWriter vWriter( shapefileName, dp->encoding(), dp->fields(), outputType, &crs );
+  QgsFeature currentFeature;
+  QMultiMap<QString, int> map;
+
+  if ( onlySelectedFeatures )
+  {
+    //use QgsVectorLayer::featureAtId
+    const QgsFeatureIds selection = layer->selectedFeaturesIds();
+    QgsFeatureIds::const_iterator it = selection.constBegin();
+    for ( ; it != selection.constEnd(); ++it )
+    {
+      if ( !layer->featureAtId( *it, currentFeature, true, true ) )
+      {
+        continue;
+      }
+      map.insert( currentFeature.attributeMap()[ uniqueIdField ].toString(), currentFeature.id() );
+    }
+  }
+  else
+  {
+    layer->select( layer->pendingAllAttributesList(), QgsRectangle(), true, false );
+    while ( layer->nextFeature( currentFeature ) )
+    {
+      map.insert( currentFeature.attributeMap()[ uniqueIdField ].toString(), currentFeature.id() );
+    }
+  }
+
+  QgsGeometry* dissolveGeometry; //dissolve geometry
+  QMultiMap<QString, int>::const_iterator jt = map.constBegin();
+  QgsFeature outputFeature;
+  while ( jt != map.constEnd() )
+  {
+    QString currentKey = jt.key();
+    int processedFeatures = 0;
+    bool first = true;
+    //take only selection
+    if ( onlySelectedFeatures )
+    {
+        //use QgsVectorLayer::featureAtId
+       const QgsFeatureIds selection = layer->selectedFeaturesIds();
+        if ( p )
+        {
+          p->setMaximum( selection.size() );
+        }
+        while ( jt != map.constEnd() && ( jt.key() == currentKey || !useField ) )
+        {
+          if ( p && p->wasCanceled() )
+          {
+            break;
+          }
+          if ( selection.contains( jt.value() ) )
+          {
+            if ( p )
+            {
+              p->setValue( processedFeatures );
+            }
+            if ( !layer->featureAtId( jt.value(), currentFeature, true, true ) )
+            {
+              continue;
+            }
+            if ( first )
+            {
+              outputFeature.setAttributeMap( currentFeature.attributeMap() );
+              first = false;
+            }
+            dissolveFeature( currentFeature, processedFeatures, &dissolveGeometry );
+            ++processedFeatures;
+          }
+          ++jt;
+        }
+    }
+    //take all features
+    else
+    {
+      int featureCount = layer->featureCount();
+      if ( p )
+      {
+        p->setMaximum( featureCount );
+      }
+      while ( jt != map.constEnd() && ( jt.key() == currentKey || !useField ) )
+      {
+        if ( p )
+        {
+          p->setValue( processedFeatures );
+        }
+
+        if ( p && p->wasCanceled() )
+        {
+          break;
+        }
+        if ( !layer->featureAtId( jt.value(), currentFeature, true, true ) )
+        {
+          continue;
+        }
+        {
+          outputFeature.setAttributeMap( currentFeature.attributeMap() );
+          first = false;
+        }
+        dissolveFeature( currentFeature, processedFeatures, &dissolveGeometry );
+        ++processedFeatures;
+        ++jt;
+      }
+    }
+    outputFeature.setGeometry( dissolveGeometry );
+    vWriter.addFeature( outputFeature );
+  }
+  return true;
+}
+
+void QgsGeometryAnalyzer::dissolveFeature( QgsFeature& f, int nProcessedFeatures, QgsGeometry** dissolveGeometry )
+{
+  QgsGeometry* featureGeometry = f.geometry();
+
+  if ( !featureGeometry )
+  {
+    return;
+  }
+
+  if ( nProcessedFeatures == 0 )
+  {
+    int geomSize = featureGeometry->wkbSize();
+    *dissolveGeometry = new QgsGeometry();
+    unsigned char* wkb = new unsigned char[geomSize];
+    memcpy(wkb, featureGeometry->asWkb(), geomSize);
+    (*dissolveGeometry)->fromWkb(wkb, geomSize);
+  }
+  else
+  {
+    *dissolveGeometry = ( *dissolveGeometry )->combine( featureGeometry );
+  }
 }
 
 bool QgsGeometryAnalyzer::buffer( QgsVectorLayer* layer, const QString& shapefileName, double bufferDistance, \

@@ -8,15 +8,20 @@ SET(QGIS_ANALYSIS_SRCS
   interpolation/qgsidwinterpolator.cpp
   interpolation/qgsinterpolator.cpp
   interpolation/qgstininterpolator.cpp
+  interpolation/Bezier3D.cc
+  interpolation/CloughTocherInterpolator.cc
   interpolation/DualEdgeTriangulation.cc
   interpolation/HalfEdge.cc
   interpolation/Line3D.cc
   interpolation/LinTriangleInterpolator.cc
   interpolation/MathUtils.cc
+  interpolation/NormVecDecorator.cc
   interpolation/Node.cc
+  interpolation/ParametricLine.cc
   interpolation/Point3D.cc
   interpolation/TriangleInterpolator.cc
   interpolation/Triangulation.cc
+  interpolation/TriDecorator.cc
   interpolation/Vector3D.cc
   raster/qgsninecellfilter.cpp
   raster/qgsruggednessfilter.cpp
@@ -25,6 +30,8 @@ SET(QGIS_ANALYSIS_SRCS
   raster/qgsaspectfilter.cpp
   raster/qgstotalcurvaturefilter.cpp
   vector/qgsgeometryanalyzer.cpp
+  vector/qgszonalstatistics.cpp
+  vector/qgsoverlayanalyzer.cpp
 )
 
 SET(QGIS_ANALYSIS_MOC_HDRS
@@ -37,6 +44,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR} 
   ${CMAKE_CURRENT_SOURCE_DIR}/../core/
   ${CMAKE_CURRENT_SOURCE_DIR}/../core/renderer
+  ${CMAKE_CURRENT_SOURCE_DIR}/../core/spatialindex
   interpolation
   ${PROJ_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
@@ -93,7 +101,7 @@ INSTALL(TARGETS qgis_analysis
 
 # Added by Tim to install headers
 
-SET(QGIS_ANALYSIS_HDRS vector/qgsgeometryanalyzer.h
+SET(QGIS_ANALYSIS_HDRS vector/qgsgeometryanalyzer.h vector/qgszonalstatistics.h vector/qgsgeometryanalyzer.h interpolation/qgsinterpolator.h interpolation/qgsgridfilewriter.h interpolation/qgsidwinterpolator.h interpolation/qgstininterpolator.h
 )
 
 INSTALL(CODE "MESSAGE(\"Installing ANALYSIS headers...\")")

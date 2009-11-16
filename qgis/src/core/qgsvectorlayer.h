@@ -47,12 +47,21 @@ class QgsVectorOverlay;
 
 class QgsRectangle;
 
+class QgsFeatureRendererV2;
 
 typedef QList<int> QgsAttributeList;
 typedef QSet<int> QgsFeatureIds;
 typedef QSet<int> QgsAttributeIds;
 
-
+class QgsLabelingEngineInterface
+{
+public:
+  virtual ~QgsLabelingEngineInterface() {}
+  virtual int prepareLayer(QgsVectorLayer* layer, int& attrIndex) = 0;
+  virtual void registerFeature(QgsVectorLayer* layer, QgsFeature& feat) = 0;
+  //void calculateLabeling() = 0;
+  //void drawLabeling(QgsRenderContext& context) = 0;
+};
 
 
 
@@ -73,6 +82,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
       Classification,
       EditRange,
       SliderRange,
+      CheckBox,    /* added in 1.4 */
       FileName,
       Enumeration,
       Immutable,   /*The attribute value should not be changed in the attribute form*/
@@ -166,6 +176,20 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /** Sets the renderer. If a renderer is already present, it is deleted */
     void setRenderer( QgsRenderer * r );
+    
+    /** Return renderer V2. Added in QGIS 1.4 */
+    QgsFeatureRendererV2* rendererV2();
+    /** Set renderer V2. Added in QGIS 1.4 */
+    void setRendererV2(QgsFeatureRendererV2* r);
+    /** Return whether using renderer V2. Added in QGIS 1.4 */
+    bool isUsingRendererV2();
+    /** set whether to use renderer V2 for drawing. Added in QGIS 1.4 */
+    void setUsingRendererV2(bool usingRendererV2);
+
+    /** Draw layer with renderer V2. Added in QGIS 1.4 */
+    void drawRendererV2( QgsRenderContext& rendererContext, bool labeling );
+    /** Draw layer with renderer V2 using symbol levels. Added in QGIS 1.4 */
+    void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling );
 
     /** Returns point, line or polygon */
     QGis::GeometryType geometryType() const;
@@ -337,6 +361,9 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     /** Label is on */
     bool hasLabelsEnabled( void ) const;
 
+    /** Assign a custom labeling engine with layer. Added in v1.4 */
+    void setLabelingEngine(QgsLabelingEngineInterface* engine);
+
     /** Returns true if the provider is in editing mode */
     virtual bool isEditable() const;
 
@@ -450,6 +477,18 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /**set edit type*/
     void setEditType( int idx, EditType edit );
+ 
+    /** set string representing 'true' for a checkbox (added in 1.4) */
+    void setCheckedState( int idx, QString checked, QString notChecked );
+    
+    /** return string representing 'true' for a checkbox (added in 1.4) */
+    QPair<QString, QString> checkedState( int idx );
+
+    /** get edit form (added in 1.4) */
+    QString editForm();
+
+    /** set edit form (added in 1.4) */
+    void setEditForm( QString ui );
 
     /**access value map*/
     QMap<QString, QVariant> &valueMap( int idx );
@@ -695,9 +734,18 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /** Renderer object which holds the information about how to display the features */
     QgsRenderer *mRenderer;
+    
+    /** Renderer V2 */
+    QgsFeatureRendererV2 *mRendererV2;
+    
+    /** whether to use V1 or V2 renderer */
+    bool mUsingRendererV2;
 
     /** Label */
     QgsLabel *mLabel;
+
+    QgsLabelingEngineInterface* mLabelingEngine;
+
 
     /** Display labels */
     bool mLabelOn;
@@ -719,6 +767,8 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     QMap< QString, EditType > mEditTypes;
     QMap< QString, QMap<QString, QVariant> > mValueMaps;
     QMap< QString, RangeData > mRanges;
+    QMap< QString, QPair<QString,QString> > mCheckedStates;
+    QString mEditForm;
 
     bool mFetching;
     QgsRectangle mFetchRect;

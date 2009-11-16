@@ -54,6 +54,9 @@
 #include <QComboBox>
 #include <QCheckBox>
 
+#include "qgsrendererv2propertiesdialog.h"
+#include "qgsstylev2.h"
+
 #if QT_VERSION < 0x040300
 #define toPlainText() text()
 #endif
@@ -125,6 +128,8 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   leSpatialRefSys->setText( layer->srs().toProj4() );
   leSpatialRefSys->setCursorPosition( 0 );
 
+  leEditForm->setText( layer->editForm() );
+
   connect( sliderTransparency, SIGNAL( valueChanged( int ) ), this, SLOT( sliderTransparency_valueChanged( int ) ) );
 
   //for each overlay plugin create a new tab
@@ -135,12 +140,13 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   for ( ; it != overlayPluginList.constEnd(); ++it )
   {
     QgsApplyDialog* d = ( *it )->dialog( lyr );
-    position = tabWidget->addTab( d, ( *it )->name() );
-    tabWidget->setCurrentIndex( position ); //ugly, but otherwise the properties dialog is a mess
+    position = stackedWidget->insertWidget( stackedWidget->count(), qobject_cast<QDialog*>( d ) );
+    stackedWidget->setCurrentIndex( position ); //ugly, but otherwise the properties dialog is a mess
     mOverlayDialogs.push_back( d );
+    listWidget->insertItem( stackedWidget->count(), ( *it )->name() );
   }
 
-  tabWidget->setCurrentIndex( 0 );
+  stackedWidget->setCurrentIndex( 0 );
 } // QgsVectorLayerProperties ctor
 
 void QgsVectorLayerProperties::loadRows()
@@ -236,6 +242,11 @@ void QgsVectorLayerProperties::attributeTypeDialog( )
     attributeTypeDialog.setIndex( index );
   }
 
+  if ( mCheckedStates.contains( index ) )
+  {
+    attributeTypeDialog.setCheckedState( mCheckedStates[index].first, mCheckedStates[index].second );
+  }
+
   if ( !attributeTypeDialog.exec() )
     return;
 
@@ -253,6 +264,8 @@ void QgsVectorLayerProperties::attributeTypeDialog( )
     case QgsVectorLayer::SliderRange:
       mRanges.insert( index, attributeTypeDialog.rangeData() );
       break;
+    case QgsVectorLayer::CheckBox:
+      mCheckedStates.insert( index, attributeTypeDialog.checkedState() );
     default:
       break;
   }
@@ -469,26 +482,45 @@ void QgsVectorLayerProperties::reset( void )
   //find out the type of renderer in the vectorlayer, create a dialog with these settings and add it to the form
   delete mRendererDialog;
   mRendererDialog = 0;
-  QString rtype = layer->renderer()->name();
-  if ( rtype == "Single Symbol" )
+
+  if ( layer->isUsingRendererV2() )
   {
-    mRendererDialog = new QgsSingleSymbolDialog( layer );
-    legendtypecombobox->setCurrentIndex( 0 );
+    mRendererDialog = new QgsRendererV2PropertiesDialog( layer, QgsStyleV2::defaultStyle(), true );
+
+    // hide unused widgets
+    legendtypecombobox->hide();
+    legendtypelabel->hide();
+    lblTransparencyPercent->hide();
+    sliderTransparency->hide();
   }
-  else if ( rtype == "Graduated Symbol" )
+  else
   {
-    mRendererDialog = new QgsGraduatedSymbolDialog( layer );
-    legendtypecombobox->setCurrentIndex( 1 );
-  }
-  else if ( rtype == "Continuous Color" )
-  {
-    mRendererDialog = new QgsContinuousColorDialog( layer );
-    legendtypecombobox->setCurrentIndex( 2 );
-  }
-  else if ( rtype == "Unique Value" )
-  {
-    mRendererDialog = new QgsUniqueValueDialog( layer );
-    legendtypecombobox->setCurrentIndex( 3 );
+
+    QString rtype = layer->renderer()->name();
+    if ( rtype == "Single Symbol" )
+    {
+      mRendererDialog = new QgsSingleSymbolDialog( layer );
+      legendtypecombobox->setCurrentIndex( 0 );
+    }
+    else if ( rtype == "Graduated Symbol" )
+    {
+      mRendererDialog = new QgsGraduatedSymbolDialog( layer );
+      legendtypecombobox->setCurrentIndex( 1 );
+    }
+    else if ( rtype == "Continuous Color" )
+    {
+      mRendererDialog = new QgsContinuousColorDialog( layer );
+      legendtypecombobox->setCurrentIndex( 2 );
+    }
+    else if ( rtype == "Unique Value" )
+    {
+      mRendererDialog = new QgsUniqueValueDialog( layer );
+      legendtypecombobox->setCurrentIndex( 3 );
+    }
+
+    QObject::connect( legendtypecombobox, SIGNAL( activated( const QString & ) ), this,
+                      SLOT( alterLayerDialog( const QString & ) ) );
+
   }
 
   if ( mRendererDialog )
@@ -496,10 +528,6 @@ void QgsVectorLayerProperties::reset( void )
     widgetStackRenderers->addWidget( mRendererDialog );
     widgetStackRenderers->setCurrentWidget( mRendererDialog );
   }
-
-
-  QObject::connect( legendtypecombobox, SIGNAL( activated( const QString & ) ), this,
-                    SLOT( alterLayerDialog( const QString & ) ) );
 
   // reset fields in label dialog
   layer->label()->setFields( layer->pendingFields() );
@@ -550,6 +578,7 @@ void QgsVectorLayerProperties::setupEditTypes()
   editTypeMap.insert( QgsVectorLayer::Enumeration, tr( "Enumeration" ) );
   editTypeMap.insert( QgsVectorLayer::Immutable, tr( "Immutable" ) );
   editTypeMap.insert( QgsVectorLayer::Hidden, tr( "Hidden" ) );
+  editTypeMap.insert( QgsVectorLayer::CheckBox, tr( "Checkbox" ) );
 }
 
 QString QgsVectorLayerProperties::editTypeButtonText( QgsVectorLayer::EditType type )
@@ -586,6 +615,8 @@ void QgsVectorLayerProperties::apply()
   // update the display field
   layer->setDisplayField( displayFieldComboBox->currentText() );
 
+  layer->setEditForm( leEditForm->text() );
+
   actionDialog->apply();
 
   labelDialog->apply();
@@ -620,34 +651,52 @@ void QgsVectorLayerProperties::apply()
         layer->range( idx ) = mRanges[idx];
       }
     }
+    else if ( editType == QgsVectorLayer::CheckBox )
+    {
+      if ( mCheckedStates.contains( idx ) )
+      {
+        layer->setCheckedState( idx, mCheckedStates[idx].first, mCheckedStates[idx].second );
+      }
+    }
   }
 
-  QgsSingleSymbolDialog *sdialog =
-    qobject_cast<QgsSingleSymbolDialog *>( widgetStackRenderers->currentWidget() );
-  QgsGraduatedSymbolDialog *gdialog =
-    qobject_cast<QgsGraduatedSymbolDialog *>( widgetStackRenderers->currentWidget() );
-  QgsContinuousColorDialog *cdialog =
-    qobject_cast<QgsContinuousColorDialog *>( widgetStackRenderers->currentWidget() );
-  QgsUniqueValueDialog* udialog =
-    qobject_cast<QgsUniqueValueDialog *>( widgetStackRenderers->currentWidget() );
+  if ( layer->isUsingRendererV2() )
+  {
+    QgsRendererV2PropertiesDialog* dlg =
+      static_cast<QgsRendererV2PropertiesDialog*>( widgetStackRenderers->currentWidget() );
+    dlg->apply();
+  }
+  else
+  {
 
-  if ( sdialog )
-  {
-    sdialog->apply();
+    QgsSingleSymbolDialog *sdialog =
+      qobject_cast < QgsSingleSymbolDialog * >( widgetStackRenderers->currentWidget() );
+    QgsGraduatedSymbolDialog *gdialog =
+      qobject_cast < QgsGraduatedSymbolDialog * >( widgetStackRenderers->currentWidget() );
+    QgsContinuousColorDialog *cdialog =
+      qobject_cast < QgsContinuousColorDialog * >( widgetStackRenderers->currentWidget() );
+    QgsUniqueValueDialog* udialog =
+      qobject_cast< QgsUniqueValueDialog * >( widgetStackRenderers->currentWidget() );
+
+    if ( sdialog )
+    {
+      sdialog->apply();
+    }
+    else if ( gdialog )
+    {
+      gdialog->apply();
+    }
+    else if ( cdialog )
+    {
+      cdialog->apply();
+    }
+    else if ( udialog )
+    {
+      udialog->apply();
+    }
+    layer->setTransparency( static_cast < unsigned int >( 255 - sliderTransparency->value() ) );
+
   }
-  else if ( gdialog )
-  {
-    gdialog->apply();
-  }
-  else if ( cdialog )
-  {
-    cdialog->apply();
-  }
-  else if ( udialog )
-  {
-    udialog->apply();
-  }
-  layer->setTransparency( static_cast < unsigned int >( 255 - sliderTransparency->value() ) );
 
   //apply overlay dialogs
   for ( QList<QgsApplyDialog*>::iterator it = mOverlayDialogs.begin(); it != mOverlayDialogs.end(); ++it )
@@ -1051,6 +1100,18 @@ void QgsVectorLayerProperties::on_mCalculateFieldButton_clicked()
 
   QgsFieldCalculator calc( layer );
   calc.exec();
+}
+
+void QgsVectorLayerProperties::on_pbnSelectEditForm_clicked()
+{
+  QSettings myQSettings;
+  QString lastUsedDir = myQSettings.value( "style/lastUIDir", "." ).toString();
+  QString uifilename = QFileDialog::getOpenFileName( this, tr( "Select edit form" ), lastUsedDir, tr( "UI file (*.ui)" ) );
+
+  if ( uifilename.isNull() )
+    return;
+
+  leEditForm->setText( uifilename );
 }
 
 QList<QgsVectorOverlayPlugin*> QgsVectorLayerProperties::overlayPlugins() const

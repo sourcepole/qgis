@@ -25,13 +25,10 @@
 QgsComposerMapWidget::QgsComposerMapWidget( QgsComposerMap* composerMap ): QWidget(), mComposerMap( composerMap )
 {
   setupUi( this );
-  mGridWidget->setVisible( false );
-  mGridWidget->setParent( 0 ); //in order to save space, separate the grid widget
-  mGridWidget->setWindowFlags( Qt::CustomizeWindowHint | Qt::WindowTitleHint );
 
   //add widget for general composer item properties
   QgsComposerItemWidget* itemPropertiesWidget = new QgsComposerItemWidget( this, composerMap );
-  gridLayout_3->addWidget( itemPropertiesWidget, 6, 0, 1, 1 );
+  toolBox->addItem( itemPropertiesWidget, tr( "General options" ) );
   QDoubleValidator v( 0 );
 
   mWidthLineEdit->setValidator( &v );
@@ -58,20 +55,17 @@ QgsComposerMapWidget::QgsComposerMapWidget( QgsComposerMap* composerMap ): QWidg
   mAnnotationDirectionComboBox->insertItem( 1, tr( "Vertical" ) );
   mAnnotationDirectionComboBox->insertItem( 2, tr( "Horizontal and Vertical" ) );
   mAnnotationDirectionComboBox->insertItem( 2, tr( "Boundary direction" ) );
-
-  blockAllSignals( false );
-
   if ( composerMap )
   {
     connect( composerMap, SIGNAL( extentChanged() ), this, SLOT( updateSettingsNoSignals() ) );
   }
 
   updateGuiElements();
+  blockAllSignals( false );
 }
 
 QgsComposerMapWidget::~QgsComposerMapWidget()
 {
-  delete mGridWidget;
 }
 
 void QgsComposerMapWidget::on_mWidthLineEdit_editingFinished()
@@ -302,11 +296,11 @@ void QgsComposerMapWidget::updateGuiElements()
     //grid
     if ( mComposerMap->gridEnabled() )
     {
-      mGridCheckBox->setCheckState( Qt::Checked );
+      mGridCheckBox->setChecked( true );
     }
     else
     {
-      mGridCheckBox->setCheckState( Qt::Unchecked );
+      mGridCheckBox->setChecked( false );
     }
 
     mIntervalXSpinBox->setValue( mComposerMap->gridIntervalX() );
@@ -468,14 +462,14 @@ void QgsComposerMapWidget::on_mKeepLayerListCheckBox_stateChanged( int state )
   }
 }
 
-void QgsComposerMapWidget::on_mGridCheckBox_stateChanged( int state )
+void QgsComposerMapWidget::on_mGridCheckBox_toggled( bool state )
 {
   if ( !mComposerMap )
   {
     return;
   }
 
-  if ( state == Qt::Checked )
+  if ( state )
   {
     mComposerMap->setGridEnabled( true );
   }
@@ -681,18 +675,6 @@ void QgsComposerMapWidget::on_mAnnotationDirectionComboBox_currentIndexChanged( 
   }
   mComposerMap->updateBoundingRect();
   mComposerMap->update();
-}
-
-void QgsComposerMapWidget::on_mShowGridDialogCheckBox_stateChanged( int state )
-{
-  if ( state == Qt::Checked )
-  {
-    mGridWidget->setVisible( true );
-  }
-  else
-  {
-    mGridWidget->setVisible( false );
-  }
 }
 
 void QgsComposerMapWidget::on_mCoordinatePrecisionSpinBox_valueChanged( int value )

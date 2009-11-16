@@ -66,6 +66,16 @@ QMap<QString, QVariant> &QgsAttributeTypeDialog::valueMap()
   return mValueMap;
 }
 
+QPair<QString, QString> QgsAttributeTypeDialog::checkedState()
+{
+  return QPair<QString, QString>( leCheckedState->text(), leUncheckedState->text() );
+}
+
+void QgsAttributeTypeDialog::setCheckedState( QString checked, QString unchecked )
+{
+  leCheckedState->setText( checked );
+  leUncheckedState->setText( unchecked );
+}
 
 void QgsAttributeTypeDialog::vCellChanged( int row, int column )
 {
@@ -122,12 +132,12 @@ void QgsAttributeTypeDialog::loadFromCSVButtonPushed()
     QMessageBox::information( NULL,
                               tr( "Error" ),
                               tr( "Could not open file %1\nError was:%2" ).arg( fileName ).arg( f.errorString() ),
-			      QMessageBox::Cancel );
+                              QMessageBox::Cancel );
     return;
   }
 
-  QTextStream s(&f);
-  s.setAutoDetectUnicode(true);
+  QTextStream s( &f );
+  s.setAutoDetectUnicode( true );
 
   QRegExp re0( "^([^;]*);(.*)$" );
   re0.setMinimal( true );
@@ -233,6 +243,10 @@ void QgsAttributeTypeDialog::setPageForEditType( QgsVectorLayer::EditType editTy
 
     case QgsVectorLayer::Hidden:
       setPage( 8 );
+      break;
+
+    case QgsVectorLayer::CheckBox:
+      setPage( 9 );
       break;
 
     case QgsVectorLayer::LineEdit:
@@ -512,6 +526,9 @@ void QgsAttributeTypeDialog::accept()
       break;
     case 8:
       mEditType = QgsVectorLayer::Hidden;
+      break;
+    case 9:
+      mEditType = QgsVectorLayer::CheckBox;
       break;
     default:
       mEditType = QgsVectorLayer::LineEdit;

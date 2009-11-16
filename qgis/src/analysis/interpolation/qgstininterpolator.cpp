@@ -16,7 +16,9 @@
  ***************************************************************************/
 
 #include "qgstininterpolator.h"
+#include "CloughTocherInterpolator.h"
 #include "DualEdgeTriangulation.h"
+#include "NormVecDecorator.h"
 #include "LinTriangleInterpolator.h"
 #include "Point3D.h"
 #include "qgsfeature.h"
@@ -35,8 +37,8 @@
 #define isnan(f) _isnan(f)
 #endif
 
-QgsTINInterpolator::QgsTINInterpolator( const QList<LayerData>& inputData, bool showProgressDialog ): QgsInterpolator( inputData ), mTriangulation( 0 ), \
-    mTriangleInterpolator( 0 ), mIsInitialized( false ), mShowProgressDialog( showProgressDialog ), mExportTriangulationToFile( false )
+QgsTINInterpolator::QgsTINInterpolator( const QList<LayerData>& inputData, TIN_INTERPOLATION interpolation, bool showProgressDialog ): QgsInterpolator( inputData ), mTriangulation( 0 ), \
+    mTriangleInterpolator( 0 ), mIsInitialized( false ), mShowProgressDialog( showProgressDialog ), mExportTriangulationToFile( false ), mInterpolation( interpolation )
 {
 }
 
@@ -70,7 +72,16 @@ int QgsTINInterpolator::interpolatePoint( double x, double y, double& result )
 void QgsTINInterpolator::initialize()
 {
   DualEdgeTriangulation* theDualEdgeTriangulation = new DualEdgeTriangulation( 100000, 0 );
-  mTriangulation = theDualEdgeTriangulation;
+  if ( mInterpolation == CloughTocher )
+  {
+    NormVecDecorator* dec = new NormVecDecorator();
+    dec->addTriangulation( theDualEdgeTriangulation );
+    mTriangulation = dec;
+  }
+  else
+  {
+    mTriangulation = theDualEdgeTriangulation;
+  }
 
   //get number of features if we use a progress bar
   int nFeatures = 0;
@@ -124,7 +135,23 @@ void QgsTINInterpolator::initialize()
   }
 
   delete theProgressDialog;
-  mTriangleInterpolator = new LinTriangleInterpolator( theDualEdgeTriangulation );
+
+  if ( mInterpolation == CloughTocher )
+  {
+    CloughTocherInterpolator* ctInterpolator = new CloughTocherInterpolator();
+    NormVecDecorator* dec = dynamic_cast<NormVecDecorator*>( mTriangulation );
+    if ( dec )
+    {
+      dec->estimateFirstDerivatives();
+      ctInterpolator->setTriangulation( dec );
+      dec->setTriangleInterpolator( ctInterpolator );
+      mTriangleInterpolator = ctInterpolator;
+    }
+  }
+  else //linear
+  {
+    mTriangleInterpolator = new LinTriangleInterpolator( theDualEdgeTriangulation );
+  }
   mIsInitialized = true;
 
   //debug
@@ -167,10 +194,12 @@ int QgsTINInterpolator::insertData( QgsFeature* f, bool zCoord, int attr, InputT
     }
   }
 
-  //parse WKB. We cannot use the methods with QgsPoint because they don't contain z-values for 25D types
+  //parse WKB. It is ugly, but we cannot use the methods with QgsPoint because they don't contain z-values for 25D types
   bool hasZValue = false;
   double x, y, z;
   unsigned char* currentWkbPtr = g->asWkb();
+  //maybe a structure or break line
+  Line3D* line = 0;
 
   QGis::WkbType wkbType = g->wkbType();
   switch ( wkbType )
@@ -199,12 +228,36 @@ int QgsTINInterpolator::insertData( QgsFeature* f, bool zCoord, int attr, InputT
       }
       break;
     }
+    case QGis::WKBMultiPoint25D:
+      hasZValue = true;
+    case QGis::WKBMultiPoint:
+    {
+      currentWkbPtr += ( 1 + sizeof( int ) );
+      int* npoints = ( int* )currentWkbPtr;
+      currentWkbPtr += sizeof( int );
+      for ( int index = 0; index < *npoints; ++index )
+      {
+        currentWkbPtr += ( 1 + sizeof( int ) ); //skip endian and point type
+        x = *(( double* )currentWkbPtr );
+        currentWkbPtr += sizeof( double );
+        y = *(( double* )currentWkbPtr );
+        currentWkbPtr += sizeof( double );
+        if ( hasZValue ) //skip z-coordinate for 25D geometries
+        {
+          z = *(( double* )currentWkbPtr );
+          currentWkbPtr += sizeof( double );
+        }
+        else
+        {
+          z = attributeValue;
+        }
+      }
+      break;
+    }
     case QGis::WKBLineString25D:
       hasZValue = true;
     case QGis::WKBLineString:
     {
-      //maybe a structure or break line
-      Line3D* line = 0;
       if ( type != POINTS )
       {
         line = new Line3D();
@@ -248,8 +301,165 @@ int QgsTINInterpolator::insertData( QgsFeature* f, bool zCoord, int attr, InputT
       }
       break;
     }
+    case QGis::WKBMultiLineString25D:
+      hasZValue = true;
+    case QGis::WKBMultiLineString:
+    {
+      currentWkbPtr += ( 1 + sizeof( int ) );
+      int* nlines = ( int* )currentWkbPtr;
+      int* npoints = 0;
+      currentWkbPtr += sizeof( int );
+      for ( int index = 0; index < *nlines; ++index )
+      {
+        if ( type != POINTS )
+        {
+          line = new Line3D();
+        }
+        currentWkbPtr += ( sizeof( int ) + 1 );
+        npoints = ( int* )currentWkbPtr;
+        currentWkbPtr += sizeof( int );
+        for ( int index2 = 0; index2 < *npoints; ++index2 )
+        {
+          x = *(( double* )currentWkbPtr );
+          currentWkbPtr += sizeof( double );
+          y = *(( double* )currentWkbPtr );
+          currentWkbPtr += sizeof( double );
+
+          if ( hasZValue ) //skip z-coordinate for 25D geometries
+          {
+            z = *(( double* ) currentWkbPtr );
+            currentWkbPtr += sizeof( double );
+          }
+          else
+          {
+            z = attributeValue;
+          }
+
+          if ( type == POINTS )
+          {
+            //todo: handle error code -100
+            mTriangulation->addPoint( new Point3D( x, y, z ) );
+          }
+          else
+          {
+            line->insertPoint( new Point3D( x, y, z ) );
+          }
+        }
+        if ( type != POINTS )
+        {
+          mTriangulation->addLine( line, type == BREAK_LINES );
+        }
+      }
+      break;
+    }
+    case QGis::WKBPolygon25D:
+      hasZValue = true;
+    case QGis::WKBPolygon:
+    {
+      currentWkbPtr += ( 1 + sizeof( int ) );
+      int* nrings = ( int* )currentWkbPtr;
+      currentWkbPtr += sizeof( int );
+      int* npoints;
+      for ( int index = 0; index < *nrings; ++index )
+      {
+        if ( type != POINTS )
+        {
+          line = new Line3D();
+        }
+
+        npoints = ( int* )currentWkbPtr;
+        currentWkbPtr += sizeof( int );
+        for ( int index2 = 0; index2 < *npoints; ++index2 )
+        {
+          x = *(( double* )currentWkbPtr );
+          currentWkbPtr += sizeof( double );
+          y = *(( double* )currentWkbPtr );
+          currentWkbPtr += sizeof( double );
+          if ( hasZValue ) //skip z-coordinate for 25D geometries
+          {
+            z = *(( double* )currentWkbPtr );;
+            currentWkbPtr += sizeof( double );
+          }
+          else
+          {
+            z = attributeValue;
+          }
+          if ( type == POINTS )
+          {
+            //todo: handle error code -100
+            mTriangulation->addPoint( new Point3D( x, y, z ) );
+          }
+          else
+          {
+            line->insertPoint( new Point3D( x, y, z ) );
+          }
+        }
+
+        if ( type != POINTS )
+        {
+          mTriangulation->addLine( line, type == BREAK_LINES );
+        }
+      }
+      break;
+    }
+
+    case QGis::WKBMultiPolygon25D:
+      hasZValue = true;
+    case QGis::WKBMultiPolygon:
+    {
+      currentWkbPtr += ( 1 + sizeof( int ) );
+      int* npolys = ( int* )currentWkbPtr;
+      int* nrings;
+      int* npoints;
+      currentWkbPtr += sizeof( int );
+      for ( int index = 0; index < *npolys; ++index )
+      {
+        currentWkbPtr += ( 1 + sizeof( int ) ); //skip endian and polygon type
+        nrings = ( int* )currentWkbPtr;
+        currentWkbPtr += sizeof( int );
+        for ( int index2 = 0; index2 < *nrings; ++index2 )
+        {
+          if ( type != POINTS )
+          {
+            line = new Line3D();
+          }
+          npoints = ( int* )currentWkbPtr;
+          currentWkbPtr += sizeof( int );
+          for ( int index3 = 0; index3 < *npoints; ++index3 )
+          {
+            x = *(( double* )currentWkbPtr );
+            currentWkbPtr += sizeof( double );
+            y = *(( double* )currentWkbPtr );
+            currentWkbPtr += sizeof( double );
+            if ( hasZValue ) //skip z-coordinate for 25D geometries
+            {
+              z = *(( double* )currentWkbPtr );
+              currentWkbPtr += sizeof( double );
+            }
+            else
+            {
+              z = attributeValue;
+            }
+            if ( type == POINTS )
+            {
+              //todo: handle error code -100
+              mTriangulation->addPoint( new Point3D( x, y, z ) );
+            }
+            else
+            {
+              line->insertPoint( new Point3D( x, y, z ) );
+            }
+          }
+          if ( type != POINTS )
+          {
+            mTriangulation->addLine( line, type == BREAK_LINES );
+          }
+        }
+      }
+      break;
+    }
     default:
-      //todo: add the same for multiline, polygon, multipolygon
+      //should not happen...
       break;
   }
 

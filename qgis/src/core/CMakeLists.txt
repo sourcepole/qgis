@@ -4,6 +4,22 @@
 # sources
 
 SET(QGIS_CORE_SRCS
+
+  symbology-ng/qgssymbolv2.cpp
+  symbology-ng/qgssymbollayerv2.cpp
+  symbology-ng/qgssymbollayerv2registry.cpp
+  symbology-ng/qgssymbollayerv2utils.cpp
+  symbology-ng/qgslinesymbollayerv2.cpp
+  symbology-ng/qgsmarkersymbollayerv2.cpp
+  symbology-ng/qgsfillsymbollayerv2.cpp
+  symbology-ng/qgsrendererv2.cpp
+  symbology-ng/qgsrendererv2registry.cpp
+  symbology-ng/qgssinglesymbolrendererv2.cpp
+  symbology-ng/qgscategorizedsymbolrendererv2.cpp
+  symbology-ng/qgsgraduatedsymbolrendererv2.cpp
+  symbology-ng/qgsvectorcolorrampv2.cpp
+  symbology-ng/qgsstylev2.cpp
+
   qgis.cpp
   qgsapplication.cpp
   qgsattributeaction.cpp
@@ -71,9 +87,9 @@ SET(QGIS_CORE_SRCS
   composer/qgsticksscalebarstyle.cpp
   composer/qgscomposition.cpp
 
+  pal/costcalculator.cpp
   pal/feature.cpp
   pal/geomfunction.cpp
-  pal/label.cpp
   pal/labelposition.cpp
   pal/layer.cpp
   pal/pal.cpp
@@ -110,6 +126,7 @@ SET(QGIS_CORE_SRCS
   symbology/qgssymbologyutils.cpp
 
   spatialindex/qgsspatialindex.cpp
+  
   )
 
 IF (WITH_INTERNAL_SPATIALITE)
@@ -164,6 +181,7 @@ SET_SOURCE_FILES_PROPERTIES(
 ENDIF (MSVC AND PEDANTIC)
 
 SET(QGIS_CORE_MOC_HDRS
+
 qgsapplication.h
 qgscontexthelp.h
 qgscoordinatetransform.h
@@ -199,6 +217,7 @@ INCLUDE_DIRECTORIES(
   renderer 
   symbology
   spatialindex/include
+  symbology-ng
   ${PROJ_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
@@ -366,6 +385,7 @@ raster/qgsrasterlayer.h
 raster/qgsrastertransparency.h
 raster/qgsrastershader.h
 raster/qgsrastershaderfunction.h
+raster/qgsrasterviewport.h
 
 renderer/qgscontinuouscolorrenderer.h
 renderer/qgsgraduatedsymbolrenderer.h

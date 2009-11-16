@@ -149,6 +149,16 @@ public:
     */
     bool writeXML(QDomNode & layer_node, QDomDocument & document) const;
 
+    /** Set a custom property for layer. Properties are stored in a map and saved in project file.
+     *  @note Added in v1.4 */
+    void setCustomProperty( const QString& key, const QVariant& value );
+    /** Read a custom property from layer. Properties are stored in a map and saved in project file.
+     *  @note Added in v1.4 */
+    QVariant customProperty( const QString& value, const QVariant& defaultValue = QVariant() ) const;
+    /** Remove a custom property from layer. Properties are stored in a map and saved in project file.
+     *  @note Added in v1.4 */
+    void removeCustomProperty( const QString& key );
+
     /** Read the symbology for the current layer from the Dom node supplied. 
      * @param QDomNode node that will contain the symbology definition for this layer.
      * @param errorMessage reference to string that will be updated with any error messages
@@ -193,7 +203,17 @@ public:
      */
     virtual QString lastError();
 
-    /** Returns layer's spatial reference system */
+    /** Returns layer's spatial reference system
+    @note This was introduced in QGIS 1.4
+    */
+    
+    const QgsCoordinateReferenceSystem& crs();
+
+    /** Returns layer's spatial reference system
+    @note This method is here for API compatibility
+    and will be deprecited in 2.0
+    @see crs()
+    */
     const QgsCoordinateReferenceSystem& srs();
     
     /** Sets layer's spatial reference system */

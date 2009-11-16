@@ -13,9 +13,10 @@ public:
     Classification,
     EditRange,
     SliderRange
+    CheckBox,    /* @note added in 1.4 */
     FileName,
-    Enumeration,
-    Immutable
+    Enumeration, /* @note added in 1.4 */
+    Immutable    /* @note added in 1.4 */
   };
    
   struct RangeData {
@@ -62,7 +63,7 @@ public:
 
   QgsLabel *label();
 
-  // TODO: wrap QgsAttributeAction* actions();
+  QgsAttributeAction *actions();
 
   /** The number of features that are selected in this layer */
   int selectedFeatureCount();
@@ -100,6 +101,20 @@ public:
   /** Sets the renderer. If a renderer is already present, it is deleted */
   void setRenderer(QgsRenderer * r /Transfer/);
 
+  /** Return renderer V2. Added in QGIS 1.4 */
+  QgsFeatureRendererV2* rendererV2();
+  /** Set renderer V2. Added in QGIS 1.4 */
+  void setRendererV2(QgsFeatureRendererV2* r);
+  /** Return whether using renderer V2. Added in QGIS 1.4 */
+  bool isUsingRendererV2();
+  /** set whether to use renderer V2 for drawing. Added in QGIS 1.4 */
+  void setUsingRendererV2(bool usingRendererV2);
+    
+  /** Draw layer with renderer V2. Added in QGIS 1.4 */
+  void drawRendererV2( QgsRenderContext& rendererContext, bool labeling );
+  /** Draw layer with renderer V2 using symbol levels. Added in QGIS 1.4 */
+  void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling );
+
   /** Returns point, line or polygon */
   QGis::GeometryType geometryType() const;
 
@@ -130,7 +145,7 @@ public:
   /** Write the symbology for the layer into the docment provided.
    *  @param QDomNode the node that will have the style element added to it.
    *  @param QDomDocument the document that will have the QDomNode added.
-   * @param errorMessage reference to string that will be updated with any error messages
+   *  @param errorMessage reference to string that will be updated with any error messages
    *  @return true in case of success.
    */
   bool writeSymbology(QDomNode&, QDomDocument& doc, QString& errorMessage) const;
@@ -154,7 +169,7 @@ public:
    * @param subset The subset string. This may be the where clause of a sql statement
    *               or other defintion string specific to the underlying dataprovider
    *               and data store.
-   * @return true, when setting the string was successful, false otherwise (added in 1.4)
+   * @return true, when setting the string was successful, false otherwise (@note added in 1.4)
    */
   virtual bool setSubsetString(QString subset);
 
@@ -386,6 +401,27 @@ public:
 
   /**set edit type*/
   void setEditType(int idx, EditType edit);
+
+  /** set string representing 'true' for a checkbox
+   @note added in 1.4
+   */
+  void setCheckedState( int idx, QString checked, QString notChecked );
+   
+  /** return string representing 'true' for a checkbox
+    @note added in 1.4
+   */
+  // FIXME: need SIP binding for QPair<QString, QString> 
+  // QPair<QString, QString> checkedState( int idx );
+ 
+  /** get edit form
+    @note added in 1.4
+   */
+  QString editForm();
+
+  /** set edit form
+    @note added in 1.4
+   */
+  void setEditForm( QString ui );
 
   /**access value map*/
   QMap<QString, QVariant> &valueMap(int idx);
