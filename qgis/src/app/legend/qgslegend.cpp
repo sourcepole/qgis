@@ -709,7 +709,7 @@ void QgsLegend::legendLayerShowProperties()
     rlp->exec();
     delete rlp; // delete since dialog cannot be reused without updating code
   }
-  else // VECTOR
+  else if ( ml->type() == QgsMapLayer::VectorLayer ) // VECTOR
   {
     QgsVectorLayer* vlayer = qobject_cast<QgsVectorLayer *>( ml );
 

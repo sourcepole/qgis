@@ -1,0 +1,6 @@
+<RCC> 
+  <qresource prefix="/plugins/sample_layer_plugin" > 
+    <file>icon.png</file> 
+  </qresource> 
+</RCC> 
+

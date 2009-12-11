@@ -353,6 +353,11 @@ bool QgsMapLayer::writeXml( QDomNode & layer_node, QDomDocument & document )
 
 bool QgsMapLayer::isValid()
 {
+  if (type() == PluginLayer)
+  {
+    return true;
+  }
+
   return mValid;
 }
 

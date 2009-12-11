@@ -35,7 +35,8 @@ public:
     enum LayerType
     {
         VectorLayer,
-        RasterLayer
+        RasterLayer,
+        PluginLayer
     };
 
     /** Constructor

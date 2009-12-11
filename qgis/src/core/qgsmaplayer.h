@@ -48,7 +48,8 @@ class CORE_EXPORT QgsMapLayer : public QObject
     enum LayerType
     {
       VectorLayer,
-      RasterLayer
+      RasterLayer,
+      PluginLayer
     };
 
     /** Constructor

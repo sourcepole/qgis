@@ -1,0 +1,13 @@
+=QGIS with plugin layer registry
+
+Added QgsPluginLayerRegistry to QGIS[http://www.qgis.org/] to support QgsMapLayers managed by plugins
+
+==Sample layer plugin
+
+This is a sample plugin using the plugin layer registry.
+
+=== Source
+qgis/sample_layer_plugin/
+
+=== Installation
+manually copy sample_layer_plugin/ to QGIS plugin folder

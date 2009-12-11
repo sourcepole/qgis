@@ -43,6 +43,7 @@
 %Include qgsmarkercatalogue.sip
 %Include qgsmessageoutput.sip
 %Include qgsoverlayobject.sip
+%Include qgspluginlayerregistry.sip
 %Include qgspoint.sip
 %Include qgsproject.sip
 %Include qgsprovidermetadata.sip

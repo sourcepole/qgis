@@ -30,6 +30,7 @@
 #include "qgslogger.h"
 #include "qgsprojectfiletransform.h"
 #include "qgsprojectversion.h"
+#include "qgspluginlayerregistry.h"
 
 #include <QApplication>
 #include <QFileInfo>
@@ -693,6 +694,10 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
     {
       mapLayer = new QgsRasterLayer;
     }
+    else
+    {
+      mapLayer = QgsPluginLayerRegistry::instance()->createLayer(node);
+    }
 
     Q_CHECK_PTR( mapLayer );
 
@@ -883,8 +888,7 @@ bool QgsProject::read( QDomNode & layerNode )
   }
   else
   {
-    QgsDebugMsg( "bad layer type" );
-    return false;
+    mapLayer = QgsPluginLayerRegistry::instance()->createLayer(layerNode);
   }
 
   if ( !mapLayer )
