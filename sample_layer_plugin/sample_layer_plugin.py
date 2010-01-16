@@ -34,6 +34,9 @@ class SamplePluginLayer(QgsMapLayer):
     self.setCrs(crs)
     self.setCustomProperty("width", QVariant(256))
 
+  def isEditable(self):
+    return False
+
   def __del__(self):
     print "SamplePluginLayer removed"
 
