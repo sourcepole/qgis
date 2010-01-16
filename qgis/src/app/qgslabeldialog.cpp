@@ -14,15 +14,19 @@
  *                                                                         *
  ***************************************************************************/
 /* $Id$ */
+
+#include <limits>
+
 #include "qgslabeldialog.h"
 #include "qgsfield.h"
 #include "qgslabel.h"
 #include "qgslabelattributes.h"
+#include "qgslogger.h"
 
 #include <QColorDialog>
 #include <QFontDialog>
 #include <QTabWidget>
-#include "qgslogger.h"
+#include <QDoubleValidator>
 
 
 const int PIXMAP_WIDTH = 200;
@@ -89,6 +93,10 @@ void QgsLabelDialog::init( )
   cboUnderlineField->addItems( myFieldStringList );
   cboUnderlineField->setCurrentIndex( itemNoForField( mLabel->labelField( QgsLabel::Underline ), myFieldStringList ) );
 
+  cboStrikeOutField->clear();
+  cboStrikeOutField->addItems( myFieldStringList );
+  cboStrikeOutField->setCurrentIndex( itemNoForField( mLabel->labelField( QgsLabel::StrikeOut ), myFieldStringList ) );
+
   cboFontSizeField->clear();
   cboFontSizeField->addItems( myFieldStringList );
   cboFontSizeField->setCurrentIndex( itemNoForField( mLabel->labelField( QgsLabel::Size ), myFieldStringList ) );
@@ -142,8 +150,10 @@ void QgsLabelDialog::init( )
 
   // set up the scale based layer visibility stuff....
   chkUseScaleDependentRendering->setChecked( mLabel->scaleBasedVisibility() );
-  spinMinimumScale->setValue(( int )mLabel->minScale() );
-  spinMaximumScale->setValue(( int )mLabel->maxScale() );
+  leMinimumScale->setText( QString::number( mLabel->minScale(), 'f' ) );
+  leMinimumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
+  leMaximumScale->setText( QString::number( mLabel->maxScale(), 'f' ) );
+  leMaximumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
 
   //
   //set the non-databound fields up now
@@ -188,7 +198,23 @@ void QgsLabelDialog::init( )
   {
     mFont.setItalic( false );
   }
-  mFont.setUnderline( myLabelAttributes->underline() );
+  if ( myLabelAttributes->underlineIsSet() )
+  {
+    mFont.setUnderline( myLabelAttributes->underline() );
+  }
+  else
+  {
+    mFont.setUnderline( false );
+  }
+  if ( myLabelAttributes->strikeOutIsSet() )
+  {
+    mFont.setStrikeOut( myLabelAttributes->strikeOut() );
+  }
+  else
+  {
+    mFont.setStrikeOut( false );
+  }
+
   mFontColor = myLabelAttributes->color();
 
   if ( myLabelAttributes->offsetIsSet() )
@@ -262,8 +288,6 @@ void QgsLabelDialog::init( )
 
   //NOTE: do we need this line too? TS
   spinBufferSize->setValue( myLabelAttributes->bufferSize() );
-  //TODO - transparency attributes for buffers
-
 }
 
 
@@ -356,6 +380,7 @@ void QgsLabelDialog::apply()
   myLabelAttributes->setBold( mFont.bold() );
   myLabelAttributes->setItalic( mFont.italic() );
   myLabelAttributes->setUnderline( mFont.underline() );
+  myLabelAttributes->setStrikeOut( mFont.strikeOut() );
   myLabelAttributes->setColor( mFontColor );
   myTypeInt = 0;
   if ( radioOffsetUnitsPoints->isChecked() )
@@ -404,6 +429,7 @@ void QgsLabelDialog::apply()
   mLabel->setLabelField( QgsLabel::Bold,  fieldIndexFromName( cboBoldField->currentText() ) );
   mLabel->setLabelField( QgsLabel::Italic,  fieldIndexFromName( cboItalicField->currentText() ) );
   mLabel->setLabelField( QgsLabel::Underline,  fieldIndexFromName( cboUnderlineField->currentText() ) );
+  mLabel->setLabelField( QgsLabel::StrikeOut,  fieldIndexFromName( cboStrikeOutField->currentText() ) );
   mLabel->setLabelField( QgsLabel::Size,  fieldIndexFromName( cboFontSizeField->currentText() ) );
   mLabel->setLabelField( QgsLabel::SizeType,  fieldIndexFromName( cboFontSizeTypeField->currentText() ) );
   mLabel->setLabelField( QgsLabel::Color,  fieldIndexFromName( cboFontColorField->currentText() ) );
@@ -418,8 +444,8 @@ void QgsLabelDialog::apply()
 
   // set up the scale based layer visibility stuff....
   mLabel->setScaleBasedVisibility( chkUseScaleDependentRendering->isChecked() );
-  mLabel->setMinScale( spinMinimumScale->value() );
-  mLabel->setMaxScale( spinMaximumScale->value() );
+  mLabel->setMinScale( leMinimumScale->text().toFloat() );
+  mLabel->setMaxScale( leMaximumScale->text().toFloat() );
 }
 
 int QgsLabelDialog::fieldIndexFromName( QString name )

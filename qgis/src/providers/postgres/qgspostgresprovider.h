@@ -205,7 +205,7 @@ class QgsPostgresProvider : public QgsVectorDataProvider
     QgsAttributeList attributeIndexes();
 
     /**Returns the default value for field specified by @c fieldName */
-    QVariant defaultValue( QString fieldName );
+    QVariant defaultValue( QString fieldName, QString tableName = QString::null, QString schemaName = QString::null );
 
     /**Returns the default value for field specified by @c fieldId */
     QVariant defaultValue( int fieldId );
@@ -560,13 +560,6 @@ class QgsPostgresProvider : public QgsVectorDataProvider
 
     int enabledCapabilities;
 
-    /**Returns the maximum value of the primary key attribute
-       @note  You should run this inside of a PostgreSQL transaction
-              so that you can safely increment the value returned for
-              use in newly added features.
-      */
-    int maxPrimaryKeyValue();
-
     //! Get the feature count based on the where clause
     long getFeatureCount();
 
@@ -667,6 +660,7 @@ class QgsPostgresProvider : public QgsVectorDataProvider
 
         static QMap<QString, Conn *> connectionsRW;
         static QMap<QString, Conn *> connectionsRO;
+        static QMap<QString, QString> passwordCache;
     };
 
     class Result
@@ -702,6 +696,14 @@ class QgsPostgresProvider : public QgsVectorDataProvider
     void disconnectDb();
 
     static int providerIds;
+
+    QString primaryKeyDefault();
+    void parseView();
+
+    /**
+     * Default value for primary key
+     */
+    QString mPrimaryKeyDefault;
 };
 
 #endif

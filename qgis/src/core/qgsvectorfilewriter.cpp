@@ -29,8 +29,10 @@
 #include <QFile>
 #include <QSettings>
 #include <QFileInfo>
+#include <QDir>
 #include <QTextCodec>
 #include <QTextStream>
+#include <QSet>
 
 #include <cassert>
 #include <cstdlib> // size_t
@@ -58,6 +60,23 @@ QgsVectorFileWriter::QgsVectorFileWriter( const QString& shapefileName,
   {
     mError = ErrDriverNotFound;
     return;
+  }
+
+  if ( driverName == "ESRI Shapefile" )
+  {
+    // check for unique fieldnames
+    QSet<QString> fieldNames;
+    QgsFieldMap::const_iterator fldIt;
+    for ( fldIt = fields.begin(); fldIt != fields.end(); ++fldIt )
+    {
+      QString name = fldIt.value().name().left( 10 );
+      if ( fieldNames.contains( name ) )
+      {
+        mError = ErrAttributeCreationFailed;
+        return;
+      }
+      fieldNames << name;
+    }
   }
 
   // create the data source
@@ -95,12 +114,27 @@ QgsVectorFileWriter::QgsVectorFileWriter( const QString& shapefileName,
   }
 
   // datasource created, now create the output layer
-  QString layerName = shapefileName.left( shapefileName.indexOf( ".shp" ) );
+  QString layerName = shapefileName.left( shapefileName.indexOf( ".shp", Qt::CaseInsensitive ) );
   OGRwkbGeometryType wkbType = static_cast<OGRwkbGeometryType>( geometryType );
   mLayer = OGR_DS_CreateLayer( mDS, QFile::encodeName( layerName ).data(), ogrRef, wkbType, NULL );
 
   if ( srs )
   {
+    if ( driverName == "ESRI Shapefile" )
+    {
+      QFile prjFile( layerName + ".qpj" );
+      if ( prjFile.open( QIODevice::WriteOnly ) )
+      {
+        QTextStream prjStream( &prjFile );
+        prjStream << srs->toWkt().toLocal8Bit().data() << endl;
+        prjFile.close();
+      }
+      else
+      {
+        QgsDebugMsg( "Couldn't open file " + layerName + ".qpj" );
+      }
+    }
+
     OSRDestroySpatialReference( ogrRef );
   }
 
@@ -251,6 +285,12 @@ bool QgsVectorFileWriter::addFeature( QgsFeature& feature )
 
   // build geometry from WKB
   QgsGeometry *geom = feature.geometry();
+  if ( !geom )
+  {
+    QgsDebugMsg( "invalid geometry" );
+    OGR_F_Destroy( poFeature );
+    return false;
+  }
 
   if ( geom->wkbType() != mWkbType )
   {
@@ -344,8 +384,8 @@ QgsVectorFileWriter::writeAsShapefile( QgsVectorLayer* layer,
     // This means we shouldn't transform, use source CRS as output (if defined)
     outputCRS = &layer->srs();
   }
-  QgsVectorFileWriter* writer = new QgsVectorFileWriter( shapefileName,
-      fileEncoding, provider->fields(), provider->geometryType(), outputCRS );
+  QgsVectorFileWriter* writer =
+    new QgsVectorFileWriter( shapefileName, fileEncoding, provider->fields(), provider->geometryType(), outputCRS );
 
   // check whether file creation was successful
   WriterError err = writer->hasError();
@@ -382,7 +422,22 @@ QgsVectorFileWriter::writeAsShapefile( QgsVectorLayer* layer,
 
     if ( shallTransform )
     {
-      fet.geometry()->transform( *ct );
+      try
+      {
+        fet.geometry()->transform( *ct );
+      }
+      catch ( QgsCsException &e )
+      {
+        delete ct;
+        delete writer;
+
+        QString msg( "Failed to transform a point while drawing a feature of type '"
+                     + fet.typeName() + "'. Writing stopped." );
+        msg += e.what();
+        QgsLogger::warning( msg );
+
+        return ErrProjection;
+      }
     }
     writer->addFeature( fet );
   }
@@ -394,51 +449,29 @@ QgsVectorFileWriter::writeAsShapefile( QgsVectorLayer* layer,
     delete ct;
   }
 
-  // Ohh, a great Hack-fest starts!
-  // Overwrite the .prj file created by QGsVectorFileWrite().
-  // This might break progrmas that relies on ESRI style .prf-files.
-  // The 'CT-params' (e.g. +towgs84) does not get stripped in this way
-  QRegExp regExp( ".shp$" );
-  QString prjName = shapefileName;
-  prjName.replace( regExp, QString( "" ) );
-  prjName.append( QString( ".prj" ) );
-  QFile prjFile( prjName );
-
-  if ( !prjFile.open( QIODevice::WriteOnly ) )
-  {
-    QgsDebugMsg( "Couldn't open file " + prjName );
-    return NoError; // For now
-  }
-
-  QTextStream prjStream( & prjFile );
-  prjStream << destCRS->toWkt() << endl;
-  prjFile.close();
-
   return NoError;
 }
 
 
 bool QgsVectorFileWriter::deleteShapeFile( QString theFileName )
 {
-  //
-  // Remove old copies that may be lying around
-  // TODO: should be case-insensitive
-  //
-  QString myFileBase = theFileName.replace( ".shp", "" );
-  bool ok = TRUE;
+  QFileInfo fi( theFileName );
+  QDir dir = fi.dir();
 
-  const char* suffixes[] = { ".shp", ".shx", ".dbf", ".prj", ".qix" };
-  for ( std::size_t i = 0; i < sizeof( suffixes ) / sizeof( char* ); i++ )
+  QStringList filter;
+  const char *suffixes[] = { ".shp", ".shx", ".dbf", ".prj", ".qix", ".qpj" };
+  for ( std::size_t i = 0; i < sizeof( suffixes ) / sizeof( *suffixes ); i++ )
   {
-    QString file = myFileBase + suffixes[i];
-    QFileInfo myInfo( file );
-    if ( myInfo.exists() )
+    filter << fi.completeBaseName() + suffixes[i];
+  }
+
+  bool ok = true;
+  foreach( QString file, dir.entryList( filter ) )
+  {
+    if ( !QFile::remove( dir.canonicalPath() + "/" + file ) )
     {
-      if ( !QFile::remove( file ) )
-      {
-        QgsDebugMsg( "Removing file failed : " + file );
-        ok = FALSE;
-      }
+      QgsDebugMsg( "Removing file failed : " + file );
+      ok = false;
     }
   }
 

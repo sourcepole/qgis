@@ -17,7 +17,6 @@
  ***************************************************************************/
 /* $Id$ */
 
-#include <iostream>
 #include <QFileInfo>
 #include <QString>
 #include <QMenu>
@@ -32,18 +31,25 @@
 #include "qgsshortcutsmanager.h"
 
 QgisAppInterface::QgisAppInterface( QgisApp * _qgis )
-    : qgis( _qgis )
+    : qgis( _qgis ),
+    legendIface( _qgis->legend() )
 {
   // connect signals
   connect( qgis->legend(), SIGNAL( currentLayerChanged( QgsMapLayer * ) ),
            this, SIGNAL( currentLayerChanged( QgsMapLayer * ) ) );
   connect( qgis, SIGNAL( currentThemeChanged( QString ) ),
            this, SIGNAL( currentThemeChanged( QString ) ) );
-
+  connect( qgis, SIGNAL( composerAdded( QgsComposerView* ) ), this, SIGNAL( composerAdded( QgsComposerView* ) ) );
+  connect( qgis, SIGNAL( composerWillBeRemoved( QgsComposerView* ) ), this, SIGNAL( composerWillBeRemoved( QgsComposerView* ) ) );
 }
 
 QgisAppInterface::~QgisAppInterface()
 {
+}
+
+QgsLegendInterface* QgisAppInterface::legendInterface()
+{
+  return &legendIface;
 }
 
 void QgisAppInterface::zoomFull()
@@ -106,6 +112,11 @@ void QgisAppInterface::newProject( bool thePromptToSaveFlag )
 QgsMapLayer *QgisAppInterface::activeLayer()
 {
   return qgis->activeLayer();
+}
+
+bool QgisAppInterface::setActiveLayer( QgsMapLayer *layer )
+{
+  return qgis->setActiveLayer( layer );
 }
 
 void QgisAppInterface::addPluginToMenu( QString name, QAction* action )
@@ -200,7 +211,6 @@ bool QgisAppInterface::unregisterMainWindowAction( QAction* action )
 {
   return QgsShortcutsManager::instance()->unregisterAction( action );
 }
-
 
 //! Menus
 QMenu *QgisAppInterface::fileMenu() { return qgis->fileMenu(); }

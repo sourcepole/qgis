@@ -21,6 +21,7 @@
 
 #include "ui_qgsidentifyresultsbase.h"
 #include "qgsattributeaction.h"
+#include "qgscontexthelp.h"
 
 #include <QWidget>
 #include <QList>
@@ -43,6 +44,7 @@ class QDockWidget;
 class QgsIdentifyResults: public QDialog, private Ui::QgsIdentifyResultsBase
 {
     Q_OBJECT
+
   public:
 
     //! Constructor - takes it own copy of the QgsAttributeAction so
@@ -57,9 +59,6 @@ class QgsIdentifyResults: public QDialog, private Ui::QgsIdentifyResultsBase
                      const QMap< QString, QString > &attributes,
                      const QMap< QString, QString > &derivedAttributes );
 
-    /** Remove results */
-    void clear();
-
     /** map tool was deactivated */
     void deactivate();
 
@@ -72,6 +71,8 @@ class QgsIdentifyResults: public QDialog, private Ui::QgsIdentifyResultsBase
     void selectedFeatureChanged( QgsVectorLayer *, int featureId );
 
   public slots:
+    /** Remove results */
+    void clear();
 
     void show();
 
@@ -86,11 +87,11 @@ class QgsIdentifyResults: public QDialog, private Ui::QgsIdentifyResultsBase
     void zoomToFeature();
     void copyAttributeValue();
     void copyFeatureAttributes();
+    void highlightAll();
+    void highlightLayer();
+    void clearRubberbands();
     void expandAll();
     void collapseAll();
-
-    //! Context help
-    void helpClicked();
 
     /* Called when an item is expanded so that we can ensure that the
        column width if expanded to show it */
@@ -102,22 +103,21 @@ class QgsIdentifyResults: public QDialog, private Ui::QgsIdentifyResultsBase
     /* Item in tree was clicked */
     void itemClicked( QTreeWidgetItem *lvi, int column );
 
-    QTreeWidgetItem *retrieveAttributes( QTreeWidgetItem *item, QList< QPair<QString, QString> > &attributes );
+    QTreeWidgetItem *retrieveAttributes( QTreeWidgetItem *item, QList< QPair<QString, QString> > &attributes, int &currentIdx );
+
+    void on_buttonBox_helpRequested() { QgsContextHelp::run( metaObject()->className() ); }
 
   private:
     QMenu *mActionPopup;
-    QgsVectorLayer *mRubberBandLayer;
-    int mRubberBandFid;
-    QgsRubberBand *mRubberBand;
+    QMap<QTreeWidgetItem *, QgsRubberBand * > mRubberBands;
     QgsMapCanvas *mCanvas;
-
-    static const int context_id = 689216579;
 
     QgsVectorLayer *vectorLayer( QTreeWidgetItem *item );
     QTreeWidgetItem *featureItem( QTreeWidgetItem *item );
+    QTreeWidgetItem *layerItem( QTreeWidgetItem *item );
     QTreeWidgetItem *layerItem( QObject *layer );
 
-    void clearRubberBand();
+    void highlightLayer( QTreeWidgetItem *object );
     void disconnectLayer( QObject *object );
 
     void setColumnText( int column, const QString & label );

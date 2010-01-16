@@ -22,6 +22,95 @@
 #include <QTextStream>
 #include <QObject> // for tr()
 
+#include "qgsexception.h"
+
+//
+// QgsVector
+//
+
+QgsVector::QgsVector() : m_x( 0.0 ), m_y( 0.0 )
+{
+}
+
+QgsVector::QgsVector( double x, double y ) : m_x( x ), m_y( y )
+{
+}
+
+QgsVector QgsVector::operator-( void ) const
+{
+  return QgsVector( -m_x, -m_y );
+}
+
+QgsVector QgsVector::operator*( double scalar ) const
+{
+  return QgsVector( m_x*scalar, m_y*scalar );
+}
+
+QgsVector QgsVector::operator/( double scalar ) const
+{
+  return *this * ( 1.0 / scalar );
+}
+
+double QgsVector::operator*( QgsVector v ) const
+{
+  return m_x*v.m_x + m_y*v.m_y;
+}
+
+double QgsVector::length() const
+{
+  return sqrt( m_x*m_x + m_y*m_y );
+}
+
+double QgsVector::x() const
+{
+  return m_x;
+}
+
+double QgsVector::y() const
+{
+  return m_y;
+}
+
+// perpendicular vector (rotated 90° counter-clockwise)
+QgsVector QgsVector::perpVector() const
+{
+  return QgsVector( -m_y, m_x );
+}
+
+double QgsVector::angle( void ) const
+{
+  double ang = atan2( m_y, m_x );
+  return ang < 0.0 ? ang + 2.0*M_PI : ang;
+}
+
+double QgsVector::angle( QgsVector v ) const
+{
+  return v.angle() - angle();
+}
+
+QgsVector QgsVector::rotateBy( double rot ) const
+{
+  double ang = atan2( m_y, m_x ) + rot;
+  double len = length();
+  return QgsVector( len*cos( ang ), len*sin( ang ) );
+}
+
+QgsVector QgsVector::normal() const
+{
+  double len = length();
+
+  if ( len == 0.0 )
+  {
+    throw QgsException( "normal vector of null vector undefined" );
+  }
+
+  return *this / len;
+}
+
+
+//
+// QgsPoint
+//
 
 QgsPoint::QgsPoint( const QgsPoint& p )
 {
@@ -48,23 +137,23 @@ QString QgsPoint::toString( int thePrecision ) const
 QString QgsPoint::toDegreesMinutesSeconds( int thePrecision ) const
 {
   int myDegreesX = int( std::abs( m_x ) );
-  float myFloatMinutesX = float( ( std::abs( m_x ) - myDegreesX ) * 60 );
+  float myFloatMinutesX = float(( std::abs( m_x ) - myDegreesX ) * 60 );
   int myIntMinutesX = int( myFloatMinutesX );
-  float mySecondsX = float ( myFloatMinutesX - myIntMinutesX ) * 60;
+  float mySecondsX = float( myFloatMinutesX - myIntMinutesX ) * 60;
 
   int myDegreesY = int( std::abs( m_y ) );
-  float myFloatMinutesY = float( ( std::abs( m_y ) - myDegreesY ) * 60 );
+  float myFloatMinutesY = float(( std::abs( m_y ) - myDegreesY ) * 60 );
   int myIntMinutesY = int( myFloatMinutesY );
-  float mySecondsY = float ( myFloatMinutesY - myIntMinutesY ) * 60;
+  float mySecondsY = float( myFloatMinutesY - myIntMinutesY ) * 60;
 
-  QString myXHemisphere = m_x < 0 ? QObject::tr("W") : QObject::tr("E");
-  QString myYHemisphere = m_y < 0 ? QObject::tr("S") : QObject::tr("N");
-  QString rep = QString::number( myDegreesX ) + QChar(176) + 
-                QString::number( myIntMinutesX ) + QString("'") +
-                QString::number( mySecondsX, 'f', thePrecision ) + QString( "\"" ) + 
+  QString myXHemisphere = m_x < 0 ? QObject::tr( "W" ) : QObject::tr( "E" );
+  QString myYHemisphere = m_y < 0 ? QObject::tr( "S" ) : QObject::tr( "N" );
+  QString rep = QString::number( myDegreesX ) + QChar( 176 ) +
+                QString::number( myIntMinutesX ) + QString( "'" ) +
+                QString::number( mySecondsX, 'f', thePrecision ) + QString( "\"" ) +
                 myXHemisphere + QString( "," ) +
-                QString::number( myDegreesY ) + QChar(176) + 
-                QString::number( myIntMinutesY ) + QString("'") +
+                QString::number( myDegreesY ) + QChar( 176 ) +
+                QString::number( myIntMinutesY ) + QString( "'" ) +
                 QString::number( mySecondsY, 'f', thePrecision ) + QString( "\"" ) +
                 myYHemisphere;
   return rep;
@@ -78,7 +167,7 @@ QString QgsPoint::wellKnownText() const
 
 double QgsPoint::sqrDist( double x, double y ) const
 {
-  return ( m_x -x )*( m_x - x ) + ( m_y - y )*( m_y - y );
+  return ( m_x - x )*( m_x - x ) + ( m_y - y )*( m_y - y );
 }
 
 double QgsPoint::sqrDist( const QgsPoint& other ) const
@@ -124,7 +213,7 @@ int QgsPoint::onSegment( const QgsPoint& a, const QgsPoint& b ) const
 {
   //algorithm from 'graphics GEMS', A. Paeth: 'A Fast 2D Point-on-line test'
   if (
-    fabs(( b.y() - a.y() ) * ( m_x - a.x() ) - ( m_y - a.y() ) * ( b.x() - a.x() ) )
+    fabs(( b.y() - a.y() ) *( m_x - a.x() ) - ( m_y - a.y() ) *( b.x() - a.x() ) )
     >= qMax( fabs( b.x() - a.x() ), fabs( b.y() - a.y() ) )
   )
   {

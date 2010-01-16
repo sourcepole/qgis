@@ -184,22 +184,22 @@ bool QgsGrassEdit::isEditable( QgsMapLayer *layer )
 {
   if ( !layer ) return false;
 
-  QgsDebugMsg( "layer name: " + layer->name() );
+  QgsDebugMsgLevel( "layer name: " + layer->name(), 3 );
 
   if ( layer->type() != QgsMapLayer::VectorLayer )
   {
-    QgsDebugMsg( "The selected layer is not vector." );
+    QgsDebugMsgLevel( "The selected layer is not vector.", 3 );
     return false;
   }
 
   //TODO dynamic_cast ?
   QgsVectorLayer *vector = ( QgsVectorLayer* )layer;
 
-  QgsDebugMsg( "Vector layer type: " + vector->providerType() );
+  QgsDebugMsgLevel( "Vector layer type: " + vector->providerType(), 3 );
 
   if ( vector->providerType() != "grass" )
   {
-    QgsDebugMsg( "The selected layer is not GRASS." );
+    QgsDebugMsgLevel( "The selected layer is not GRASS.", 3 );
     return false;
   }
 
@@ -892,10 +892,10 @@ int QgsGrassEdit::lineSymbFromMap( int line )
 
       if ( !( mProvider->lineAreas( line, &left, &right ) ) ) return 0;
 
-      /* Count areas/isles on both sides */
+      /* Count areas on both sides */
       nareas = 0;
-      if ( left != 0 ) nareas++;
-      if ( right != 0 ) nareas++;
+      if ( left > 0 || (left < 0 && mProvider->isleArea(-left) > 0 ) ) nareas++;
+      if ( right > 0 || (right < 0 && mProvider->isleArea(-right) > 0 ) ) nareas++;
       if ( nareas == 0 ) return SYMB_BOUNDARY_0;
       else if ( nareas == 1 ) return SYMB_BOUNDARY_1;
       else return SYMB_BOUNDARY_2;
@@ -1310,7 +1310,7 @@ void QgsGrassEdit::startTool( int tool )
   Vect_reset_line( mEditPoints );
   mSelectedLine = 0;
 
-  // TODO: mTool != NEW_LINE is a hack for lines until more buttons can be recieved
+  // TODO: mTool != NEW_LINE is a hack for lines until more buttons can be received
   if ( mAttributes && mTool != QgsGrassEdit::NEW_LINE && mTool != QgsGrassEdit::NEW_BOUNDARY )
   {
     delete mAttributes;

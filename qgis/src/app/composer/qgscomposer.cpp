@@ -21,6 +21,8 @@
 #include "qgscomposerview.h"
 #include "qgscomposition.h"
 #include "qgscompositionwidget.h"
+#include "qgscomposerarrow.h"
+#include "qgscomposerarrowwidget.h"
 #include "qgscomposerlabel.h"
 #include "qgscomposerlabelwidget.h"
 #include "qgscomposerlegend.h"
@@ -31,6 +33,10 @@
 #include "qgscomposerpicturewidget.h"
 #include "qgscomposerscalebar.h"
 #include "qgscomposerscalebarwidget.h"
+#include "qgscomposershape.h"
+#include "qgscomposershapewidget.h"
+#include "qgscomposertable.h"
+#include "qgscomposertablewidget.h"
 #include "qgsexception.h"
 #include "qgsproject.h"
 #include "qgsmapcanvas.h"
@@ -106,6 +112,9 @@ QgsComposer::QgsComposer( QgisApp *qgis, const QString& title ): QMainWindow(), 
   toggleActionGroup->addAction( mActionAddNewScalebar );
   toggleActionGroup->addAction( mActionAddImage );
   toggleActionGroup->addAction( mActionSelectMoveItem );
+  toggleActionGroup->addAction( mActionAddBasicShape );
+  toggleActionGroup->addAction( mActionAddArrow );
+  toggleActionGroup->addAction( mActionAddTable );
   toggleActionGroup->setExclusive( true );
 
   mActionAddNewMap->setCheckable( true );
@@ -115,6 +124,8 @@ QgsComposer::QgsComposer( QgisApp *qgis, const QString& title ): QMainWindow(), 
   mActionAddNewScalebar->setCheckable( true );
   mActionAddImage->setCheckable( true );
   mActionMoveItemContent->setCheckable( true );
+  mActionAddBasicShape->setCheckable( true );
+  mActionAddArrow->setCheckable( true );
 
 #ifdef Q_WS_MAC
   QMenu *appMenu = menuBar()->addMenu( tr( "QGIS" ) );
@@ -150,6 +161,9 @@ QgsComposer::QgsComposer( QgisApp *qgis, const QString& title ): QMainWindow(), 
   layoutMenu->addAction( mActionAddImage );
   layoutMenu->addAction( mActionSelectMoveItem );
   layoutMenu->addAction( mActionMoveItemContent );
+  layoutMenu->addAction( mActionAddBasicShape );
+  layoutMenu->addAction( mActionAddArrow );
+  layoutMenu->addAction( mActionAddTable );
   layoutMenu->addSeparator();
   layoutMenu->addAction( mActionGroupItems );
   layoutMenu->addAction( mActionUngroupItems );
@@ -243,6 +257,9 @@ void QgsComposer::setupTheme()
   mActionAddNewLabel->setIcon( QgisApp::getThemeIcon( "/mActionLabel.png" ) );
   mActionAddNewLegend->setIcon( QgisApp::getThemeIcon( "/mActionAddLegend.png" ) );
   mActionAddNewScalebar->setIcon( QgisApp::getThemeIcon( "/mActionScaleBar.png" ) );
+  mActionAddBasicShape->setIcon( QgisApp::getThemeIcon( "/mActionAddBasicShape.png" ) );
+  mActionAddArrow->setIcon( QgisApp::getThemeIcon( "/mActionAddArrow.png" ) );
+  mActionAddTable->setIcon( QgisApp::getThemeIcon( "/mActionOpenTable.png" ) );
   mActionSelectMoveItem->setIcon( QgisApp::getThemeIcon( "/mActionSelectPan.png" ) );
   mActionMoveItemContent->setIcon( QgisApp::getThemeIcon( "/mActionMoveItemContent.png" ) );
   mActionGroupItems->setIcon( QgisApp::getThemeIcon( "/mActionGroupItems.png" ) );
@@ -268,6 +285,9 @@ void QgsComposer::connectSlots()
   connect( mView, SIGNAL( composerScaleBarAdded( QgsComposerScaleBar* ) ), this, SLOT( addComposerScaleBar( QgsComposerScaleBar* ) ) );
   connect( mView, SIGNAL( composerLegendAdded( QgsComposerLegend* ) ), this, SLOT( addComposerLegend( QgsComposerLegend* ) ) );
   connect( mView, SIGNAL( composerPictureAdded( QgsComposerPicture* ) ), this, SLOT( addComposerPicture( QgsComposerPicture* ) ) );
+  connect( mView, SIGNAL( composerShapeAdded( QgsComposerShape* ) ), this, SLOT( addComposerShape( QgsComposerShape* ) ) );
+  connect( mView, SIGNAL( composerArrowAdded( QgsComposerArrow* ) ), this, SLOT( addComposerArrow( QgsComposerArrow* ) ) );
+  connect( mView, SIGNAL( composerTableAdded( QgsComposerTable* ) ), this, SLOT( addComposerTable( QgsComposerTable* ) ) );
   connect( mView, SIGNAL( actionFinished() ), this, SLOT( setSelectionTool() ) );
 }
 
@@ -330,6 +350,10 @@ void QgsComposer::setTitle( const QString& title )
 {
   mTitle = title;
   setWindowTitle( mTitle );
+  if ( mWindowAction )
+  {
+    mWindowAction->setText( title );
+  }
 }
 
 void QgsComposer::showCompositionOptions( QWidget *w )
@@ -415,15 +439,29 @@ void QgsComposer::on_mActionZoomOut_triggered()
 
 void QgsComposer::on_mActionRefreshView_triggered()
 {
-  if ( mComposition )
+  if ( !mComposition )
   {
-    mComposition->update();
+    return;
   }
+
+  //refresh preview of all composer maps
+  QMap<QgsComposerItem*, QWidget*>::iterator it = mItemWidgetMap.begin();
+  for ( ; it != mItemWidgetMap.end(); ++it )
+  {
+    QgsComposerMap* map = dynamic_cast<QgsComposerMap*>( it.key() );
+    if ( map && !map->isDrawing() )
+    {
+      map->cache();
+      map->update();
+    }
+  }
+
+  mComposition->update();
 }
 
 void QgsComposer::on_mActionExportAsPDF_triggered()
 {
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedFile = myQSettings.value( "/UI/lastSaveAsPdfFile", "qgis.pdf" ).toString();
   QFileInfo file( myLastUsedFile );
   QFileDialog *myQFileDialog = new QFileDialog( this, tr( "Choose a file name to save the map as" ),
@@ -565,7 +603,7 @@ void QgsComposer::on_mActionExportAsImage_triggered()
   FilterMap myFilterMap;
 
   //find out the last used filter
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedFormat = myQSettings.value( "/UI/lastSaveAsImageFormat", "png" ).toString();
   QString myLastUsedFile = myQSettings.value( "/UI/lastSaveAsImageFile", "qgis.png" ).toString();
   QFileInfo file( myLastUsedFile );
@@ -786,6 +824,30 @@ void QgsComposer::on_mActionAddImage_triggered()
   }
 }
 
+void QgsComposer::on_mActionAddBasicShape_triggered()
+{
+  if ( mView )
+  {
+    mView->setCurrentTool( QgsComposerView::AddShape );
+  }
+}
+
+void QgsComposer::on_mActionAddTable_triggered()
+{
+  if ( mView )
+  {
+    mView->setCurrentTool( QgsComposerView::AddTable );
+  }
+}
+
+void QgsComposer::on_mActionAddArrow_triggered()
+{
+  if ( mView )
+  {
+    mView->setCurrentTool( QgsComposerView::AddArrow );
+  }
+}
+
 void QgsComposer::on_mActionSaveAsTemplate_triggered()
 {
   //show file dialog
@@ -994,11 +1056,6 @@ void QgsComposer::restoreWindowState()
   }
 }
 
-void QgsComposer::on_buttonBox_helpRequested()
-{
-  QgsContextHelp::run( context_id );
-}
-
 void  QgsComposer::writeXML( QDomDocument& doc )
 {
 
@@ -1020,6 +1077,16 @@ void QgsComposer::writeXML( QDomNode& parentNode, QDomDocument& doc )
 {
   QDomElement composerElem = doc.createElement( "Composer" );
   composerElem.setAttribute( "title", mTitle );
+
+  //store if composer is open or closed
+  if ( isVisible() )
+  {
+    composerElem.setAttribute( "visible", 1 );
+  }
+  else
+  {
+    composerElem.setAttribute( "visible", 0 );
+  }
   parentNode.appendChild( composerElem );
 
   //store composer items:
@@ -1045,19 +1112,18 @@ void QgsComposer::readXML( const QDomDocument& doc )
   {
     return;
   }
-  readXML( composerNodeList.at( 0 ).toElement(), doc );
+  readXML( composerNodeList.at( 0 ).toElement(), doc, true );
 }
 
-void QgsComposer::readXML( const QDomElement& composerElem, const QDomDocument& doc )
+void QgsComposer::readXML( const QDomElement& composerElem, const QDomDocument& doc, bool fromTemplate )
 {
-  // Create action to select this window
-  delete mWindowAction;
-  mWindowAction = new QAction( windowTitle(), this );
-  connect( mWindowAction, SIGNAL( triggered() ), this, SLOT( activate() ) );
-
-  if ( composerElem.hasAttribute( "title" ) )
+  // Set title only if reading from project file
+  if ( !fromTemplate )
   {
-    setTitle( composerElem.attribute( "title", tr( "Composer" ) ) );
+    if ( composerElem.hasAttribute( "title" ) )
+    {
+      setTitle( composerElem.attribute( "title", tr( "Composer" ) ) );
+    }
   }
 
   //delete composer view and composition
@@ -1178,6 +1244,51 @@ void QgsComposer::readXML( const QDomElement& composerElem, const QDomDocument& 
     showItemOptions( newPicture );
   }
 
+  //composer shapes
+  QDomNodeList composerShapeList = composerElem.elementsByTagName( "ComposerShape" );
+  for ( int i = 0; i < composerShapeList.size(); ++i )
+  {
+    QDomElement currentShapeElem = composerShapeList.at( i ).toElement();
+    QgsComposerShape* newShape = new QgsComposerShape( mComposition );
+    newShape->readXML( currentShapeElem, doc );
+    addComposerShape( newShape );
+    mComposition->addItem( newShape );
+    mComposition->update();
+    mComposition->clearSelection();
+    newShape->setSelected( true );
+    showItemOptions( newShape );
+  }
+
+  //composer arrows
+  QDomNodeList composerArrowList = composerElem.elementsByTagName( "ComposerArrow" );
+  for ( int i = 0; i < composerArrowList.size(); ++i )
+  {
+    QDomElement currentArrowElem = composerArrowList.at( i ).toElement();
+    QgsComposerArrow* newArrow = new QgsComposerArrow( mComposition );
+    newArrow->readXML( currentArrowElem, doc );
+    addComposerArrow( newArrow );
+    mComposition->addItem( newArrow );
+    mComposition->update();
+    mComposition->clearSelection();
+    newArrow->setSelected( true );
+    showItemOptions( newArrow );
+  }
+
+  //composer tables
+  QDomNodeList composerTableList = composerElem.elementsByTagName( "ComposerTable" );
+  for ( int i = 0; i < composerTableList.size(); ++i )
+  {
+    QDomElement currentTableElem = composerTableList.at( i ).toElement();
+    QgsComposerTable* newTable = new QgsComposerTable( mComposition );
+    newTable->readXML( currentTableElem, doc );
+    addComposerTable( newTable );
+    mComposition->addItem( newTable );
+    mComposition->update();
+    mComposition->clearSelection();
+    newTable->setSelected( true );
+    showItemOptions( newTable );
+  }
+
   mComposition->sortZList();
   mView->setComposition( mComposition );
 
@@ -1194,6 +1305,17 @@ void QgsComposer::deleteItems()
     delete it.value();
   }
   mItemWidgetMap.clear();
+}
+
+void QgsComposer::addComposerArrow( QgsComposerArrow* arrow )
+{
+  if ( !arrow )
+  {
+    return;
+  }
+
+  QgsComposerArrowWidget* arrowWidget = new QgsComposerArrowWidget( arrow );
+  mItemWidgetMap.insert( arrow, arrowWidget );
 }
 
 void QgsComposer::addComposerMap( QgsComposerMap* map )
@@ -1250,6 +1372,26 @@ void QgsComposer::addComposerPicture( QgsComposerPicture* picture )
 
   QgsComposerPictureWidget* pWidget = new QgsComposerPictureWidget( picture );
   mItemWidgetMap.insert( picture, pWidget );
+}
+
+void QgsComposer::addComposerShape( QgsComposerShape* shape )
+{
+  if ( !shape )
+  {
+    return;
+  }
+  QgsComposerShapeWidget* sWidget = new QgsComposerShapeWidget( shape );
+  mItemWidgetMap.insert( shape, sWidget );
+}
+
+void QgsComposer::addComposerTable( QgsComposerTable* table )
+{
+  if ( !table )
+  {
+    return;
+  }
+  QgsComposerTableWidget* tWidget = new QgsComposerTableWidget( table );
+  mItemWidgetMap.insert( table, tWidget );
 }
 
 void QgsComposer::deleteItem( QgsComposerItem* item )

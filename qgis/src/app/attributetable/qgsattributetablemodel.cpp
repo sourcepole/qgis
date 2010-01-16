@@ -19,6 +19,8 @@
 #include "qgsfield.h"
 #include "qgsvectorlayer.h"
 #include "qgslogger.h"
+#include "qgisapp.h"
+#include "qgsattributeaction.h"
 
 #include <QtGui>
 #include <QVariant>
@@ -60,30 +62,6 @@ void QgsAttributeTableModel::featureDeleted( int fid )
   int idx = mIdRowMap[fid];
   QgsDebugMsg( idx );
   QgsDebugMsg( fid );
-#endif
-
-#if 0
-  --mFeatureCount;
-  mIdRowMap.remove( fid );
-  mRowIdMap.remove( idx );
-
-  // fill the hole in the view
-  if ( idx != mFeatureCount )
-  {
-    QgsDebugMsg( "jo" );
-    //mRowIdMap[idx] = mRowIdMap[mFeatureCount];
-    //mIdRowMap[mRowIdMap[idx]] = idx;
-    int movedId = mRowIdMap[mFeatureCount];
-    mRowIdMap.remove( mFeatureCount );
-    mRowIdMap.insert( idx, movedId );
-    mIdRowMap[movedId] = idx;
-    //mIdRowMap.remove(mRowIdMap[idx]);
-    //mIdRowMap.insert(mRowIdMap[idx], idx);
-  }
-
-  QgsDebugMsg( QString( "map sizes:%1, %2" ).arg( mRowIdMap.size() ).arg( mIdRowMap.size() ) );
-  emit layoutChanged();
-  //reload(index(0,0), index(rowCount(), columnCount()));
 #endif
 
   QgsDebugMsg( "id->row" );
@@ -259,18 +237,6 @@ void QgsAttributeTableModel::loadLayer()
     endRemoveRows();
     QgsDebugMsg( "end rm" );
   }
-
-#if 0
-  QgsDebugMsg( "id->row" );
-  QHash<int, int>::iterator it;
-  for ( it = mIdRowMap.begin(); it != mIdRowMap.end(); ++it )
-    QgsDebugMsg( QString( "%1->%2" ).arg( it.key() ).arg( *it ) );
-
-  QgsDebugMsg( "row->id" );
-
-  for ( it = mRowIdMap.begin(); it != mRowIdMap.end(); ++it )
-    QgsDebugMsg( QString( "%1->%2" ).arg( it.key() ).arg( *it ) );
-#endif
 }
 
 void QgsAttributeTableModel::swapRows( int a, int b )
@@ -353,7 +319,10 @@ QVariant QgsAttributeTableModel::headerData( int section, Qt::Orientation orient
       return QVariant( attributeName );
     }
   }
-  else return QVariant();
+  else
+  {
+    return QVariant();
+  }
 }
 
 void QgsAttributeTableModel::sort( int column, Qt::SortOrder order )
@@ -454,14 +423,6 @@ QVariant QgsAttributeTableModel::data( const QModelIndex &index, int role )
     return mValueMaps[ index.column()]->key( val.toString(), QString( "(%1)" ).arg( val.toString() ) );
   }
 
-  // force also numeric data for EditRole to be strings
-  // otherwise it creates spinboxes instead of line edits
-  // (probably not what we do want)
-  if ( fldNumeric && role == Qt::EditRole )
-    return val.toString();
-
-  // convert to QString from some other representation
-  // this prevents displaying greater numbers in exponential format
   return val.toString();
 }
 
@@ -480,9 +441,15 @@ bool QgsAttributeTableModel::setData( const QModelIndex &index, const QVariant &
     mLastRowId = rowToId( index.row() );
     mLastRow = ( QgsAttributeMap * ) & mFeat.attributeMap();
 
+    disconnect( mLayer, SIGNAL( layerModified( bool ) ), this, SLOT( layerModified( bool ) ) );
+
     mLayer->beginEditCommand( tr( "Attribute changed" ) );
     mLayer->changeAttributeValue( rowToId( index.row() ), mAttributes[ index.column()], value, true );
     mLayer->endEditCommand();
+
+    ( *mLastRow )[ mAttributes[index.column()] ] = value;
+
+    connect( mLayer, SIGNAL( layerModified( bool ) ), this, SLOT( layerModified( bool ) ) );
   }
 
   if ( !mLayer->isModified() )
@@ -525,3 +492,22 @@ void QgsAttributeTableModel::incomingChangeLayout()
   emit layoutAboutToBeChanged();
 }
 
+static void _runPythonString( const QString &expr )
+{
+  QgisApp::instance()->runPythonString( expr );
+}
+
+void QgsAttributeTableModel::executeAction( int action, const QModelIndex &idx ) const
+{
+  QList< QPair<QString, QString> > attributes;
+
+  for ( int i = 0; i < mAttributes.size(); i++ )
+  {
+    attributes << QPair<QString, QString>(
+      mLayer->pendingFields()[ mAttributes[i] ].name(),
+      data( index( idx.row(), i ), Qt::EditRole ).toString()
+    );
+  }
+
+  mLayer->actions()->doAction( action, attributes, fieldIdx( idx.column() ), _runPythonString );
+}

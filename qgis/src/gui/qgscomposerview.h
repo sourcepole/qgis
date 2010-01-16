@@ -24,12 +24,15 @@ class QKeyEvent;
 class QMainWindow;
 class QMouseEvent;
 class QgsComposition;
+class QgsComposerArrow;
 class QgsComposerItem;
 class QgsComposerLabel;
 class QgsComposerLegend;
 class QgsComposerMap;
 class QgsComposerPicture;
 class QgsComposerScaleBar;
+class QgsComposerShape;
+class QgsComposerTable;
 
 /** \ingroup MapComposer
  * \ingroup gui
@@ -48,11 +51,14 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
     enum Tool
     {
       Select = 0,      // Select/Move item
+      AddArrow,         //add arrow
       AddMap,          // add new map
       AddLegend, // add vector legend
       AddLabel,        // add label
       AddScalebar,     // add scalebar
       AddPicture,       // add raster/vector picture
+      AddShape, //add shape item (ellipse, rectangle, triangle)
+      AddTable, //add attribute table
       MoveItemContent //move content of item (e.g. content of map)
     };
 
@@ -72,6 +78,8 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
     /**Returns the composition or 0 in case of error*/
     QgsComposition* composition();
 
+    /**Adds an arrow item to the graphics scene and advices composer to create a widget for it (through signal)*/
+    void addComposerArrow( QgsComposerArrow* arrow );
     /**Adds label to the graphics scene and advices composer to create a widget for it (through signal)*/
     void addComposerLabel( QgsComposerLabel* label );
     /**Adds map to the graphics scene and advices composer to create a widget for it (through signal)*/
@@ -82,6 +90,10 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
     void addComposerLegend( QgsComposerLegend* legend );
     /**Adds picture to the graphics scene and advices composer to create a widget for it (through signal)*/
     void addComposerPicture( QgsComposerPicture* picture );
+    /**Adds a composer shape to the graphics scene and advices composer to create a widget for it (through signal)*/
+    void addComposerShape( QgsComposerShape* shape );
+    /**Adds a composer table to the graphics scene and advices composer to create a widget for it (through signal)*/
+    void addComposerTable( QgsComposerTable* table );
 
     /**Returns the composer main window*/
     QMainWindow* composerWindow();
@@ -103,6 +115,8 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
     QgsComposerView::Tool mCurrentTool;
     /**Rubber band item*/
     QGraphicsRectItem* mRubberBandItem;
+    /**Rubber band item for arrows*/
+    QGraphicsLineItem* mRubberBandLineItem;
     /**Item to move content*/
     QgsComposerItem* mMoveContentItem;
     /**Start position of content move*/
@@ -117,7 +131,9 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
   signals:
     /**Is emitted when selected item changed. If 0, no item is selected*/
     void selectedItemChanged( const QgsComposerItem* selected );
-    /**Ist emittted when new composer label has been added to the view*/
+    /**Is emitted when new composer arrow has been added to the view*/
+    void composerArrowAdded( QgsComposerArrow* arrow );
+    /**Is emitted when new composer label has been added to the view*/
     void composerLabelAdded( QgsComposerLabel* label );
     /**Is emitted when new composer map has been added to the view*/
     void composerMapAdded( QgsComposerMap* map );
@@ -127,6 +143,10 @@ class GUI_EXPORT QgsComposerView: public QGraphicsView
     void composerLegendAdded( QgsComposerLegend* legend );
     /**Is emitted when a new composer picture has been added*/
     void composerPictureAdded( QgsComposerPicture* picture );
+    /**Is emitted when a new composer shape has been added*/
+    void composerShapeAdded( QgsComposerShape* shape );
+    /**Is emitted when a new composer table has been added*/
+    void composerTableAdded( QgsComposerTable* table );
     /**Is emitted when a composer item has been removed from the scene*/
     void itemRemoved( QgsComposerItem* );
     /**Current action (e.g. adding composer map) has been finished. The purpose of this signal is that

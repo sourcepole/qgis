@@ -31,10 +31,11 @@
 
 
 QgsNewOgrConnection::QgsNewOgrConnection( QWidget *parent, const QString& connType, const QString& connName, Qt::WFlags fl )
-    : QDialog( parent, fl )
+    : QDialog( parent, fl ),
+    mOriginalConnName( connName )
 {
   setupUi( this );
-  connect( buttonBox, SIGNAL( helpRequested() ), this, SLOT( help() ) );
+
   //add database drivers
   QStringList dbDrivers = QgsProviderRegistry::instance()->databaseDrivers().split( ";" );
   for ( int i = 0; i < dbDrivers.count(); i++ )
@@ -94,11 +95,30 @@ void QgsNewOgrConnection::testConnection()
   }
 }
 
-void QgsNewOgrConnection::saveConnection()
+/** Autoconnected SLOTS **/
+void QgsNewOgrConnection::accept()
 {
   QSettings settings;
   QString baseKey = "/" + cmbDatabaseTypes->currentText() + "/connections/";
   settings.setValue( baseKey + "selected", txtName->text() );
+
+  // warn if entry was renamed to an existing connection
+  if (( mOriginalConnName.isNull() || mOriginalConnName != txtName->text() ) &&
+      settings.contains( baseKey + txtName->text() + "/host" ) &&
+      QMessageBox::question( this,
+                             tr( "Save connection" ),
+                             tr( "Should the existing connection %1 be overwritten?" ).arg( txtName->text() ),
+                             QMessageBox::Ok | QMessageBox::Cancel ) == QMessageBox::Cancel )
+  {
+    return;
+  }
+
+  // on rename delete original entry first
+  if ( !mOriginalConnName.isNull() && mOriginalConnName != txtName->text() )
+  {
+    settings.remove( baseKey + mOriginalConnName );
+  }
+
   baseKey += txtName->text();
   settings.setValue( baseKey + "/host", txtHost->text() );
   settings.setValue( baseKey + "/database", txtDatabase->text() );
@@ -106,18 +126,8 @@ void QgsNewOgrConnection::saveConnection()
   settings.setValue( baseKey + "/username", txtUsername->text() );
   settings.setValue( baseKey + "/password", chkStorePassword->isChecked() ? txtPassword->text() : "" );
   settings.setValue( baseKey + "/save", chkStorePassword->isChecked() ? "true" : "false" );
-}
 
-/** Autoconnected SLOTS **/
-void QgsNewOgrConnection::accept()
-{
-  saveConnection();
   QDialog::accept();
-}
-
-void QgsNewOgrConnection::help()
-{
-  helpInfo();
 }
 
 void QgsNewOgrConnection::on_btnConnect_clicked()
@@ -125,18 +135,4 @@ void QgsNewOgrConnection::on_btnConnect_clicked()
   testConnection();
 }
 
-void QgsNewOgrConnection::helpInfo()
-{
-  QgsContextHelp::run( context_id );
-}
-
 /** end  Autoconnected SLOTS **/
-
-
-
-
-
-
-
-
-

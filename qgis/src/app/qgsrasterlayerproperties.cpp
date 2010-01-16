@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <QDebug>
+#include <limits>
 
 #include "qgslogger.h"
 #include "qgsapplication.h"
@@ -98,8 +98,10 @@ QgsRasterLayerProperties::QgsRasterLayerProperties( QgsMapLayer *lyr, QWidget *p
 
   // set up the scale based layer visibility stuff....
   chkUseScaleDependentRendering->setChecked( lyr->hasScaleBasedVisibility() );
-  spinMinimumScale->setValue(( int )lyr->minimumScale() );
-  spinMaximumScale->setValue(( int )lyr->maximumScale() );
+  leMinimumScale->setText( QString::number( lyr->minimumScale(), 'f' ) );
+  leMinimumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
+  leMaximumScale->setText( QString::number( lyr->maximumScale(), 'f' ) );
+  leMaximumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
 
   // build GUI components
   cboxColorMap->addItem( tr( "Grayscale" ) );
@@ -149,7 +151,7 @@ QgsRasterLayerProperties::QgsRasterLayerProperties( QgsMapLayer *lyr, QWidget *p
   mColormapTreeWidget->setHeaderLabels( headerLabels );
 
   //disable colormap tab completely until 'Colormap' is selected (and only for type GrayOrUndefined)
-  tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), FALSE );
+  tabPageColormap->setEnabled( false );
 
   //
   // Set up the combo boxes that contain band lists using the qstring list generated above
@@ -281,24 +283,24 @@ QgsRasterLayerProperties::QgsRasterLayerProperties( QgsMapLayer *lyr, QWidget *p
       if (( *myRasterPyramidIterator ).exists == true )
       {
         lbxPyramidResolutions->addItem( new QListWidgetItem( myPyramidPixmap,
-                                        QString::number(( *myRasterPyramidIterator ).xDim ) + QString( " x " ) +
-                                        QString::number(( *myRasterPyramidIterator ).yDim ) ) );
+                                        QString::number( myRasterPyramidIterator->xDim ) + QString( " x " ) +
+                                        QString::number( myRasterPyramidIterator->yDim ) ) );
       }
       else
       {
         lbxPyramidResolutions->addItem( new QListWidgetItem( myNoPyramidPixmap,
-                                        QString::number(( *myRasterPyramidIterator ).xDim ) + QString( " x " ) +
-                                        QString::number(( *myRasterPyramidIterator ).yDim ) ) );
+                                        QString::number( myRasterPyramidIterator->xDim ) + QString( " x " ) +
+                                        QString::number( myRasterPyramidIterator->yDim ) ) );
       }
     }
   }
   else if ( mRasterLayerIsWms )
   {
     // disable Pyramids tab completely
-    tabBar->setTabEnabled( tabBar->indexOf( tabPagePyramids ), FALSE );
+    tabPagePyramids->setEnabled( false );
 
     // disable Histogram tab completely
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageHistogram ), FALSE );
+    tabPageHistogram->setEnabled( false );
   }
 
   leSpatialRefSys->setText( mRasterLayer->srs().toProj4() );
@@ -318,11 +320,18 @@ QgsRasterLayerProperties::QgsRasterLayerProperties( QgsMapLayer *lyr, QWidget *p
 
   // update based on lyr's current state
   sync();
+
+  QSettings settings;
+  restoreGeometry( settings.value( "/Windows/RasterLayerProperties/geometry" ).toByteArray() );
+  listWidget->setCurrentRow( settings.value( "/Windows/RasterLayerProperties/row" ).toInt() );
 } // QgsRasterLayerProperties ctor
 
 
 QgsRasterLayerProperties::~QgsRasterLayerProperties()
 {
+  QSettings settings;
+  settings.setValue( "/Windows/RasterLayerProperties/geometry", saveGeometry() );
+  settings.setValue( "/Windows/RasterLayerProperties/row", listWidget->currentRow() );
 }
 
 /*
@@ -550,14 +559,28 @@ void QgsRasterLayerProperties::sync()
 
   if ( mRasterLayerIsWms )
   {
-    tabBar->setCurrentIndex( tabBar->indexOf( tabPageMetadata ) );
-    tabBar->removeTab( tabBar->indexOf( tabPageColormap ) );
-    tabBar->removeTab( tabBar->indexOf( tabPageSymbology ) );
+    QListWidgetItem *symbologyItem = listWidget->item( 0 );
+    QListWidgetItem *colormapItem = listWidget->item( 2 );
+    QListWidgetItem *metadataItem = listWidget->item( 4 );
+    QListWidgetItem *pyramidItem = listWidget->item( 5 );
+    QListWidgetItem *histogramItem = listWidget->item( 6 );
+
+    delete symbologyItem;
+    delete colormapItem;
+    delete pyramidItem;
+    delete histogramItem;
+
+    tabBar->removeWidget( tabPageSymbology );
+    tabBar->removeWidget( tabPageColormap );
+    tabBar->removeWidget( tabPagePyramids );
+    tabBar->removeWidget( tabPageHistogram );
+
     gboxNoDataValue->setEnabled( false );
     gboxCustomTransparency->setEnabled( false );
-    tabBar->removeTab( tabBar->indexOf( tabPageHistogram ) );
-    tabBar->removeTab( tabBar->indexOf( tabPagePyramids ) );
+
+    listWidget->setCurrentItem( metadataItem );
   }
+
 #if 0
   if ( mRasterLayer->rasterType() == QgsRasterLayer::Multiband )
   {
@@ -1425,8 +1448,8 @@ void QgsRasterLayerProperties::apply()
 
   // set up the scale based layer visibility stuff....
   mRasterLayer->toggleScaleBasedVisibility( chkUseScaleDependentRendering->isChecked() );
-  mRasterLayer->setMinimumScale( spinMinimumScale->value() );
-  mRasterLayer->setMaximumScale( spinMaximumScale->value() );
+  mRasterLayer->setMinimumScale( leMinimumScale->text().toFloat() );
+  mRasterLayer->setMaximumScale( leMaximumScale->text().toFloat() );
 
   //update the legend pixmap
   pixmapLegend->setPixmap( mRasterLayer->legendAsPixmap() );
@@ -1447,7 +1470,7 @@ void QgsRasterLayerProperties::apply()
   //make sure the layer is redrawn
   mRasterLayer->triggerRepaint();
 
-  //Becuase Min Max values can be set during the redraw if a strech is requested we need to resync after apply
+  //Because Min Max values can be set during the redraw if a strech is requested we need to resync after apply
   if ( mRasterLayerIsGdal && QgsContrastEnhancement::NoEnhancement != mRasterLayer->contrastEnhancementAlgorithm() )
   {
     //set the stdDevs and min max values
@@ -1515,11 +1538,6 @@ void QgsRasterLayerProperties::apply()
   // notify the project we've made a change
   QgsProject::instance()->dirty( true );
 }//apply
-
-void QgsRasterLayerProperties::on_buttonBox_helpRequested()
-{
-  QgsContextHelp::run( context_id );
-}
 
 void QgsRasterLayerProperties::on_buttonBuildPyramids_clicked()
 {
@@ -1605,14 +1623,14 @@ void QgsRasterLayerProperties::on_buttonBuildPyramids_clicked()
     if (( *myRasterPyramidIterator ).exists == true )
     {
       lbxPyramidResolutions->addItem( new QListWidgetItem( myPyramidPixmap,
-                                      QString::number(( *myRasterPyramidIterator ).xDim ) + QString( " x " ) +
-                                      QString::number(( *myRasterPyramidIterator ).yDim ) ) );
+                                      QString::number( myRasterPyramidIterator->xDim ) + QString( " x " ) +
+                                      QString::number( myRasterPyramidIterator->yDim ) ) );
     }
     else
     {
       lbxPyramidResolutions->addItem( new QListWidgetItem( myNoPyramidPixmap,
-                                      QString::number(( *myRasterPyramidIterator ).xDim ) + QString( " x " ) +
-                                      QString::number(( *myRasterPyramidIterator ).yDim ) ) );
+                                      QString::number( myRasterPyramidIterator->xDim ) + QString( " x " ) +
+                                      QString::number( myRasterPyramidIterator->yDim ) ) );
     }
   }
   //update the legend pixmap
@@ -1695,7 +1713,7 @@ void QgsRasterLayerProperties::on_cboxColorMap_currentIndexChanged( const QStrin
 {
   if ( mRasterLayerIsGdal && ( theText == tr( "Pseudocolor" ) || theText == tr( "Freak Out" ) ) )
   {
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), FALSE );
+    tabPageColormap->setEnabled( false );
     rbtnSingleBandMinMax->setEnabled( false );
     rbtnSingleBandStdDev->setEnabled( true );
     sboxSingleBandStdDev->setEnabled( true );
@@ -1705,7 +1723,7 @@ void QgsRasterLayerProperties::on_cboxColorMap_currentIndexChanged( const QStrin
   }
   else if ( mRasterLayerIsGdal && theText == tr( "Colormap" ) )
   {
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), TRUE );
+    tabPageColormap->setEnabled( true );
     rbtnSingleBandMinMax->setEnabled( false );
     rbtnSingleBandStdDev->setEnabled( false );
     sboxSingleBandStdDev->setEnabled( false );
@@ -1715,7 +1733,7 @@ void QgsRasterLayerProperties::on_cboxColorMap_currentIndexChanged( const QStrin
   }
   else if ( mRasterLayerIsGdal && theText == tr( "User Defined" ) )
   {
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), FALSE );
+    tabPageColormap->setEnabled( false );
     rbtnSingleBandMinMax->setEnabled( true );
     rbtnSingleBandStdDev->setEnabled( true );
     sboxSingleBandStdDev->setEnabled( true );
@@ -1725,7 +1743,7 @@ void QgsRasterLayerProperties::on_cboxColorMap_currentIndexChanged( const QStrin
   }
   else if ( mRasterLayerIsGdal )
   {
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), FALSE );
+    tabPageColormap->setEnabled( false );
     rbtnSingleBandMinMax->setEnabled( true );
     rbtnSingleBandStdDev->setEnabled( true );
     sboxSingleBandStdDev->setEnabled( true );
@@ -1874,7 +1892,7 @@ void QgsRasterLayerProperties::on_pbnHistRefresh_clicked()
 
   QgsDebugMsg( "Computing histogram minima and maxima" );
   //somtimes there are more bins than needed
-  //we find out the last on that actully has data in it
+  //we find out the last on that actually has data in it
   //so we can discard the rest adn the x-axis scales correctly
   int myLastBinWithData = 0;
   //
@@ -2009,7 +2027,7 @@ void QgsRasterLayerProperties::on_pbnHistRefresh_clicked()
       //see wehter to draw something each loop or to save up drawing for after iteration
       if ( myGraphType == BAR_CHART )
       {
-        //determin which color to draw the bar
+        //determine which color to draw the bar
         int c1, c2, c3;
         // Take middle of the interval for color
         // TODO: this is not precise
@@ -2359,7 +2377,7 @@ void QgsRasterLayerProperties::on_rbtnSingleBand_toggled( bool theState )
 
     if ( cboxColorMap->currentText() == tr( "Pseudocolor" ) )
     {
-      tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), true );
+      tabPageColormap->setEnabled( true );
     }
 
     if ( cboxColorMap->currentText() == tr( "Pseudocolor" ) || cboxColorMap->currentText() == tr( "Color Ramp" ) || cboxColorMap->currentText() == tr( "Freak Out" ) || mRasterLayer->rasterType() == QgsRasterLayer::Palette )
@@ -2429,7 +2447,7 @@ void QgsRasterLayerProperties::on_rbtnThreeBand_toggled( bool theState )
     stackedWidget->setCurrentIndex( 0 );
     rbtnSingleBand->setChecked( false );
     cboxColorMap->setEnabled( false );
-    tabBar->setTabEnabled( tabBar->indexOf( tabPageColormap ), false );
+    tabPageColormap->setEnabled( false );
 
     grpRgbBands->setEnabled( true );
 
@@ -3104,7 +3122,7 @@ void QgsRasterLayerProperties::on_pbnSaveDefaultStyle_clicked()
 
 void QgsRasterLayerProperties::on_pbnLoadStyle_clicked()
 {
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedDir = myQSettings.value( "style/lastStyleDir", "." ).toString();
 
   //create a file dialog
@@ -3169,7 +3187,7 @@ void QgsRasterLayerProperties::on_pbnLoadStyle_clicked()
 void QgsRasterLayerProperties::on_pbnSaveStyleAs_clicked()
 {
 
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedDir = myQSettings.value( "style/lastStyleDir", "." ).toString();
 
   //create a file dialog
@@ -3210,7 +3228,7 @@ void QgsRasterLayerProperties::on_pbnSaveStyleAs_clicked()
       //reset if the default style was loaded ok only
       if ( defaultLoadedFlag )
       {
-        //dont show the message if all went well...
+        //don't show the message if all went well...
         sync();
       }
       else

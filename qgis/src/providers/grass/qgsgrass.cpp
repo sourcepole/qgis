@@ -90,6 +90,10 @@ void GRASS_EXPORT QgsGrass::init( void )
   // Init GRASS libraries (required)
   G_no_gisinit();  // Doesn't check write permissions for mapset compare to G_gisinit("libgrass++");
 
+  // I think that mask should not be used in QGIS as it can only confuses people,
+  // anyway, I don't think anybody is using MASK
+  G_suppress_masking();
+
   // Set program name
   G_set_program_name( "QGIS" );
 
@@ -335,9 +339,9 @@ void QgsGrass::setLocation( QString gisdbase, QString location )
 // #if defined(WIN32)
 //  G__setenv(( char * ) "GISDBASE", shortPath( gisdbase ).toLocal8Bit().data() );
 //#else
-  G__setenv(( char * ) "GISDBASE", gisdbase.toAscii().constData() );
+  G__setenv(( char * ) "GISDBASE", gisdbase.toUtf8().constData() );
 //#endif
-  G__setenv(( char * ) "LOCATION_NAME", location.toAscii().constData() );
+  G__setenv(( char * ) "LOCATION_NAME", location.toUtf8().constData() );
   G__setenv(( char * ) "MAPSET", ( char * ) "PERMANENT" ); // PERMANENT must always exist
 
   // Add all available mapsets to search path
@@ -393,8 +397,8 @@ int QgsGrass::error_routine( const char *msg, int fatal )
 
   if ( fatal )
   {
-    // we have to do a long jump here, otherwise GRASS >= 6.3 will kill our process
-    throw QgsGrass::Exception( msg );
+    // we have to throw an exception here, otherwise GRASS >= 6.3 will kill our process
+    throw QgsGrass::Exception( QString::fromUtf8( msg ) );
   }
   else
     lastError = WARNING;
@@ -542,7 +546,7 @@ QString GRASS_EXPORT QgsGrass::openMapset( QString gisdbase, QString location, Q
 
   out.close();
 
-  // Set GISRC enviroment variable
+  // Set GISRC environment variable
 
   /* _Correct_ putenv() implementation is not making copy! */
   QString gisrcEnv = "GISRC=" + mGisrc;
@@ -594,9 +598,15 @@ QString QgsGrass::closeMapset( )
 
     // Reinitialize GRASS
     G__setenv(( char * ) "GISRC", ( char * ) "" );
-    G__setenv(( char * ) "GISDBASE", ( char * ) "" );
-    G__setenv(( char * ) "LOCATION_NAME", ( char * ) "" );
-    G__setenv(( char * ) "MAPSET", ( char * ) "" );
+
+    // Temporarily commented because of
+    //   http://trac.osgeo.org/qgis/ticket/1900
+    //   http://trac.osgeo.org/gdal/ticket/3313
+    // it can be uncommented once GDAL with patch gets deployed (probably GDAL 1.8)
+    //G__setenv(( char * ) "GISDBASE", ( char * ) "" );
+    //G__setenv(( char * ) "LOCATION_NAME", ( char * ) "" );
+    //G__setenv(( char * ) "MAPSET", ( char * ) "" );
+
     defaultGisdbase = "";
     defaultLocation = "";
     defaultMapset = "";
@@ -604,7 +614,7 @@ QString QgsGrass::closeMapset( )
 
     // Delete temporary dir
 
-    // To be sure that we dont delete '/' for example
+    // To be sure that we don't delete '/' for example
     if ( mTmp.left( 4 ) == "/tmp" )
     {
       QDir dir( mTmp );

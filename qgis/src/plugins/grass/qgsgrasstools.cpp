@@ -166,23 +166,19 @@ void QgsGrassTools::runModule( QString name )
   QPixmap pixmap = QgsGrassModule::pixmap( path, height );
 
   // Icon size in QT4 does not seem to be variable
-  // -> put smaller icons in the middle
-  QPixmap pixmap2( mTabWidget->iconSize() );
-  QPalette pal;
-  pixmap2.fill( pal.color( QPalette::Window ) );
-  QPainter painter( &pixmap2 );
-  int x = ( int )(( mTabWidget->iconSize().width() - pixmap.width() ) / 2 );
-  painter.drawPixmap( x, 0, pixmap );
-  painter.end();
+  // -> reset the width to max icon width
+  if ( mTabWidget->iconSize().width() < pixmap.width() ) {
+    mTabWidget->setIconSize( QSize( pixmap.width(), mTabWidget->iconSize().height() )  );
+  }
 
   QIcon is;
-  is.addPixmap( pixmap2 );
+  is.addPixmap( pixmap );
   mTabWidget->addTab( m, is, "" );
 
 
   mTabWidget->setCurrentIndex( mTabWidget->count() - 1 );
 
-  // We must call resize to reset COLUMNS enviroment variable
+  // We must call resize to reset COLUMNS environment variable
   // used by bash !!!
 
   /* TODO: Implement something that resizes the terminal without
@@ -276,7 +272,7 @@ void QgsGrassTools::addModules( QTreeWidgetItem *parent, QDomElement &element )
 
       if ( e.tagName() == "section" )
       {
-        QString label = e.attribute( "label" );
+        QString label = QApplication::translate( "grasslabel", e.attribute( "label" ).toUtf8() );
         QgsDebugMsg( QString( "label = %1" ).arg( label ) );
         item->setText( 0, label );
         item->setExpanded( false );

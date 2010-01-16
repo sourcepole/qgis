@@ -1,12 +1,12 @@
 SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-SET(CPACK_PACKAGE_VERSION_MINOR "4")
+SET(CPACK_PACKAGE_VERSION_MINOR "5")
 SET(CPACK_PACKAGE_VERSION_PATCH "0")
 SET(COMPLETE_VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH})
 SET(RELEASE_NAME "Trunk")
 SET(PROJECT_VERSION ${COMPLETE_VERSION})
 PROJECT(qgis${PROJECT_VERSION})
 # Note the version no is Mmmpp for Major/minor/patch, 0-padded, thus '10100' for 1.1.0
-SET(QGIS_VERSION_INT 10400)
+SET(QGIS_VERSION_INT 10500)
 
 # TODO:
 # - install includes for libs
@@ -20,7 +20,8 @@ SET(QGIS_VERSION_INT 10400)
 #############################################################
 # CMake settings
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4.3)
+# 2.6 required for QtWebkit
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 SET(CMAKE_COLOR_MAKEFILE ON)
 
@@ -51,6 +52,8 @@ IF (WITH_POSTGRESQL)
   SET (POSTGRESQL_PREFIX "" CACHE PATH "Path to POSTGRESQL base directory")
 ENDIF (WITH_POSTGRESQL)
 
+SET (WITH_QWT TRUE CACHE BOOL "Determines whether QWT support should be included (currently used for GPS widget)")
+
 SET (WITH_SPATIALITE TRUE CACHE BOOL "Determines whether SPATIALITE support should be built")
 
 IF (WITH_SPATIALITE)
@@ -74,7 +77,7 @@ IF (WITH_BINDINGS)
   SET (BINDINGS_GLOBAL_INSTALL FALSE CACHE BOOL "Install bindings to global python directory? (might need root)")
 ENDIF (WITH_BINDINGS)
 
-# Compile flag. Make it posible to turn it off.
+# Compile flag. Make it possible to turn it off.
 SET (PEDANTIC FALSE CACHE BOOL "Determines if we should compile in pedantic mode.")
 
 # whether unit tests should be build
@@ -110,6 +113,21 @@ ENDIF (NOT BISON_EXECUTABLE)
 # we don't use cblas
 SET(DONT_LINK_CBLAS TRUE)
 
+IF(NOT WIN32)
+  INCLUDE(CheckFunctionExists)
+  CHECK_FUNCTION_EXISTS(openpty OPENPTY_IN_LIBC)
+  IF(NOT OPENPTY_IN_LIBC)
+    SET(CMAKE_REQUIRED_INCLUDES util.h)
+    SET(CMAKE_REQUIRED_LIBRARIES util)
+    CHECK_FUNCTION_EXISTS(openpty NEED_LIBUTIL)
+    IF(NEED_LIBUTIL)
+      SET(OPENPTY_LIBRARY util)
+    ELSE(NEED_LIBUTIL)
+      MESSAGE (SEND_ERROR "openpty not found!")
+    ENDIF(NEED_LIBUTIL)
+  ENDIF(NOT OPENPTY_IN_LIBC)
+ENDIF(NOT WIN32)
+
 # required
 FIND_PACKAGE(Proj)
 FIND_PACKAGE(Expat)    # GPS importer plugin
@@ -131,6 +149,9 @@ ENDIF (WITH_POSTGRESQL)
 IF (WITH_GRASS)
   FIND_PACKAGE(GRASS)    # GRASS plugin
 ENDIF (WITH_GRASS)
+IF (WITH_QWT)
+  FIND_PACKAGE(QWT)
+ENDIF(WITH_QWT)
 
 IF (WITH_SPATIALITE AND NOT WITH_INTERNAL_SPATIALITE)
   FIND_PACKAGE(SPATIALITE)
@@ -165,6 +186,7 @@ SET( QT_USE_QTXML      TRUE )
 SET( QT_USE_QTNETWORK  TRUE )
 SET( QT_USE_QTSVG      TRUE )
 SET( QT_USE_QTSQL      TRUE )
+SET( QT_USE_QTWEBKIT   TRUE )
 IF (ENABLE_TESTS)
   SET( QT_USE_QTTEST  TRUE )
   ENABLE_TESTING()
@@ -197,8 +219,9 @@ IF (PEDANTIC)
     ADD_DEFINITIONS( /wd4510 )  # default constructor could not be generated (sqlite3_index_info, QMap)
     ADD_DEFINITIONS( /wd4512 )  # assignment operator could not be generated (sqlite3_index_info)
     ADD_DEFINITIONS( /wd4610 )  # user defined constructor required (sqlite3_index_info)
+    ADD_DEFINITIONS( /wd4706 )  # assignment within conditional expression (pal)
   ELSE (MSVC)
-    ADD_DEFINITIONS( -Wall -Wno-long-long -Wformat-security )
+    ADD_DEFINITIONS( -Wall -Wno-long-long -Wformat-security -Wno-strict-aliasing )
     # Qt produces lots of warnings with strict aliasing (as of Qt 4.4.0 & GCC 4.3)
     # ADD_DEFINITIONS( -fstrict-aliasing -Wstrict-aliasing=1 )
   ENDIF (MSVC)
@@ -267,7 +290,7 @@ ENDIF (WIN32)
 
 #assume we have excaped compiler directives
 #eventually we want to change this to new
-#since we dont need to jump through so many 
+#since we don't need to jump through so many 
 #hoops to escape compiler directives then
 IF(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)

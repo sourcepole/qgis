@@ -17,20 +17,25 @@
 #include "qgsapplication.h"
 #include "qgsmaplayerregistry.h"
 #include "qgsproviderregistry.h"
+#include "qgsexception.h"
 
 #include <QDir>
 #include <QMessageBox>
 #include <QPalette>
 #include <QSettings>
 
-#include "qgsconfig.h"
-
-// for htonl
-#ifdef WIN32
-#include <winsock.h>
-#else
-#include <netinet/in.h>
+// (if Windows/Mac, use icon from resource)
+#if ! defined(Q_WS_WIN) && ! defined(Q_WS_MAC)
+#include "../../images/themes/default/qgis.xpm" // Linux
+#include <QIcon>
 #endif
+#ifndef Q_WS_WIN
+#include <netinet/in.h>
+#else
+#include <winsock.h>
+#endif
+
+#include "qgsconfig.h"
 
 #include <ogr_api.h>
 
@@ -63,6 +68,11 @@ QgsApplication::QgsApplication( int & argc, char ** argv, bool GUIenabled )
   QString myPrefix = myDir.absolutePath();
   setPrefixPath( myPrefix, true );
 #endif
+
+  // set application's icon (if Windows/Mac, use icon from resource)
+#if ! defined(Q_WS_WIN) && ! defined(Q_WS_MAC)
+  setWindowIcon( QPixmap( qgis_xpm ) );        // Linux
+#endif
 }
 
 QgsApplication::~QgsApplication()
@@ -78,9 +88,17 @@ bool QgsApplication::notify( QObject * receiver, QEvent * event )
   {
     done = QApplication::notify( receiver, event );
   }
+  catch ( QgsException & e )
+  {
+    QMessageBox::critical( activeWindow(), tr( "Exception" ), e.what() );
+  }
   catch ( std::exception & e )
   {
     QMessageBox::critical( activeWindow(), tr( "Exception" ), e.what() );
+  }
+  catch ( ... )
+  {
+    QMessageBox::critical( activeWindow(), tr( "Exception" ), "unknown exception" );
   }
   return done;
 }
@@ -125,11 +143,11 @@ const QString QgsApplication::pkgDataPath()
 }
 const QString QgsApplication::defaultThemePath()
 {
-  return mPkgDataPath + "/themes/default/";
+  return ":/images/themes/default/";
 }
 const QString QgsApplication::activeThemePath()
 {
-  return mPkgDataPath + "/themes/" + mThemeName + "/";
+  return ":/images/themes/" + mThemeName + "/";
 }
 
 /*!
@@ -137,7 +155,7 @@ const QString QgsApplication::activeThemePath()
 */
 void QgsApplication::setThemeName( const QString theThemeName )
 {
-  QString myPath = mPkgDataPath + "/themes/" + theThemeName + "/";
+  QString myPath = ":/images/themes/" + theThemeName + "/";
   //check it exists and if not roll back to default theme
   if ( QFile::exists( myPath ) )
   {
@@ -297,8 +315,8 @@ const QStringList QgsApplication::svgPaths()
   }
   //additional default paths
   myPathList
-    << mPkgDataPath + QString( "/svg/" )
-    << qgisSettingsDirPath() + QString( "svg/" );
+  << mPkgDataPath + QString( "/svg/" )
+  << qgisSettingsDirPath() + QString( "svg/" );
   return myPathList;
 
 }
@@ -367,7 +385,7 @@ QString QgsApplication::reportStyleSheet()
 {
   //
   // Make the style sheet desktop preferences aware by using qappliation
-  // palette as a basis for colours where appropriate
+  // palette as a basis for colors where appropriate
   //
   QColor myColor1 = palette().highlight().color();
   QColor myColor2 = myColor1;
@@ -385,9 +403,53 @@ QString QgsApplication::reportStyleSheet()
             "padding-bottom: 8px;"
             "border: 1px solid #6c6c6c;"
             "}"
-            "h1 {font-size : 22pt; }"
-            "h2 {font-size : 18pt; }"
-            "h3 {font-size : 14pt; }";
+            ".overview{ font: 1.82em; font-weight: bold;}"
+            "body{  background: white;"
+            "  color: black;"
+            "  font-family: arial,sans-serif;"
+            "}"
+            "h2{  background-color: #F6F6F6;"
+            "  color: #8FB171; "
+            "  font-size: medium;  "
+            "  font-weight: normal;"
+            "  font-family: luxi serif, georgia, times new roman, times, serif;"
+            "  background: none;"
+            "  padding: 0.75em 0 0;"
+            "  margin: 0;"
+            "  line-height: 1.1em;"
+            "}"
+            "h3{  background-color: #F6F6F6;"
+            "  color: #729FCF;"
+            "  font-family: luxi serif, georgia, times new roman, times, serif;"
+            "  font-weight: bold;"
+            "  font-size: large;"
+            "  text-align: right;"
+            "  border-bottom: 5px solid #DCEB5C;"
+            "}"
+            "h4{  background-color: #F6F6F6;"
+            "  color: #729FCF;"
+            "  font-family: luxi serif, georgia, times new roman, times, serif;"
+            "  font-weight: bold;"
+            "  font-size: medium;"
+            "  text-align: right;"
+            "}"
+            "h5{    background-color: #F6F6F6;"
+            "   color: #729FCF;"
+            "   font-family: luxi serif, georgia, times new roman, times, serif;"
+            "   font-weight: bold;"
+            "   font-size: small;"
+            "   text-align: right;"
+            "}"
+            "a{  color: #729FCF;"
+            "  font-family: arial,sans-serif;"
+            "  font-size: small;"
+            "}"
+            "label{  background-color: #FFFFCC;"
+            "  border: 1px solid black;"
+            "  margin: 1px;"
+            "  padding: 0px 3px; "
+            "  font-size: small;"
+            "}";
   return myStyle;
 }
 

@@ -25,6 +25,7 @@
 #include <set>
 #include <QTreeWidget>
 
+class QgsLegendGroup;
 class QgsLegendLayer;
 class QgsLegendItem;
 class QgsMapLayer;
@@ -103,6 +104,10 @@ class QgsLegend : public QTreeWidget
     Else, 0 is returned.*/
     QgsMapLayer* currentLayer();
 
+    /*!set the current layer
+    returns true if the layer exists, false otherwise*/
+    bool setCurrentLayer( QgsMapLayer *layer );
+
     /**Writes the content of the legend to a project file*/
     bool writeXML( QDomNode & layer_node, QDomDocument & document );
 
@@ -111,6 +116,12 @@ class QgsLegend : public QTreeWidget
 
     /**Returns true, if the y-coordinate is >= the center of the item*/
     bool yCoordAboveCenter( QgsLegendItem* it, int ycoord );
+
+    /**Returns true, if the item at index is a QgsLegendGroup*/
+    bool isLegendGroup( const QModelIndex &index );
+
+    /**Returns a string list of groups*/
+    QStringList groups();
 
     /**Returns the first item in the hierarchy*/
     QTreeWidgetItem* firstItem();
@@ -198,9 +209,19 @@ class QgsLegend : public QTreeWidget
     /*!
      * Slot called when user wishes to add a new empty layer group to the legend.
      * The user will be prompted for the name of the newly added group.
+     * @param name name of the new group
+     * @param expand expand the group
      * @return void
      */
-    void addGroup();
+    int addGroup( QString name = QString(), bool expand = true );
+
+    /*!
+     * Removes all groups with the given name.
+     * @param name name of the groups to remove
+     * @return void
+     */
+    void removeGroup( int groupIndex );
+
     void removeLayer( QString );
 
     /** called to read legend settings from project */
@@ -218,6 +239,14 @@ class QgsLegend : public QTreeWidget
       @param askCancelOnEditable gibe cancel option in the dialog for editable (and changed) layers
       @param return false if canceled or in case of error, true else*/
     bool removeLayer( QgsMapLayer* ml, bool askCancelOnEditable );
+
+    /*!
+     * Moves a layer to a group.
+     * @param ml the maplayer to move
+     * @param groupIndex index of group
+     * @return false if the group does not exist, false otherwise
+     */
+    void moveLayer( QgsMapLayer* ml, int groupIndex );
 
     /**Toggle show in overview for current layer*/
     void legendLayerShowInOverview();
@@ -285,8 +314,11 @@ class QgsLegend : public QTreeWidget
     /**Moves an item back to the position where storeInitialPosition has been called*/
     void resetToInitialPosition( QTreeWidgetItem* li );
 
-    /**Returns the legend layer to which a map layer gelongs*/
+    /**Returns the legend layer to which a map layer belongs to*/
     QgsLegendLayer* findLegendLayer( const QString& layerKey );
+
+    /**Returns the legend layer to which a map layer belongs to*/
+    QgsLegendLayer* findLegendLayer( const QgsMapLayer *layer );
 
     /**Checks mPixmapWidthValues and mPixmapHeightValues and sets a new icon size if necessary*/
     void adjustIconSize();
@@ -331,6 +363,8 @@ class QgsLegend : public QTreeWidget
     void handleRightClickEvent( QTreeWidgetItem* item, const QPoint& position );
     /**Removes the current legend group*/
     void legendGroupRemove();
+    /**Removes a legend group and its layers*/
+    void removeGroup( QgsLegendGroup * lg );
     /**Sets all listview items to open*/
     void expandAll();
     /**Sets all listview items to closed*/
@@ -395,7 +429,7 @@ class QgsLegend : public QTreeWidget
     QAction* mToggleEditingAction;
 
     /*!
-     * A fuction sed to determin how far down in the list an item is (starting with one for the first Item.
+     * A function to determine how far down in the list an item is (starting with one for the first Item).
      *If the item is not in the legend, -1 is returned
      * @see mItemBeingMovedOrigPos
      */
@@ -437,6 +471,8 @@ class QgsLegend : public QTreeWidget
     QWidget *mInsertionLine;
 
   signals:
+    void itemMoved( QModelIndex oldIndex, QModelIndex newIndex );
+
     void zOrderChanged( QgsLegend * lv );
 
     //! Emited whenever current (selected) layer changes

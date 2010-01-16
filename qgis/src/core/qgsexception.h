@@ -18,107 +18,32 @@
 #ifndef QGSEXCEPTION_H
 #define QGSEXCEPTION_H
 
-#include <exception>
-#include <string>
-#include <list>
-
-#include <QDomNode>
-#include <QDomDocument>
+#include <QString>
 
 /** \ingroup core
   * Defines a qgis exception class.
  */
-class CORE_EXPORT QgsException : public std::exception
+class CORE_EXPORT QgsException
 {
   public:
-
-    QgsException( std::string const & what )
-        : what_( what )
-    {}
-
     QgsException( QString const & what )
-        : what_(( const char * )what.toLocal8Bit().data() )
+        : what_( what )
     {}
 
     virtual ~QgsException() throw()
     {}
 
-    const char* what() const throw()
+    QString what() const throw()
     {
-      return what_.c_str();
+      return what_;
     }
 
   private:
 
     /// description of exception
-    std::string what_;
+    QString what_;
 
 }; // class QgsException
-
-
-/** for Qgis I/O related exceptions
-
-  @note usually thrown for opening file's that don't exist, and the like.
-
-*/
-class QgsIOException : public QgsException
-{
-  public:
-
-    QgsIOException( std::string const & what )
-        : QgsException( what )
-    {}
-
-    QgsIOException( QString const & what )
-        : QgsException( what )
-    {}
-
-}; // class QgsIOException
-
-
-
-/** for files missing from layers while reading project files
-
-*/
-class QgsProjectBadLayerException : public QgsException
-{
-  public:
-
-    QgsProjectBadLayerException( std::list<QDomNode> const & layers, QDomDocument const & doc = QDomDocument() )
-        : QgsException( std::string( msg_ ) ),
-        mBrokenLayers( layers ),
-        mProjectDom( doc )
-    {}
-
-    ~QgsProjectBadLayerException() throw()
-    {}
-
-    std::list<QDomNode> const & layers() const
-    {
-      return mBrokenLayers;
-    }
-
-    QDomDocument const & document() const
-    {
-      return mProjectDom;
-    }
-  private:
-
-    /** QDomNodes representing the state of a layer that couldn't be loaded
-
-    The layer data was either relocated or deleted.  The Dom node also
-    contains ancillary data such as line widths and the like.
-
-     */
-    std::list<QDomNode> mBrokenLayers;
-
-    // A default empty document does not contain any extra information
-    QDomDocument mProjectDom;
-
-    static const char * msg_;
-
-}; // class QgsProjectBadLayerException
-
 
 
 #endif

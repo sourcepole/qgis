@@ -46,6 +46,13 @@ class CORE_EXPORT QgsComposerLabel: public QgsComposerItem
     double margin() {return mMargin;}
     void setMargin( double m ) {mMargin = m;}
 
+    /**Sets text color
+        @note: this function was added in version 1.4*/
+    void setFontColor( const QColor& c ) {mFontColor = c;}
+    /**Get font color
+        @note: this function was added in version 1.4*/
+    QColor fontColor() const {return mFontColor;}
+
     /** stores state in Dom node
        * @param node is Dom node corresponding to 'Composer' tag
        * @param temp write template file
@@ -66,6 +73,9 @@ class CORE_EXPORT QgsComposerLabel: public QgsComposerItem
 
     // Border between text and fram (in mm)
     double mMargin;
+
+    // Font color
+    QColor mFontColor;
 
     /**Replaces replace '$CURRENT_DATE<(FORMAT)>' with the current date (e.g. $CURRENT_DATE(d 'June' yyyy)*/
     void replaceDateText( QString& text ) const;

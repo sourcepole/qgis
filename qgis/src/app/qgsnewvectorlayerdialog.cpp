@@ -20,7 +20,10 @@
 #include "qgsapplication.h"
 #include "qgisapp.h" // <- for theme icons
 #include "qgslogger.h"
+#include "qgscoordinatereferencesystem.h"
+#include "qgsgenericprojectionselector.h"
 #include <QPushButton>
+
 
 QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, Qt::WFlags fl )
     : QDialog( parent, fl )
@@ -33,7 +36,7 @@ QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, Qt::WFlags fl
   mTypeBox->addItem( tr( "Decimal number" ), "Real" );
 
   mWidth->setValidator( new QIntValidator( 1, 255, this ) );
-  mPrecision->setValidator( new QIntValidator( 0, 20, this ) );
+  mPrecision->setValidator( new QIntValidator( 0, 5, this ) );
 
   mPointRadioButton->setChecked( true );
   mFileFormatComboBox->addItem( tr( "ESRI Shapefile" ), "ESRI Shapefile" );
@@ -48,6 +51,12 @@ QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, Qt::WFlags fl
   }
   mOkButton = buttonBox->button( QDialogButtonBox::Ok );
   mOkButton->setEnabled( false );
+
+  QgsCoordinateReferenceSystem srs;
+  srs.validate();
+
+  mCrsId = srs.srsid();
+  leSpatialRefSys->setText( srs.toProj4() );
 }
 
 QgsNewVectorLayerDialog::~QgsNewVectorLayerDialog()
@@ -56,7 +65,33 @@ QgsNewVectorLayerDialog::~QgsNewVectorLayerDialog()
 
 void QgsNewVectorLayerDialog::on_mTypeBox_currentIndexChanged( int index )
 {
-  mPrecision->setEnabled( index == 2 );  // Real
+  // FIXME: sync with providers/ogr/qgsogrprovider.cpp
+  switch ( index )
+  {
+    case 0: // Text data
+      mWidth->setValidator( new QIntValidator( 1, 255, this ) );
+      mPrecision->setEnabled( false );
+      break;
+
+    case 1: // Whole number
+      if ( mWidth->text().toInt() > 10 )
+        mWidth->setText( "10" );
+      mPrecision->setEnabled( false );
+      mWidth->setValidator( new QIntValidator( 1, 10, this ) );
+      break;
+
+    case 2: // Decimal number
+      if ( mWidth->text().toInt() > 20 )
+        mWidth->setText( "20" );
+      mPrecision->setEnabled( false );
+      mWidth->setValidator( new QIntValidator( 1, 20, this ) );
+      mPrecision->setEnabled( true );
+      break;
+
+    default:
+      QgsDebugMsg( "unexpected index" );
+      break;
+  }
 }
 
 QGis::WkbType QgsNewVectorLayerDialog::selectedType() const
@@ -74,6 +109,11 @@ QGis::WkbType QgsNewVectorLayerDialog::selectedType() const
     return QGis::WKBPolygon;
   }
   return QGis::WKBUnknown;
+}
+
+int QgsNewVectorLayerDialog::selectedCrsId() const
+{
+  return mCrsId;
 }
 
 void QgsNewVectorLayerDialog::on_mAddAttributeButton_clicked()
@@ -100,9 +140,21 @@ void QgsNewVectorLayerDialog::on_mRemoveAttributeButton_clicked()
   }
 }
 
-void QgsNewVectorLayerDialog::on_buttonBox_helpRequested()
+void QgsNewVectorLayerDialog::on_pbnChangeSpatialRefSys_clicked()
 {
-  QgsContextHelp::run( context_id );
+  QgsGenericProjectionSelector *mySelector = new QgsGenericProjectionSelector( this );
+  mySelector->setMessage();
+  mySelector->setSelectedCrsId( pbnChangeSpatialRefSys->text().toInt() );
+  if ( mySelector->exec() )
+  {
+    mCrsId = mySelector->selectedCrsId();
+    leSpatialRefSys->setText( mySelector->selectedProj4String() );
+  }
+  else
+  {
+    QApplication::restoreOverrideCursor();
+  }
+  delete mySelector;
 }
 
 void QgsNewVectorLayerDialog::attributes( std::list<std::pair<QString, QString> >& at ) const

@@ -123,7 +123,7 @@ namespace pal
   Layer *Pal::getLayer( const char *lyrName )
   {
     lyrsMutex->lock();
-    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end();it++ )
+    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end(); it++ )
       if ( strcmp(( *it )->name, lyrName ) == 0 )
       {
         lyrsMutex->unlock();
@@ -178,7 +178,7 @@ namespace pal
     std::cout << "nbLayers:" << layers->size() << std::endl;
 #endif
 
-    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end();it++ )
+    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end(); it++ )
     {
       if ( strcmp(( *it )->name, lyrName ) == 0 )   // if layer already known
       {
@@ -237,7 +237,7 @@ namespace pal
     // all feature which are obstacle will be inserted into obstacles
     if ( context->layer->obstacle )
     {
-      ft_ptr->getBoundingBox(amin, amax);
+      ft_ptr->getBoundingBox( amin, amax );
       context->obstacles->Insert( amin, amax, ft_ptr );
     }
 
@@ -258,12 +258,12 @@ namespace pal
     // OK, everything's fine, let's process the feature part
 
     // Holes of the feature are obstacles
-    for ( int i = 0;i < ft_ptr->getNumSelfObstacles();i++ )
+    for ( int i = 0; i < ft_ptr->getNumSelfObstacles(); i++ )
     {
-      ft_ptr->getSelfObstacle(i)->getBoundingBox(amin, amax);
-      context->obstacles->Insert( amin, amax, ft_ptr->getSelfObstacle(i) );
+      ft_ptr->getSelfObstacle( i )->getBoundingBox( amin, amax );
+      context->obstacles->Insert( amin, amax, ft_ptr->getSelfObstacle( i ) );
 
-      if ( !ft_ptr->getSelfObstacle(i)->getHoleOf() )
+      if ( !ft_ptr->getSelfObstacle( i )->getHoleOf() )
       {
         std::cout << "ERROR: SHOULD HAVE A PARENT!!!!!" << std::endl;
       }
@@ -273,9 +273,9 @@ namespace pal
     LabelPosition** lPos = NULL;
     int nblp = ft_ptr->setPosition( context->scale, &lPos, context->bbox_min, context->bbox_max, ft_ptr, context->candidates
 #ifdef _EXPORT_MAP_
-                                               , *context->svgmap
+                                    , *context->svgmap
 #endif
-                                             );
+                                  );
 
     if ( nblp > 0 )
     {
@@ -315,7 +315,7 @@ namespace pal
     Pal* pal = (( FilterContext* )ctx )->pal;
 
     double amin[2], amax[2];
-    pset->getBoundingBox(amin, amax);
+    pset->getBoundingBox( amin, amax );
 
     LabelPosition::PruneCtx pruneContext;
 
@@ -348,7 +348,7 @@ namespace pal
 
     Problem *prob = new Problem();
 
-    int i, j, c;
+    int i, j;
 
     double bbx[4];
     double bby[4];
@@ -403,9 +403,9 @@ namespace pal
     std::list<char*> *labLayers = new std::list<char*>();
 
     lyrsMutex->lock();
-    for ( i = 0;i < nbLayers;i++ )
+    for ( i = 0; i < nbLayers; i++ )
     {
-      for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end();it++ ) // iterate on pal->layers
+      for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end(); it++ ) // iterate on pal->layers
       {
         layer = *it;
         // Only select those who are active and labellable (with scale constraint) or those who are active and which must be treated as obstaclewhich must be treated as obstacle
@@ -417,7 +417,7 @@ namespace pal
           if ( strcmp( layersName[i], layer->name ) == 0 )
           {
             // check for connected features with the same label text and join them
-            if (layer->getMergeConnectedLines())
+            if ( layer->getMergeConnectedLines() )
               layer->joinConnectedFeatures();
 
             context->layer = layer;
@@ -466,7 +466,7 @@ namespace pal
 
     prob->nbLabelledLayers = labLayers->size();
     prob->labelledLayersName = new char*[prob->nbLabelledLayers];
-    for ( i = 0;i < prob->nbLabelledLayers;i++ )
+    for ( i = 0; i < prob->nbLabelledLayers; i++ )
     {
       prob->labelledLayersName[i] = labLayers->front();
       labLayers->pop_front();
@@ -493,7 +493,9 @@ namespace pal
 
     Feats *feat;
 
-    std::cout << "FIRSST NBFT : " << prob->nbft << std::endl;
+#ifdef _VERBOSE_
+    std::cout << "FIRST NBFT : " << prob->nbft << std::endl;
+#endif
 
     // Filtering label positions against obstacles
     amin[0] = amin[1] = -DBL_MAX;
@@ -506,7 +508,7 @@ namespace pal
 
 
     int idlp = 0;
-    for ( i = 0;i < prob->nbft;i++ ) /* foreach feature into prob */
+    for ( i = 0; i < prob->nbft; i++ ) /* foreach feature into prob */
     {
       feat = fFeats->pop_front();
 #ifdef _DEBUG_FULL_
@@ -535,7 +537,7 @@ namespace pal
       std::cout << "All Cost are setted" << std::endl;
 #endif
       // only keep the 'max_p' best candidates
-      for ( j = max_p;j < feat->nblp;j++ )
+      for ( j = max_p; j < feat->nblp; j++ )
       {
         // TODO remove from index
         feat->lPos[j]->removeFromIndex( prob->candidates );
@@ -548,7 +550,7 @@ namespace pal
       prob->nblp += feat->nblp;
 
       // add all candidates into a rtree (to speed up conflicts searching)
-      for ( j = 0;j < feat->nblp;j++, idlp++ )
+      for ( j = 0; j < feat->nblp; j++, idlp++ )
       {
         lp = feat->lPos[j];
         //lp->insertIntoIndex(prob->candidates);
@@ -576,7 +578,7 @@ namespace pal
     while ( fFeats->size() > 0 ) // foreach feature
     {
       feat = fFeats->pop_front();
-      for ( i = 0;i < feat->nblp;i++, idlp++ )  // foreach label candidate
+      for ( i = 0; i < feat->nblp; i++, idlp++ )  // foreach label candidate
       {
         lp = feat->lPos[i];
         lp->resetNumOverlaps();
@@ -587,7 +589,7 @@ namespace pal
         prob->labelpositions[idlp] = lp;
         //prob->feat[idlp] = j;
 
-        lp->getBoundingBox(amin, amax);
+        lp->getBoundingBox( amin, amax );
 
         // lookup for overlapping candidate
         prob->candidates->Search( amin, amax, LabelPosition::countOverlapCallback, ( void* ) lp );
@@ -638,7 +640,7 @@ namespace pal
     double *priorities = new double[nbLayers];
     Layer *layer;
     i = 0;
-    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end();it++ )
+    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end(); it++ )
     {
       layer = *it;
       layersName[i] = layer->name;
@@ -793,7 +795,7 @@ namespace pal
     return solution;
   }
 
-  Problem* Pal::extractProblem(double scale, double bbox[4])
+  Problem* Pal::extractProblem( double scale, double bbox[4] )
   {
     // find out: nbLayers, layersName, layersFactor
     lyrsMutex->lock();
@@ -803,7 +805,7 @@ namespace pal
     double *priorities = new double[nbLayers];
     Layer *layer;
     int i = 0;
-    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end();it++ )
+    for ( std::list<Layer*>::iterator it = layers->begin(); it != layers->end(); it++ )
     {
       layer = *it;
       layersName[i] = layer->name;
@@ -812,7 +814,7 @@ namespace pal
     }
     lyrsMutex->unlock();
 
-    Problem* prob = extract( nbLayers, layersName, priorities, bbox[0], bbox[1], bbox[2], bbox[3], scale, NULL);
+    Problem* prob = extract( nbLayers, layersName, priorities, bbox[0], bbox[1], bbox[2], bbox[3], scale, NULL );
 
     delete[] layersName;
     delete[] priorities;
@@ -820,9 +822,9 @@ namespace pal
     return prob;
   }
 
-  std::list<LabelPosition*>* Pal::solveProblem(Problem* prob, bool displayAll )
+  std::list<LabelPosition*>* Pal::solveProblem( Problem* prob, bool displayAll )
   {
-    if (prob == NULL)
+    if ( prob == NULL )
       return new std::list<LabelPosition*>();
 
     prob->reduce();

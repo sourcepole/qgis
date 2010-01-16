@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 QGIS utilities module
 
@@ -6,6 +7,9 @@ QGIS utilities module
 from PyQt4.QtCore import QCoreApplication
 import sys
 import traceback
+import glob
+import os.path
+import re
 
 
 #######################
@@ -52,44 +56,44 @@ def initInterface(pointer):
 
 
 #######################
-# CONSOLE OUTPUT
-
-old_stdout = sys.stdout
-console_output = None
-
-# hook for python console so all output will be redirected
-# and then shown in console
-def console_displayhook(obj):
-  global console_output
-  console_output = obj
-
-class QgisOutputCatcher:
-  def __init__(self):
-    self.data = ''
-  def write(self, stuff):
-    self.data += stuff
-  def get_and_clean_data(self):
-    tmp = self.data
-    self.data = ''
-    return tmp
-  def flush(self):
-    pass
-  
-
-def installConsoleHooks():
-  sys.displayhook = console_displayhook
-  sys.stdout = QgisOutputCatcher()
-
-def uninstallConsoleHooks():
-  sys.displayhook = sys.__displayhook__
-  sys.stdout = old_stdout
-
-
-#######################
 # PLUGINS
 
 # dictionary of plugins
 plugins = {}
+
+# list of active (started) plugins
+active_plugins = []
+
+# list of plugins in plugin directory and home plugin directory
+available_plugins = []
+
+def findPlugins(path):
+  plugins = []
+  for plugin in glob.glob(path + "/plugins/*"):
+    if os.path.isdir(plugin):
+      plugins.append( os.path.basename(plugin) )
+ 
+  return plugins
+
+def updateAvailablePlugins():
+  from qgis.core import QgsApplication
+  pythonPath = unicode(QgsApplication.pkgDataPath()) + "/python"
+  homePythonPath = unicode(QgsApplication.qgisSettingsDirPath()) + "/python"
+
+  plugins = findPlugins( pythonPath )
+  homePlugins = findPlugins( homePythonPath )
+
+  # merge the lists
+  for p in homePlugins:
+    if p not in plugins:
+      plugins.append(p)
+
+  global available_plugins
+  available_plugins = plugins
+
+# update list on start
+updateAvailablePlugins()
+
 
 def pluginMetadata(packageName, fct):
   """ fetch metadata from a plugin """
@@ -100,7 +104,7 @@ def pluginMetadata(packageName, fct):
     return "__error__"
 
 def loadPlugin(packageName):
-  """ load plugin's package and ensure that plugin is reloaded when changed """
+  """ load plugin's package """
 
   try:
     __import__(packageName)
@@ -114,7 +118,6 @@ def loadPlugin(packageName):
   # retry
   try:
     __import__(packageName)
-    reload(packageName)
     return True
   except:
     msgTemplate = QCoreApplication.translate("Python", "Couldn't load plugin '%1' from ['%2']")
@@ -125,7 +128,9 @@ def loadPlugin(packageName):
 
 def startPlugin(packageName):
   """ initialize the plugin """
-  global plugins, iface
+  global plugins, active_plugins, iface
+
+  if packageName in active_plugins: return False
 
   package = sys.modules[packageName]
 
@@ -135,6 +140,7 @@ def startPlugin(packageName):
   try:
     plugins[packageName] = package.classFactory(iface)
   except:
+    _unloadPluginModules(packageName)
     msg = QCoreApplication.translate("Python", "%1 due an error when calling its classFactory() method").arg(errMsg)
     showException(sys.exc_type, sys.exc_value, sys.exc_traceback, msg)
     return False
@@ -143,22 +149,100 @@ def startPlugin(packageName):
   try:
     plugins[packageName].initGui()
   except:
+    del plugins[packageName]
+    _unloadPluginModules(packageName)
     msg = QCoreApplication.translate("Python", "%1 due an error when calling its initGui() method" ).arg( errMsg )
     showException(sys.exc_type, sys.exc_value, sys.exc_traceback, msg)
     return False
+
+  # add to active plugins
+  active_plugins.append(packageName)
 
   return True
 
 
 def unloadPlugin(packageName):
   """ unload and delete plugin! """
-  global plugins
+  global plugins, active_plugins
+  
+  if not plugins.has_key(packageName): return False
+  if packageName not in active_plugins: return False
 
   try:
     plugins[packageName].unload()
     del plugins[packageName]
+    active_plugins.remove(packageName)
+    _unloadPluginModules(packageName)
     return True
   except Exception, e:
-    errMsg = QCoreApplication.translate("Python", "Error while unloading plugin %1").arg(packageName)
+    msg = QCoreApplication.translate("Python", "Error while unloading plugin %1").arg(packageName)
     showException(sys.exc_type, sys.exc_value, sys.exc_traceback, msg)
     return False
+
+
+def _unloadPluginModules(packageName):
+  """ unload plugin package with all its modules (files) """
+  global _plugin_modules
+  mods = _plugin_modules[packageName]
+
+  for mod in mods:
+    # if it looks like a Qt resource file, try to do a cleanup
+    # otherwise we might experience a segfault next time the plugin is loaded
+    # because Qt will try to access invalid plugin resource data
+    if "resources" in mod:
+      try:
+	sys.modules[mod].qCleanupResources()
+      except:
+	pass
+    # try to remove the module from python
+    try:
+      del sys.modules[mod]
+    except:
+      pass
+  # remove the plugin entry
+  del _plugin_modules[packageName]
+
+
+def isPluginLoaded(packageName):
+  """ find out whether a plugin is active (i.e. has been started) """
+  global plugins, active_plugins
+
+  if not plugins.has_key(packageName): return False
+  return (packageName in active_plugins)
+
+
+def reloadPlugin(packageName):
+  """ unload and start again a plugin """
+  global active_plugins
+  if packageName not in active_plugins:
+    return # it's not active
+
+  unloadPlugin(packageName)
+  loadPlugin(packageName)
+  startPlugin(packageName)
+
+
+#######################
+# IMPORT wrapper
+
+import __builtin__
+
+_builtin_import = __builtin__.__import__
+_plugin_modules = { }
+
+def _import(name, globals={}, locals={}, fromlist=[], level=-1):
+  """ wrapper around builtin import that keeps track of loaded plugin modules """
+  mod = _builtin_import(name, globals, locals, fromlist, level)
+
+  if mod and '__file__' in mod.__dict__:
+    module_name = mod.__name__
+    package_name = module_name.split('.')[0]
+    # check whether the module belongs to one of our plugins 
+    if package_name in available_plugins:
+      if package_name not in _plugin_modules:
+        _plugin_modules[package_name] = set()
+      _plugin_modules[package_name].add(module_name)
+    
+  return mod
+
+__builtin__.__import__ = _import

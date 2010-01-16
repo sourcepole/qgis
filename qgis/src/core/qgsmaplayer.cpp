@@ -111,7 +111,7 @@ void QgsMapLayer::setLayerName( const QString & _newVal )
 /** Read property of QString layerName. */
 QString const & QgsMapLayer::name() const
 {
-  QgsDebugMsg( "returning name '" + mLayerName + "'" );
+  QgsDebugMsgLevel( "returning name '" + mLayerName + "'", 3 );
   return mLayerName;
 }
 
@@ -316,7 +316,7 @@ bool QgsMapLayer::writeXML( QDomNode & layer_node, QDomDocument & document )
   maplayer.appendChild( layerName );
 
   // zorder
-  // This is no longer stored in the project file. It is superflous since the layers
+  // This is no longer stored in the project file. It is superfluous since the layers
   // are written and read in the proper order.
 
   // spatial reference system id
@@ -364,7 +364,7 @@ bool QgsMapLayer::isValid()
 
 void QgsMapLayer::invalidTransformInput()
 {
-  QgsLogger::warning( "QgsMapLayer::invalidTransformInput() called" );
+  QgsDebugMsg( "called" );
   // TODO: emit a signal - it will be used to update legend
 }
 
@@ -381,7 +381,7 @@ QString QgsMapLayer::lastError()
 
 void QgsMapLayer::connectNotify( const char * signal )
 {
-  QgsDebugMsg( "QgsMapLayer connected to " + QString( signal ) );
+  QgsDebugMsgLevel( "QgsMapLayer connected to " + QString( signal ), 3 );
 } //  QgsMapLayer::connectNotify
 
 
@@ -445,9 +445,11 @@ const QgsCoordinateReferenceSystem& QgsMapLayer::srs()
   return *mCRS;
 }
 
-void QgsMapLayer::setCrs( const QgsCoordinateReferenceSystem& srs )
+void QgsMapLayer::setCrs( const QgsCoordinateReferenceSystem& srs, bool emitSignal )
 {
   *mCRS = srs;
+  if ( emitSignal )
+    emit layerCrsChanged();
 }
 
 unsigned int QgsMapLayer::getTransparency()
@@ -796,17 +798,17 @@ void QgsMapLayer::setCustomProperty( const QString& key, const QVariant& value )
 
 QVariant QgsMapLayer::customProperty( const QString& value, const QVariant& defaultValue ) const
 {
-  return mCustomProperties.value(value, defaultValue);
+  return mCustomProperties.value( value, defaultValue );
 }
 
 void QgsMapLayer::removeCustomProperty( const QString& key )
 {
-  mCustomProperties.remove(key);
+  mCustomProperties.remove( key );
 }
 
 void QgsMapLayer::readCustomProperties( QDomNode & layerNode )
 {
-  QDomNode propsNode = layerNode.namedItem("customproperties");
+  QDomNode propsNode = layerNode.namedItem( "customproperties" );
   if ( propsNode.isNull() ) // no properties stored...
     return;
 
@@ -817,13 +819,13 @@ void QgsMapLayer::readCustomProperties( QDomNode & layerNode )
   for ( int i = 0; i < nodes.size(); i++ )
   {
     QDomNode propNode = nodes.at( i );
-    if (propNode.isNull() || propNode.nodeName() != "property")
+    if ( propNode.isNull() || propNode.nodeName() != "property" )
       continue;
     QDomElement propElement = propNode.toElement();
 
     QString key = propElement.attribute( "key" );
     QString value = propElement.attribute( "value" );
-    mCustomProperties[key] = QVariant(value);
+    mCustomProperties[key] = QVariant( value );
   }
 
 }
@@ -837,14 +839,14 @@ void QgsMapLayer::writeCustomProperties( QDomNode & layerNode, QDomDocument & do
     QDomElement propElement = doc.createElement( "property" );
     propElement.setAttribute( "key", it.key() );
     propElement.setAttribute( "value", it.value().toString() );
-    propsElement.appendChild(propElement);
+    propsElement.appendChild( propElement );
   }
 
-  layerNode.appendChild(propsElement);
+  layerNode.appendChild( propsElement );
 }
 
-void QgsMapLayer::setCacheImage( QImage * thepImage ) 
-{ 
+void QgsMapLayer::setCacheImage( QImage * thepImage )
+{
   QgsDebugMsg( "cache Image set!" );
   if ( mpCacheImage )
   {

@@ -19,14 +19,12 @@ email                : sherman at mrcc.com
 #include "qgsogrprovider.h"
 #include "qgslogger.h"
 
-#include <iostream>
-#include <cassert>
-
 #define CPL_SUPRESS_CPLUSPLUS
 #include <gdal.h>         // to collect version information
 #include <ogr_api.h>
 #include <ogr_srs_api.h>
 #include <cpl_error.h>
+#include <cpl_conv.h>
 
 #include <QtDebug>
 #include <QFile>
@@ -80,7 +78,7 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
   // If there is no & in the uri, then the uri is just the filename. The loaded
   // layer will be layer 0.
   //this is not true for geojson
-  if ( ! uri.contains( '|', Qt::CaseSensitive ) )
+  if ( !uri.contains( '|', Qt::CaseSensitive ) )
   {
     mFilePath = uri;
     mLayerIndex = 0;
@@ -88,35 +86,33 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
   }
   else
   {
-    // If we get here, there are some options added to the filename. We must parse
-    // the different parts separated by &, and among each option, the name and the
-    // value around the =.
-    // A valid uri is of the form: filename&option1=value1&option2=value2,...
-
     QStringList theURIParts = uri.split( "|" );
     mFilePath = theURIParts.at( 0 );
 
     for ( int i = 1 ; i < theURIParts.size(); i++ )
     {
-      QStringList theInstruction = theURIParts.at( i ).split( "=" );
-      if ( theInstruction.at( 0 ) == QString( "layerid" ) )
+      QString part = theURIParts.at( i );
+      int pos = part.indexOf( "=" );
+      QString field = part.left( pos );
+      QString value = part.mid( pos + 1 );
+
+      if ( field == "layerid" )
       {
         bool ok;
-        mLayerIndex = theInstruction.at( 1 ).toInt( &ok );
+        mLayerIndex = value.toInt( &ok );
         if ( ! ok )
         {
           mLayerIndex = -1;
         }
       }
-
-      if ( theInstruction.at( 0 ) == QString( "layername" ) )
+      else if ( field == "layername" )
       {
-        mLayerName = theInstruction.at( 1 );
+        mLayerName = value;
       }
 
-      if ( theInstruction.at( 0 ) == QString( "subset" ) )
+      if ( field == "subset" )
       {
-        mSubsetString = theInstruction.at( 1 );
+        mSubsetString = value;
       }
     }
   }
@@ -125,7 +121,7 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
   QgsDebugMsg( "mLayerIndex: " + QString::number( mLayerIndex ) );
   QgsDebugMsg( "mLayerName: " + mLayerName );
   QgsDebugMsg( "mSubsetString: " + mSubsetString );
-
+  CPLSetConfigOption( "OGR_ORGANIZE_POLYGONS", "ONLY_CCW" );  // "SKIP" returns MULTIPOLYGONs for multiringed POLYGONs
   CPLPushErrorHandler( CPLQuietErrorHandler );
   ogrDataSource = OGROpen( QFile::encodeName( mFilePath ).constData(), TRUE, &ogrDriver );
   CPLPopErrorHandler();
@@ -172,10 +168,11 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
     valid = false;
   }
 
+  // FIXME: sync with app/qgsnewvectorlayerdialog.cpp
   mNativeTypes
   << QgsVectorDataProvider::NativeType( tr( "Whole number (integer)" ), "integer", QVariant::Int, 1, 10 )
   << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), "double", QVariant::Double, 1, 20, 0, 5 )
-  << QgsVectorDataProvider::NativeType( tr( "Text (string)" ), "string", QVariant::String, 1, 255, 0, 0 )
+  << QgsVectorDataProvider::NativeType( tr( "Text (string)" ), "string", QVariant::String, 1, 255 )
   ;
 }
 
@@ -211,7 +208,7 @@ bool QgsOgrProvider::setSubsetString( QString theSQL )
     QString sql = QString( "SELECT * FROM %1 WHERE %2" )
                   .arg( quotedIdentifier( OGR_FD_GetName( OGR_L_GetLayerDefn( ogrOrigLayer ) ) ) )
                   .arg( mSubsetString );
-    ogrLayer = OGR_DS_ExecuteSQL( ogrDataSource, sql.toUtf8().data(), NULL, NULL );
+    ogrLayer = OGR_DS_ExecuteSQL( ogrDataSource, mEncoding->fromUnicode( sql ).constData(), NULL, NULL );
 
     if ( !ogrLayer )
     {
@@ -244,6 +241,7 @@ bool QgsOgrProvider::setSubsetString( QString theSQL )
   {
     uri += QString( "|subset=%1" ).arg( mSubsetString );
   }
+
   setDataSourceUri( uri );
 
   OGR_L_ResetReading( ogrLayer );
@@ -1026,6 +1024,7 @@ int QgsOgrProvider::capabilities() const
       ability |= ChangeGeometries;
     }
 
+#if 0
     if ( OGR_L_TestCapability( ogrLayer, "FastSpatialFilter" ) )
       // TRUE if this layer implements spatial filtering efficiently.
       // Layers that effectively read all features, and test them with the
@@ -1059,25 +1058,20 @@ int QgsOgrProvider::capabilities() const
     {
       // No use required for this QGIS release.
     }
-
-    if ( 1 )
-    {
-      // Ideally this should test for Shapefile type and GDAL >= 1.2.6
-      // In reality, createSpatialIndex() looks after itself.
-      ability |= CreateSpatialIndex;
-    }
-
-#if defined(GDAL_VERSION_NUM) && GDAL_VERSION_NUM >= 1600
-    // adding attributes was added in GDAL 1.6
-    if ( ogrDriverName.startsWith( "ESRI" ) )
-    {
-      ability |= AddAttributes;
-    }
 #endif
 
     // OGR doesn't handle shapefiles without attributes, ie. missing DBFs well, fixes #803
-    if ( ogrDriverName.startsWith( "ESRI" ) )
+    if ( ogrDriverName == "ESRI Shapefile" )
     {
+#if defined(GDAL_VERSION_NUM) && GDAL_VERSION_NUM >= 1260
+      // test for Shapefile type and GDAL >= 1.2.6
+      ability |= CreateSpatialIndex;
+#endif
+#if defined(GDAL_VERSION_NUM) && GDAL_VERSION_NUM >= 1600
+      // adding attributes was added in GDAL 1.6
+      ability |= AddAttributes;
+#endif
+
       if ( mAttributeFields.size() == 0 )
       {
         QgsDebugMsg( "OGR doesn't handle shapefile without attributes well, ie. missing DBFs" );
@@ -1332,7 +1326,7 @@ QString createFilters( QString type )
       {
         // NOP, we don't know anything about the current driver
         // with regards to a proper file filter string
-        QgsLogger::debug( "fileVectorFilters, unknown driver: " + driverName );
+        QgsDebugMsg( "fileVectorFilters, unknown driver: " + driverName );
       }
 
     }                           // each loaded GDAL driver
@@ -1449,19 +1443,45 @@ QGISEXTERN bool isProvider()
 @param vectortype point/line/polygon or multitypes
 @param attributes a list of name/type pairs for the initial attributes
 @return true in case of success*/
-QGISEXTERN bool createEmptyDataSource( const QString& uri,
-                                       const QString& format,
-                                       const QString& encoding,
+QGISEXTERN bool createEmptyDataSource( const QString &uri,
+                                       const QString &format,
+                                       const QString &encoding,
                                        QGis::WkbType vectortype,
-                                       const std::list<std::pair<QString, QString> >& attributes )
+                                       const std::list<std::pair<QString, QString> > &attributes,
+                                       const QgsCoordinateReferenceSystem *srs = NULL )
 {
   QgsDebugMsg( QString( "Creating empty vector layer with format: %1" ).arg( format ) );
+
   OGRSFDriverH driver;
   QgsApplication::registerOgrDrivers();
   driver = OGRGetDriverByName( format.toAscii() );
   if ( driver == NULL )
   {
     return false;
+  }
+
+  QString driverName = OGR_Dr_GetName( driver );
+
+  if ( driverName == "ESRI Shapefile" )
+  {
+    if ( !uri.endsWith( ".shp", Qt::CaseInsensitive ) )
+    {
+      return false;
+    }
+
+    // check for duplicate fieldnames
+    QSet<QString> fieldNames;
+    std::list<std::pair<QString, QString> >::const_iterator fldIt;
+    for ( fldIt = attributes.begin(); fldIt != attributes.end(); ++fldIt )
+    {
+      QString name = fldIt->first.left( 10 );
+      if ( fieldNames.contains( name ) )
+      {
+        QgsDebugMsg( QString( "duplicate field (10 significant characters): %1" ).arg( name ) );
+        return false;
+      }
+      fieldNames << name;
+    }
   }
 
   OGRDataSourceH dataSource;
@@ -1473,8 +1493,17 @@ QGISEXTERN bool createEmptyDataSource( const QString& uri,
 
   //consider spatial reference system
   OGRSpatialReferenceH reference = NULL;
+
   QgsCoordinateReferenceSystem mySpatialRefSys;
-  mySpatialRefSys.validate();
+  if ( srs )
+  {
+    mySpatialRefSys = *srs;
+  }
+  else
+  {
+    mySpatialRefSys.validate();
+  }
+
   QString myWkt = mySpatialRefSys.toWkt();
 
   if ( !myWkt.isNull()  &&  myWkt.length() != 0 )
@@ -1506,8 +1535,7 @@ QGISEXTERN bool createEmptyDataSource( const QString& uri,
       break;
     default:
     {
-      QgsLogger::debug( "Unknown vector type of: ", ( int )( vectortype ), 1,
-                        __FILE__, __FUNCTION__, __LINE__ );
+      QgsDebugMsg( QString( "Unknown vector type of: %1" ).arg(( int )( vectortype ) ) );
       return false;
       break;
     }
@@ -1576,6 +1604,22 @@ QGISEXTERN bool createEmptyDataSource( const QString& uri,
 
   OGR_DS_Destroy( dataSource );
 
+  if ( driverName == "ESRI Shapefile" )
+  {
+    QString layerName = uri.left( uri.indexOf( ".shp", Qt::CaseInsensitive ) );
+    QFile prjFile( layerName + ".qpj" );
+    if ( prjFile.open( QIODevice::WriteOnly ) )
+    {
+      QTextStream prjStream( &prjFile );
+      prjStream << myWkt.toLocal8Bit().data() << endl;
+      prjFile.close();
+    }
+    else
+    {
+      QgsDebugMsg( "Couldn't open file " + layerName + ".qpj" );
+    }
+  }
+
   QgsDebugMsg( QString( "GDAL Version number %1" ).arg( GDAL_VERSION_NUM ) );
 #if defined(GDAL_VERSION_NUM) && GDAL_VERSION_NUM >= 1310
   if ( reference )
@@ -1592,6 +1636,29 @@ QgsCoordinateReferenceSystem QgsOgrProvider::crs()
 
   QgsCoordinateReferenceSystem srs;
 
+  if ( ogrDriver )
+  {
+    QString driverName = OGR_Dr_GetName( ogrDriver );
+
+    if ( driverName == "ESRI Shapefile" )
+    {
+      QString layerName = mFilePath.left( mFilePath.indexOf( ".shp", Qt::CaseInsensitive ) );
+      QFile prjFile( layerName + ".qpj" );
+      if ( prjFile.open( QIODevice::ReadOnly ) )
+      {
+        QTextStream prjStream( &prjFile );
+        QString myWktString = prjStream.readLine();
+        prjFile.close();
+
+        // create CRS from Wkt
+        srs.createFromWkt( myWktString );
+
+        if ( srs.isValid() )
+          return srs;
+      }
+    }
+  }
+
   OGRSpatialReferenceH mySpatialRefSys = OGR_L_GetSpatialRef( ogrLayer );
   if ( mySpatialRefSys == NULL )
   {
@@ -1600,10 +1667,10 @@ QgsCoordinateReferenceSystem QgsOgrProvider::crs()
   else
   {
     // get the proj4 text
-    char * ppszProj4;
+    char *ppszProj4;
     OSRExportToProj4( mySpatialRefSys, &ppszProj4 );
     QgsDebugMsg( ppszProj4 );
-    char    *pszWkt = NULL;
+    char *pszWkt = NULL;
     OSRExportToWkt( mySpatialRefSys, &pszWkt );
     QString myWktString = QString( pszWkt );
     OGRFree( pszWkt );

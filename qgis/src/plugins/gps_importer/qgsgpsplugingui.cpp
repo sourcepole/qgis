@@ -15,6 +15,7 @@
 #include "qgsdataprovider.h"
 #include "qgscontexthelp.h"
 #include "qgslogger.h"
+#include "qgsgpsdetector.h"
 
 //qt includes
 #include <QFileDialog>
@@ -112,7 +113,8 @@ void QgsGPSPluginGui::on_buttonBox_accepted()
         fileName += ".gpx";
       }
 
-      emit downloadFromGPS( cmbDLDevice->currentText(), cmbDLPort->currentText(),
+      emit downloadFromGPS( cmbDLDevice->currentText(),
+                            cmbDLPort->itemData( cmbDLPort->currentIndex() ).toString(),
                             featureType == 0, featureType == 1, featureType == 2,
                             fileName, leDLBasename->text() );
       break;
@@ -121,7 +123,8 @@ void QgsGPSPluginGui::on_buttonBox_accepted()
     case 3:
     {
       emit uploadToGPS( mGPXLayers[cmbULLayer->currentIndex()],
-                        cmbULDevice->currentText(), cmbULPort->currentText() );
+                        cmbULDevice->currentText(),
+                        cmbULPort->itemData( cmbULPort->currentIndex() ).toString() );
       break;
     }
     // or convert between waypoints/tracks=
@@ -303,118 +306,25 @@ void QgsGPSPluginGui::on_pbnRefresh_clicked()
 
 void QgsGPSPluginGui::populatePortComboBoxes()
 {
+  QList< QPair<QString, QString> > devs = QgsGPSDetector::availablePorts() << QPair<QString, QString>( "usb:", "usb:" );
 
   cmbDLPort->clear();
-#ifdef linux
-  // look for linux serial devices
-  QString linuxDev( "/dev/ttyS%1" );
-  for ( int i = 0; i < 10; ++i )
+  cmbULPort->clear();
+  for ( int i = 0; i < devs.size(); i++ )
   {
-    if ( QFileInfo( linuxDev.arg( i ) ).exists() )
-    {
-      cmbDLPort->addItem( linuxDev.arg( i ) );
-      cmbULPort->addItem( linuxDev.arg( i ) );
-    }
-    else
-      break;
+    cmbDLPort->addItem( devs[i].second, devs[i].first );
+    cmbULPort->addItem( devs[i].second, devs[i].first );
   }
-
-  // and the ttyUSB* devices (serial USB adaptor)
-  linuxDev = "/dev/ttyUSB%1";
-  for ( int i = 0; i < 10; ++i )
-  {
-    if ( QFileInfo( linuxDev.arg( i ) ).exists() )
-    {
-      cmbDLPort->addItem( linuxDev.arg( i ) );
-      cmbULPort->addItem( linuxDev.arg( i ) );
-    }
-    else
-      break;
-  }
-
-  cmbDLPort->addItem( "usb:" );
-  cmbULPort->addItem( "usb:" );
-#endif
-
-#ifdef __FreeBSD__ // freebsd
-  // and freebsd devices (untested)
-  QString freebsdDev( "/dev/cuaa%1" );
-  for ( int i = 0; i < 10; ++i )
-  {
-    if ( QFileInfo( freebsdDev.arg( i ) ).exists() )
-    {
-      cmbDLPort->addItem( freebsdDev.arg( i ) );
-      cmbULPort->addItem( freebsdDev.arg( i ) );
-    }
-    else
-      break;
-  }
-
-  // and the ucom devices (serial USB adaptors)
-  freebsdDev = "/dev/ucom%1";
-  for ( int i = 0; i < 10; ++i )
-  {
-    if ( QFileInfo( freebsdDev.arg( i ) ).exists() )
-    {
-      cmbDLPort->addItem( freebsdDev.arg( i ) );
-      cmbULPort->addItem( freebsdDev.arg( i ) );
-    }
-    else
-      break;
-  }
-
-#endif
-
-#ifdef sparc
-  // and solaris devices (also untested)
-  QString solarisDev( "/dev/cua/%1" );
-  for ( int i = 'a'; i < 'k'; ++i )
-  {
-    if ( QFileInfo( solarisDev.arg( char( i ) ) ).exists() )
-    {
-      cmbDLPort->addItem( solarisDev.arg( char( i ) ) );
-      cmbULPort->addItem( solarisDev.arg( char( i ) ) );
-    }
-    else
-      break;
-  }
-#endif
-
-#ifdef WIN32
-  cmbULPort->addItem( "com1" );
-  cmbULPort->addItem( "com2" );
-  cmbULPort->addItem( "com3" );
-  cmbULPort->addItem( "com4" );
-  cmbULPort->addItem( "usb:" );
-  cmbDLPort->addItem( "com1" );
-  cmbDLPort->addItem( "com2" );
-  cmbDLPort->addItem( "com3" );
-  cmbDLPort->addItem( "com4" );
-  cmbDLPort->addItem( "usb:" );
-#endif
-
-  // OSX, OpenBSD, NetBSD etc? Anyone?
 
   // remember the last ports used
   QSettings settings;
   QString lastDLPort = settings.value( "/Plugin-GPS/lastdlport", "" ).toString();
   QString lastULPort = settings.value( "/Plugin-GPS/lastulport", "" ).toString();
-  for ( int i = 0; i < cmbDLPort->count(); ++i )
-  {
-    if ( cmbDLPort->itemText( i ) == lastDLPort )
-    {
-      cmbDLPort->setCurrentIndex( i );
-      break;
-    }
-  }
-  for ( int i = 0; i < cmbULPort->count(); ++i )
-  {
-    if ( cmbULPort->itemText( i ) == lastULPort )
-    {
-      cmbULPort->setCurrentIndex( i );
-      break;
-    }
-  }
+
+  int idx = cmbDLPort->findData( lastDLPort );
+  cmbDLPort->setCurrentIndex( idx < 0 ? 0 : idx );
+  idx = cmbULPort->findData( lastULPort );
+  cmbULPort->setCurrentIndex( idx < 0 ? 0 : idx );
 }
 
 
@@ -490,14 +400,7 @@ void QgsGPSPluginGui::openDeviceEditor()
   connect( dlg, SIGNAL( devicesChanged() ), this, SLOT( devicesUpdated() ) );
 }
 
-
 void QgsGPSPluginGui::devicesUpdated()
 {
   populateIMPBabelFormats();
-}
-
-
-void QgsGPSPluginGui::on_buttonBox_helpRequested()
-{
-  QgsContextHelp::run( context_id );
 }

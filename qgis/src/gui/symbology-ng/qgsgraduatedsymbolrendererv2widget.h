@@ -2,49 +2,64 @@
 #define QGSGRADUATEDSYMBOLRENDERERV2WIDGET_H
 
 #include "qgsrendererv2widget.h"
+#include <QStandardItem>
 
 class QgsGraduatedSymbolRendererV2;
 
 #include "ui_qgsgraduatedsymbolrendererv2widget.h"
 
-class QgsGraduatedSymbolRendererV2Widget : public QgsRendererV2Widget, private Ui::QgsGraduatedSymbolRendererV2Widget
+class GUI_EXPORT QgsGraduatedSymbolRendererV2Widget : public QgsRendererV2Widget, private Ui::QgsGraduatedSymbolRendererV2Widget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-public:
+  public:
 
-  static QgsRendererV2Widget* create(QgsVectorLayer* layer, QgsStyleV2* style, QgsFeatureRendererV2* renderer);
+    static QgsRendererV2Widget* create( QgsVectorLayer* layer, QgsStyleV2* style, QgsFeatureRendererV2* renderer );
 
-  QgsGraduatedSymbolRendererV2Widget(QgsVectorLayer* layer, QgsStyleV2* style, QgsFeatureRendererV2* renderer);
-  ~QgsGraduatedSymbolRendererV2Widget();
+    QgsGraduatedSymbolRendererV2Widget( QgsVectorLayer* layer, QgsStyleV2* style, QgsFeatureRendererV2* renderer );
+    ~QgsGraduatedSymbolRendererV2Widget();
 
-  virtual QgsFeatureRendererV2* renderer();
+    virtual QgsFeatureRendererV2* renderer();
 
-public slots:
-  void changeGraduatedSymbol();
-  void classifyGraduated();
-  void rangesDoubleClicked(const QModelIndex & idx);
+  public slots:
+    void changeGraduatedSymbol();
+    void classifyGraduated();
+    void rangesDoubleClicked( const QModelIndex & idx );
+    void rangesClicked( const QModelIndex & idx );
+    void changeCurrentValue( QStandardItem * item );
 
-protected:
-  void updateUiFromRenderer();
+    /**Adds a class manually to the classification*/
+    void addClass();
+    /**Removes a class from the classification*/
+    void deleteCurrentClass();
 
-  void updateGraduatedSymbolIcon();
+  protected:
+    void updateUiFromRenderer();
 
-  //! populate column combos in categorized and graduated page
-  void populateColumns();
+    void updateGraduatedSymbolIcon();
 
-  void populateColorRamps();
+    //! populate column combos in categorized and graduated page
+    void populateColumns();
 
-  //! populate ranges of graduated symbol renderer
-  void populateRanges();
+    void populateColorRamps();
 
-  void changeRangeSymbol(int rangeIdx);
+    //! populate ranges of graduated symbol renderer
+    void populateRanges();
+
+    void changeRangeSymbol( int rangeIdx );
+    void changeRange( int rangeIdx );
 
 
-protected:
-  QgsGraduatedSymbolRendererV2* mRenderer;
 
-  QgsSymbolV2* mGraduatedSymbol;
+
+  protected:
+    QgsGraduatedSymbolRendererV2* mRenderer;
+
+    QgsSymbolV2* mGraduatedSymbol;
+
+    int mRowSelected;
+
+
 };
 
 

@@ -141,7 +141,21 @@ void QgsUniqueValueRenderer::renderFeature( QgsRenderContext &renderContext, Qgs
       symbol->setNamedPointSymbol( name );
     }
 
-    *img = symbol->getPointSymbolAsImage( renderContext.scaleFactor(), selected, mSelectionColor,
+    double scale = renderContext.scaleFactor();
+
+    if ( symbol->pointSizeUnits() )
+    {
+      /* Calc scale (still not nice) */
+      QgsPoint point;
+      point = renderContext.mapToPixel().transform( 0, 0 );
+      double x1 = point.x();
+      point = renderContext.mapToPixel().transform( 1000, 0 );
+      double x2 = point.x();
+
+      scale *= ( x2 - x1 ) * 0.001;
+    }
+
+    *img = symbol->getPointSymbolAsImage( scale, selected, mSelectionColor,
                                           fieldScale, rotation, renderContext.rasterScaleFactor(),
                                           opacity );
     if ( !oldName.isNull() )
@@ -175,7 +189,7 @@ void QgsUniqueValueRenderer::renderFeature( QgsRenderContext &renderContext, Qgs
         brush.setColor( mSelectionColor );
         p->setBrush( brush );
       }
-      else //dont draw outlines of polygons in selection colour otherwise they appear merged
+      else //don't draw outlines of polygons in selection color otherwise they appear merged
       {
         pen.setColor( mSelectionColor );
       }

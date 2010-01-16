@@ -104,7 +104,14 @@ void QgsHelpViewer::loadContext( const QString &contextId )
      * determine the locale and create the file name from
      * the context id
      */
-    QString lang( QLocale::system().name() );
+    QString lang = QLocale::system().name();
+
+    QSettings settings;
+    if ( settings.value( "locale/overrideFlag", false ).toBool() )
+    {
+      QLocale l( settings.value( "locale/userLocale", "en_US" ).toString() );
+      lang = l.name();
+    }
     /*
      * If the language isn't set on the system, assume en_US,
      * otherwise we get the banner at the top of the help file
@@ -115,7 +122,7 @@ void QgsHelpViewer::loadContext( const QString &contextId )
     {
       lang = "en_US";
     }
-    QString fullHelpPath = helpFilesPath + contextId + "_" + lang;
+    QString fullHelpPath = helpFilesPath + contextId + "-" + lang;
     // get the help content and title from the localized file
     QString helpContents;
     QFile file( fullHelpPath );
@@ -123,14 +130,13 @@ void QgsHelpViewer::loadContext( const QString &contextId )
     if ( !file.exists() )
     {
       // change the file name to the en_US version (default)
-      fullHelpPath = helpFilesPath + contextId + "_en_US";
+      fullHelpPath = helpFilesPath + contextId + "-en_US";
       file.setFileName( fullHelpPath );
       // Check for some sort of english locale and if not found, include
       // translate this for us message
       if ( !lang.contains( "en_" ) )
       {
-        helpContents = "<i>This help file is not available in your language."
-                       " If you would like to translate it, please contact the QGIS  development team.</i><hr>";
+        helpContents = "<i>" + tr( "This help file is not available in your language %1. If you would like to translate it, please contact the QGIS  development team." ).arg( lang ) + "</i><hr />";
       }
     }
     if ( !file.open( QIODevice::ReadOnly | QIODevice::Text ) )
@@ -151,7 +157,9 @@ void QgsHelpViewer::loadContext( const QString &contextId )
     file.close();
 
     // Set the browser text to the help contents
-    txtBrowser->setHtml( helpContents );
+    QString myStyle = QgsApplication::reportStyleSheet();
+    helpContents = "<head><style>" + myStyle + "</style></head><body>" + helpContents + "</body>";
+    webView->setHtml( helpContents );
     setWindowTitle( tr( "Quantum GIS Help" ) );
 
   }
@@ -171,8 +179,7 @@ void QgsHelpViewer::loadContextFromSqlite( const QString &contextId )
       sqlite3_stmt *ppStmt;
       const char *pzTail;
       // build the sql statement
-      QString sql = "select content,title from context_helps where context_id = "
-                    + contextId;
+      QString sql = "select content,title from context_helps where context = '" + contextId + "'";
       rc = sqlite3_prepare( db, sql.toUtf8(), sql.toUtf8().length(), &ppStmt, &pzTail );
       if ( rc == SQLITE_OK )
       {
@@ -180,7 +187,7 @@ void QgsHelpViewer::loadContextFromSqlite( const QString &contextId )
         {
           // there should only be one row returned
           // Set the browser text to the record from the database
-          txtBrowser->setText(( char* )sqlite3_column_text( ppStmt, 0 ) );
+          webView->setHtml(( char* )sqlite3_column_text( ppStmt, 0 ) );
           setWindowTitle( tr( "Quantum GIS Help - %1" ).arg(( char* )sqlite3_column_text( ppStmt, 1 ) ) );
         }
       }

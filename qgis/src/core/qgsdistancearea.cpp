@@ -175,6 +175,9 @@ bool QgsDistanceArea::setEllipsoid( const QString& ellipsoid )
 
 double QgsDistanceArea::measure( QgsGeometry* geometry )
 {
+  if ( !geometry )
+    return 0.0;
+
   unsigned char* wkb = geometry->asWkb();
   unsigned char* ptr;
   unsigned int wkbType;
@@ -431,14 +434,21 @@ double QgsDistanceArea::measurePolygon( const QList<QgsPoint>& points )
 double QgsDistanceArea::bearing( const QgsPoint& p1, const QgsPoint& p2 )
 {
   QgsPoint pp1 = p1, pp2 = p2;
+  double bearing;
+
   if ( mProjectionsEnabled && ( mEllipsoid != "NONE" ) )
   {
     pp1 = mCoordTransform->transform( p1 );
     pp2 = mCoordTransform->transform( p2 );
+    computeDistanceBearing( pp1, pp2, &bearing );
+  }
+  else //compute simple planar azimuth
+  {
+    double dx = p2.x() - p1.x();
+    double dy = p2.y() - p1.y();
+    bearing = atan2( dx, dy );
   }
 
-  double bearing;
-  computeDistanceBearing( pp1, pp2, &bearing );
   return bearing;
 }
 
@@ -537,7 +547,7 @@ double QgsDistanceArea::getQ( double x )
   sinx = sin( x );
   sinx2 = sinx * sinx;
 
-  return sinx * ( 1 + sinx2 * ( m_QA + sinx2 * ( m_QB + sinx2 * m_QC ) ) );
+  return sinx *( 1 + sinx2 *( m_QA + sinx2 *( m_QB + sinx2 * m_QC ) ) );
 }
 
 
@@ -548,7 +558,7 @@ double QgsDistanceArea::getQbar( double x )
   cosx = cos( x );
   cosx2 = cosx * cosx;
 
-  return cosx * ( m_QbarA + cosx2 * ( m_QbarB + cosx2 * ( m_QbarC + cosx2 * m_QbarD ) ) );
+  return cosx *( m_QbarA + cosx2 *( m_QbarB + cosx2 *( m_QbarC + cosx2 * m_QbarD ) ) );
 }
 
 

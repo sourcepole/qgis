@@ -21,13 +21,13 @@ SET(QGIS_APP_SRCS
   qgsspatialitefilterproxymodel.cpp
   qgsspatialitetablemodel.cpp
   qgsdelattrdialog.cpp
+  qgsdisplayangle.cpp
   qgsfieldcalculator.cpp
   qgsnewvectorlayerdialog.cpp
   qgsgraduatedsymboldialog.cpp
   qgshelpviewer.cpp
   qgsidentifyresults.cpp
   qgslabeldialog.cpp
-  qgsludialog.cpp
   qgsmaptooladdfeature.cpp
   qgsmaptooladdvertex.cpp
   qgsmaptooladdisland.cpp
@@ -38,6 +38,7 @@ SET(QGIS_APP_SRCS
   qgsmaptooldeletevertex.cpp
   qgsmaptooledit.cpp
   qgsmaptoolidentify.cpp
+  qgsmaptoolmeasureangle.cpp
   qgsmaptoolmovefeature.cpp
   qgsmaptoolmovevertex.cpp
   qgsmaptoolnodetool.cpp
@@ -52,7 +53,6 @@ SET(QGIS_APP_SRCS
   qgsmergeattributesdialog.cpp
   qgsnewhttpconnection.cpp
   qgsnumericsortlistviewitem.cpp
-  qgsogrsublayersdialog.cpp
   qgsoptions.cpp
   qgspastetransformations.cpp
   qgspointrotationitem.cpp
@@ -60,7 +60,6 @@ SET(QGIS_APP_SRCS
   qgspluginmanager.cpp
   qgspluginmetadata.cpp
   qgspluginregistry.cpp
-  qgspythondialog.cpp
   qgsprojectproperties.cpp
   qgsrasterlayerproperties.cpp
   qgssearchquerybuilder.cpp
@@ -73,13 +72,17 @@ SET(QGIS_APP_SRCS
   qgsvectorlayerproperties.cpp
   qgsquerybuilder.cpp
 
+  composer/qgsattributeselectiondialog.cpp
   composer/qgscomposer.cpp
+  composer/qgscomposerarrowwidget.cpp
   composer/qgscomposeritemwidget.cpp
   composer/qgscomposerlabelwidget.cpp
   composer/qgscomposerpicturewidget.cpp
   composer/qgscomposermanager.cpp
   composer/qgscomposermapwidget.cpp
   composer/qgscomposerscalebarwidget.cpp
+  composer/qgscomposershapewidget.cpp
+  composer/qgscomposertablewidget.cpp
   composer/qgscomposerlegenditemdialog.cpp
   composer/qgscomposerlegendwidget.cpp
   composer/qgscompositionwidget.cpp
@@ -87,6 +90,7 @@ SET(QGIS_APP_SRCS
 
   legend/qgslegendgroup.cpp
   legend/qgslegend.cpp
+  legend/qgsapplegendinterface.cpp
   legend/qgslegenditem.cpp
   legend/qgslegendlayer.cpp
   legend/qgslegendpropertygroup.cpp
@@ -98,6 +102,7 @@ SET(QGIS_APP_SRCS
   ogr/qgsogrhelperfunctions.cpp
   ogr/qgsopenvectorlayerdialog.cpp
   ogr/qgsnewogrconnection.cpp
+  ogr/qgsogrsublayersdialog.cpp
   
   attributetable/qgsattributetabledialog.cpp
   attributetable/qgsattributetablemodel.cpp
@@ -106,7 +111,7 @@ SET(QGIS_APP_SRCS
   attributetable/qgsattributetablefiltermodel.cpp
   attributetable/qgsattributetableidcolumnpair.cpp
   attributetable/qgsattributetabledelegate.cpp
-  )
+)
 
 
 SET (QGIS_APP_MOC_HDRS
@@ -126,12 +131,12 @@ SET (QGIS_APP_MOC_HDRS
   qgscustomprojectiondialog.h
   qgsdelattrdialog.h
   qgsfieldcalculator.h
+  qgsmaptoolmeasureangle.h
   qgsnewvectorlayerdialog.h
   qgsgraduatedsymboldialog.h
   qgshelpviewer.h
   qgsidentifyresults.h
   qgslabeldialog.h
-  qgsludialog.h
 
   qgsmaptoolidentify.h
   qgsmaptoolsplitfeatures.h
@@ -154,10 +159,8 @@ SET (QGIS_APP_MOC_HDRS
   qgsmergeattributesdialog.h
   qgsnewhttpconnection.h
   qgsoptions.h
-  qgsogrsublayersdialog.h
   qgspastetransformations.h
   qgspluginmanager.h
-  qgspythondialog.h
   qgsprojectproperties.h
   qgsrasterlayerproperties.h
   qgssearchquerybuilder.h
@@ -172,6 +175,7 @@ SET (QGIS_APP_MOC_HDRS
   qgsquerybuilder.h
 
   composer/qgscomposer.h
+  composer/qgscomposerarrowwidget.h
   composer/qgscomposeritemwidget.h
   composer/qgscomposerlabelwidget.h
   composer/qgscomposerlegendwidget.h
@@ -179,20 +183,58 @@ SET (QGIS_APP_MOC_HDRS
   composer/qgscomposermapwidget.h
   composer/qgscomposerpicturewidget.h
   composer/qgscomposerscalebarwidget.h
+  composer/qgscomposertablewidget.h
+  composer/qgscomposershapewidget.h
   composer/qgscompositionwidget.h
   composer/qgsitempositiondialog.h
 
   legend/qgslegend.h
+  legend/qgsapplegendinterface.h
   legend/qgslegendlayer.h
   
   ogr/qgsopenvectorlayerdialog.h
   ogr/qgsnewogrconnection.h
+  ogr/qgsogrsublayersdialog.h
   
+  attributetable/qgsattributetableview.h
   attributetable/qgsattributetablemodel.h
   attributetable/qgsattributetablememorymodel.h
   attributetable/qgsattributetabledialog.h
   attributetable/qgsattributetabledelegate.h
+
   )
+
+IF( QWT_FOUND )
+  ADD_DEFINITIONS(-DHAVE_QWT)
+
+  SET(QGIS_APP_SRCS 
+    ${QGIS_APP_SRCS}
+    gps/qgsgpsinformationwidget.cpp
+    gps/qgsgpsmarker.cpp
+    gps/qwtpolar/qwt_polar_canvas.cpp  
+    gps/qwtpolar/qwt_polar_curve.cpp
+    gps/qwtpolar/qwt_polar_fitter.cpp  
+    gps/qwtpolar/qwt_polar_grid.cpp   
+    gps/qwtpolar/qwt_polar_itemdict.cpp  
+    gps/qwtpolar/qwt_polar_item.cpp
+    gps/qwtpolar/qwt_polar_layout.cpp    
+    gps/qwtpolar/qwt_polar_magnifier.cpp
+    gps/qwtpolar/qwt_polar_marker.cpp     
+    gps/qwtpolar/qwt_polar_panner.cpp
+    gps/qwtpolar/qwt_polar_plot.cpp 
+    gps/qwtpolar/qwt_polar_point.cpp
+    gps/qwtpolar/qwt_polar_spectrogram.cpp
+  )
+
+  SET (QGIS_APP_MOC_HDRS
+    ${QGIS_APP_MOC_HDRS}
+    gps/qgsgpsinformationwidget.h
+    gps/qwtpolar/qwt_polar_canvas.h  
+    gps/qwtpolar/qwt_polar_magnifier.h
+    gps/qwtpolar/qwt_polar_panner.h
+    gps/qwtpolar/qwt_polar_plot.h 
+  )
+ENDIF( QWT_FOUND )
 
 IF (POSTGRES_FOUND)
   IF(HAVE_PGCONFIG)
@@ -200,12 +242,12 @@ IF (POSTGRES_FOUND)
   ENDIF(HAVE_PGCONFIG)
 
   SET (QGIS_APP_SRCS ${QGIS_APP_SRCS}
-    qgspgsourceselect.cpp
-    qgsnewconnection.cpp
+    postgres/qgspgsourceselect.cpp
+    postgres/qgspgnewconnection.cpp
     )
   SET (QGIS_APP_MOC_HDRS ${QGIS_APP_MOC_HDRS}
-    qgspgsourceselect.h
-    qgsnewconnection.h
+    postgres/qgspgsourceselect.h
+    postgres/qgspgnewconnection.h
     )
 ENDIF (POSTGRES_FOUND)
 
@@ -219,12 +261,15 @@ IF (HAVE_SPATIALITE)
 ENDIF (HAVE_SPATIALITE)
 
 
+SET(IMAGE_RCCS ../../images/images.qrc)
+
+QT4_ADD_RESOURCES(IMAGE_RCC_SRCS ${IMAGE_RCCS})
+
 QT4_WRAP_CPP(QGIS_APP_MOC_SRCS ${QGIS_APP_MOC_HDRS})
 
 
 
 IF (WIN32)
-
   IF (MSVC)
     SET (QGIS_APP_SRCS ${QGIS_APP_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/qgis_win32.rc)
   ELSE(MSVC)
@@ -254,14 +299,17 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}/../ui
   ${QT_QTUITOOLS_INCLUDE_DIR}
+  ${PROJ_INCLUDE_DIR}
+  ${GEOS_INCLUDE_DIR}
+  ${GDAL_INCLUDE_DIR}
   ../core
+  ../core/gps ../core/gps/qextserialport
   ../core/composer ../core/raster ../core/renderer ../core/symbology ../core/symbology-ng
   ../gui ../gui/symbology-ng
   ../plugins
   ../python
-  ${PROJ_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
-  ${GDAL_INCLUDE_DIR}
+  gps
+  gps/qwtpolar
   )
 
 IF (WITH_INTERNAL_SPATIALITE)
@@ -292,18 +340,21 @@ ELSE (WIN32)
 ENDIF (WIN32)
 
 TARGET_LINK_LIBRARIES(qgis
-  ${QT_QTCORE_LIBRARY} 
-  ${QT_QTGUI_LIBRARY} 
-  ${QT_QTXML_LIBRARY} 
-  ${QT_QTSVG_LIBRARY} 
-  ${QT_QTNETWORK_LIBRARY} 
   ${QT_QTSQL_LIBRARY}
   ${QT_QTUITOOLS_LIBRARY}
   #should only be needed for win
   ${QT_QTMAIN_LIBRARY} 
   qgis_core
   qgis_gui
-  )
+)
+
+IF( QWT_FOUND )
+  IF( WIN32 )
+    ADD_DEFINITIONS(-DQWT_DLL)
+  ENDIF( WIN32 ) 
+  INCLUDE_DIRECTORIES(${QWT_INCLUDE_DIR})
+  TARGET_LINK_LIBRARIES(qgis ${QWT_LIBRARY})
+ENDIF( QWT_FOUND )
 
 IF(NOT WITH_INTERNAL_SPATIALITE)
   TARGET_LINK_LIBRARIES(qgis ${SQLITE_LIBRARY})
@@ -342,6 +393,6 @@ IF(MSVC)
 ENDIF(MSVC)
 
 ########## Install headers for developers to use against qgis libs
-#commented out since app classes dont go into any lib there is little point
+#commented out since app classes don't go into any lib there is little point
 #INSTALL(FILES ${CMAKE_BINARY_DIR}/src/ui/ui_qgsmeasurebase.h DESTINATION ${QGIS_INCLUDE_DIR})
 #INSTALL(FILES ${QGIS_APP_MOC_HDRS} DESTINATION ${QGIS_INCLUDE_DIR})

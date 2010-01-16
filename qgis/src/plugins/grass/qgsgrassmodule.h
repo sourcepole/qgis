@@ -57,6 +57,8 @@ class QgsGrassModule: public QDialog, private  Ui::QgsGrassModuleBase
     //! Destructor
     ~QgsGrassModule();
 
+    QString translate( QString string );
+
     //! Returns module label for module description path
     static QString label( QString path );
 
@@ -233,8 +235,10 @@ class QgsGrassModuleOptions
  *  \brief Widget with GRASS standard options.
  *
  */
-class QgsGrassModuleStandardOptions: public QgsGrassModuleOptions, QWidget
+class QgsGrassModuleStandardOptions: QWidget, public QgsGrassModuleOptions
 {
+  Q_OBJECT
+
   public:
     //! Constructor
     QgsGrassModuleStandardOptions(
@@ -252,6 +256,9 @@ class QgsGrassModuleStandardOptions: public QgsGrassModuleOptions, QWidget
     // ! Get item by ID
     QgsGrassModuleItem *item( QString id );
 
+    // ! Get item by key
+    QgsGrassModuleItem *itemByKey( QString key );
+
     // Reimplemented methods from QgsGrassModuleOptions
     QStringList checkOutput();
     void freezeOutput();
@@ -263,6 +270,10 @@ class QgsGrassModuleStandardOptions: public QgsGrassModuleOptions, QWidget
     bool requestsRegion();
     bool inputRegion( struct Cell_head *window, bool all );
     QStringList flagNames() { return mFlagNames; }
+
+  public slots:
+    // ! Show/hide advanced options
+    void switchAdvanced();
 
   private:
     //! Name of module executable
@@ -279,6 +290,12 @@ class QgsGrassModuleStandardOptions: public QgsGrassModuleOptions, QWidget
 
     //! Use of region defined in qgm
     bool mUsesRegion;
+
+    // ! Advanced options switch button
+    QPushButton mAdvancedPushButton;
+
+    // ! Advanced options frame
+    QFrame mAdvancedFrame;
 };
 
 /****************** QgsGrassModuleGroupBoxItem ************************/
@@ -735,7 +752,7 @@ class QgsGrassModuleField: public QgsGrassModuleGroupBoxItem
     QgsGrassModuleStandardOptions *mModuleStandardOptions;
 
     //! Layer key
-    QString mLayerId;
+    QString mLayerKey;
 
     //! Pointer to layer input
     QgsGrassModuleInput *mLayerInput;

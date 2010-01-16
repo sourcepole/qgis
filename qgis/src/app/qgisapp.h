@@ -41,6 +41,7 @@ class QValidator;
 class QgisAppInterface;
 class QgsClipboard;
 class QgsComposer;
+class QgsComposerView;
 class QgsGeometry;
 class QgsHelpViewer;
 class QgsFeature;
@@ -52,12 +53,13 @@ class QgsMapTip;
 class QgsMapTool;
 class QgsPoint;
 class QgsProviderRegistry;
-class QgsPythonDialog;
 class QgsPythonUtils;
 class QgsRasterLayer;
 class QgsRectangle;
 class QgsUndoWidget;
 class QgsVectorLayer;
+
+class QDomDocument;
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -67,6 +69,9 @@ class QgsVectorLayer;
 #include "qgsconfig.h"
 #include "qgsfeature.h"
 #include "qgspoint.h"
+#ifdef HAVE_QWT
+class QgsGPSInformationWidget;
+#endif
 
 /*! \class QgisApp
  * \brief Main window for the Qgis application
@@ -226,10 +231,11 @@ class QgisApp : public QMainWindow
     QAction *actionDeleteSelected() { return mActionDeleteSelected; }
     QAction *actionMoveFeature() { return mActionMoveFeature; }
     QAction *actionSplitFeatures() { return mActionSplitFeatures; }
-    //These three tools are deprecated - use node tool rather...
-    //QAction *actionAddVertex() { return mActionAddVertex; }
-    //QAction *actionDeleteVertex() { return mActionDeleteVertex; }
-    //QAction *actionMoveVertex() { return mActionMoveVertex; }
+#if 0 //These three tools are deprecated - use node tool rather...
+    QAction *actionAddVertex() { return mActionAddVertex; }
+    QAction *actionDeleteVertex() { return mActionDeleteVertex; }
+    QAction *actionMoveVertex() { return mActionMoveVertex; }
+#endif
     QAction *actionAddRing() { return mActionAddRing; }
     QAction *actionAddIsland() { return mActionAddIsland; }
     QAction *actionSimplifyFeature() { return mActionSimplifyFeature; }
@@ -271,6 +277,9 @@ class QgisApp : public QMainWindow
     QAction *actionLayerSaveAs() { return mActionLayerSaveAs; }
     QAction *actionLayerSelectionSaveAs() { return mActionLayerSelectionSaveAs; }
     QAction *actionRemoveLayer() { return mActionRemoveLayer; }
+#ifdef HAVE_QWT
+    QAction *actionGpsTool() { return mActionGpsTool; }
+#endif
     QAction *actionLayerProperties() { return mActionLayerProperties; }
     QAction *actionLayerSeparator2() { return mActionLayerSeparator2; }
     QAction *actionAddToOverview() { return mActionAddToOverview; }
@@ -376,6 +385,15 @@ class QgisApp : public QMainWindow
 
     void loadOGRSublayers( QString layertype, QString uri, QStringList list );
 
+    /**Deletes the selected attributes for the currently selected vector layer*/
+    void deleteSelected( QgsMapLayer *layer = 0 );
+
+    //! project was written
+    void writeProject( QDomDocument & );
+
+    //! project was read
+    void readProject( const QDomDocument & );
+
   protected:
 
     //! Handle state changes (WindowTitleChange)
@@ -414,6 +432,8 @@ class QgisApp : public QMainWindow
     void userCenter();
     //! Remove a layer from the map and legend
     void removeLayer();
+    //! Show GPS tool
+    void showGpsTool();
     //! zoom to extent of layer
     void zoomToLayerExtent();
     //! zoom to actual size of raster layer
@@ -472,6 +492,8 @@ class QgisApp : public QMainWindow
     */
     //! Return pointer to the active layer
     QgsMapLayer *activeLayer();
+    //! set the active layer
+    bool setActiveLayer( QgsMapLayer * );
     //! Open the help contents in a browser
     void helpContents();
     //! Open the QGIS homepage in users browser
@@ -507,8 +529,6 @@ class QgisApp : public QMainWindow
     void captureLine();
     //! activates the capture polygon tool
     void capturePolygon();
-    /**Deletes the selected attributes for the currently selected vector layer*/
-    void deleteSelected();
     //! activates the move feature tool
     void moveFeature();
     //! activates the reshape features tool
@@ -540,6 +560,10 @@ class QgisApp : public QMainWindow
 
     //! activates the selection tool
     void select();
+
+    //! deselect features from all layers
+    void deselectAll();
+
     //! refresh map canvas
     void refreshMapCanvas();
     //! returns pointer to map legend
@@ -581,6 +605,8 @@ class QgisApp : public QMainWindow
     void measure();
     //! Measure area
     void measureArea();
+    //! Measure angle
+    void measureAngle();
 
     //! show the attribute table for the currently selected layer
     void attributeTable();
@@ -658,6 +684,15 @@ class QgisApp : public QMainWindow
      */
     void currentThemeChanged( QString );
 
+    /**This signal is emitted when a new composer instance has been created
+       @note added in version 1.4*/
+    void composerAdded( QgsComposerView* v );
+
+    /**This signal is emitted before a new composer instance is going to be removed
+      @note added in version 1.4*/
+    void composerWillBeRemoved( QgsComposerView* v );
+
+
   private:
     /** This method will open a dialog so the user can select the sublayers
     * to load
@@ -668,10 +703,10 @@ class QgisApp : public QMainWindow
      */
     bool addRasterLayer( QgsRasterLayer * theRasterLayer );
     //@todo We should move these next two into vector layer class
-    /** This helper checks to see whether the file name appears to be a valid vector file name */
-    bool isValidVectorFileName( QString theFileNameQString );
+    /** This helper checks to see whether the file name appears to be a valid shape file name */
+    bool isValidShapeFileName( QString theFileNameQString );
     /** Overloaded version of the above function provided for convenience that takes a qstring pointer */
-    bool isValidVectorFileName( QString * theFileNameQString );
+    bool isValidShapeFileName( QString * theFileNameQString );
     /** add this file to the recently opened/saved projects list
      *  pass settings by reference since creating more than one
      * instance simultaneously results in data loss.
@@ -686,8 +721,8 @@ class QgisApp : public QMainWindow
     //! check to see if file is dirty and if so, prompt the user th save it
     bool saveDirty();
     /** Helper function to union several geometries together (used in function mergeSelectedFeatures)
-      @return 0 in case of error*/
-    QgsGeometry* unionGeometries( const QgsVectorLayer* vl, QgsFeatureList& featureList );
+      @return 0 in case of error or if canceled */
+    QgsGeometry* unionGeometries( const QgsVectorLayer* vl, QgsFeatureList& featureList, bool &canceled );
 
     /**Deletes all the composer objects and clears mPrintComposers*/
     void deletePrintComposers();
@@ -773,8 +808,10 @@ class QgisApp : public QMainWindow
     QAction *mActionZoomIn;
     QAction *mActionZoomOut;
     QAction *mActionSelect;
+    QAction *mActionDeselectAll;
     QAction *mActionIdentify;
     QAction *mActionMeasure;
+    QAction *mActionMeasureAngle;
     QAction *mActionMeasureArea;
     QAction *mActionViewSeparator1;
     QAction *mActionZoomFullExtent;
@@ -802,6 +839,9 @@ class QgisApp : public QMainWindow
     QAction *mActionLayerSaveAs;
     QAction *mActionLayerSelectionSaveAs;
     QAction *mActionRemoveLayer;
+#ifdef HAVE_QWT
+    QAction *mActionGpsTool;
+#endif
     QAction *mActionLayerProperties;
     QAction *mActionLayerSeparator2;
     QAction *mActionAddToOverview;
@@ -862,6 +902,9 @@ class QgisApp : public QMainWindow
     // docks ------------------------------------------
     QDockWidget *mLegendDock;
     QDockWidget *mOverviewDock;
+#ifdef HAVE_QWT
+    QDockWidget *mpGpsDock;
+#endif
 
 #ifdef Q_WS_MAC
     //! Window menu action to select this window
@@ -877,6 +920,7 @@ class QgisApp : public QMainWindow
         QgsMapTool* mIdentify;
         QgsMapTool* mMeasureDist;
         QgsMapTool* mMeasureArea;
+        QgsMapTool* mMeasureAngle;
         QgsMapTool* mCapturePoint;
         QgsMapTool* mCaptureLine;
         QgsMapTool* mCapturePolygon;
@@ -999,7 +1043,6 @@ class QgisApp : public QMainWindow
     //!flag to indicate that the previous screen mode was 'maximised'
     bool mPrevScreenModeMaximized;
 
-    QgsPythonDialog* mPythonConsole;
     QgsPythonUtils* mPythonUtils;
 
     static QgisApp *smInstance;
@@ -1007,6 +1050,13 @@ class QgisApp : public QMainWindow
     QgsUndoWidget* mUndoWidget;
 
     int mLastComposerId;
+
+#ifdef HAVE_QWT
+    //! Persistent GPS toolbox
+    QgsGPSInformationWidget * mpGpsWidget;
+#endif
+    //! project changed
+    void projectChanged( const QDomDocument & );
 };
 
 #endif

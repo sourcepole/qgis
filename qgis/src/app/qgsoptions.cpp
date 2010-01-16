@@ -59,6 +59,9 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   cbxAutoFeatureForm->setChecked( settings.value( "/Map/identifyAutoFeatureForm", false ).toBool() );
   double identifyValue = settings.value( "/Map/identifyRadius", QGis::DEFAULT_IDENTIFY_RADIUS ).toDouble();
   QgsDebugMsg( QString( "Standard Identify radius setting read from settings file: %1" ).arg( identifyValue ) );
+  if ( identifyValue <= 0.0 )
+    identifyValue = QGis::DEFAULT_IDENTIFY_RADIUS;
+  spinBoxIdentifyValue->setMinimum( 0.01 );
   spinBoxIdentifyValue->setValue( identifyValue );
 
 
@@ -111,6 +114,10 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
     }
   }
 
+  //wms search server
+  leWmsSearch->setText( settings.value( "/qgis/WMSSearchUrl", "http://geopole.org/wms/search?search=%1&type=rss" ).toString() );
+
+
   // set the current theme
   cmbTheme->setItemText( cmbTheme->currentIndex(), settings.value( "/Themes" ).toString() );
 
@@ -148,9 +155,28 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
     radMeters->setChecked( true );
   }
 
+  QButtonGroup* angleButtonGroup = new QButtonGroup( this );
+  angleButtonGroup->addButton( mDegreesRadioButton );
+  angleButtonGroup->addButton( mRadiansRadioButton );
+  angleButtonGroup->addButton( mGonRadioButton );
+
+  QString myAngleUnitsTxt = settings.value( "/qgis/measure/angleunits", "degrees" ).toString();
+  if ( myAngleUnitsTxt == "gon" )
+  {
+    mGonRadioButton->setChecked( true );
+  }
+  else if ( myAngleUnitsTxt == "radians" )
+  {
+    mRadiansRadioButton->setChecked( true );
+  }
+  else //degrees
+  {
+    mDegreesRadioButton->setChecked( true );
+  }
+
 
   // add the themes to the combo box on the option dialog
-  QDir myThemeDir( QgsApplication::pkgDataPath() + "/themes/" );
+  QDir myThemeDir( ":/images/themes/" );
   myThemeDir.setFilter( QDir::Dirs );
   QStringList myDirList = myThemeDir.entryList( QStringList( "*" ) );
   cmbTheme->clear();
@@ -181,11 +207,11 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   cbxIdentifyResultsDocked->setChecked( settings.value( "/qgis/dockIdentifyResults", false ).toBool() );
   cbxAddPostgisDC->setChecked( settings.value( "/qgis/addPostgisDC", false ).toBool() );
 
-  //set the colour for selections
+  //set the color for selections
   int myRed = settings.value( "/qgis/default_selection_color_red", 255 ).toInt();
   int myGreen = settings.value( "/qgis/default_selection_color_green", 255 ).toInt();
   int myBlue = settings.value( "/qgis/default_selection_color_blue", 0 ).toInt();
-  pbnSelectionColour->setColor( QColor( myRed, myGreen, myBlue ) );
+  pbnSelectionColor->setColor( QColor( myRed, myGreen, myBlue ) );
 
   //set the default color for canvas background
   myRed = settings.value( "/qgis/default_canvas_color_red", 255 ).toInt();
@@ -197,7 +223,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   myRed = settings.value( "/qgis/default_measure_color_red", 180 ).toInt();
   myGreen = settings.value( "/qgis/default_measure_color_green", 180 ).toInt();
   myBlue = settings.value( "/qgis/default_measure_color_blue", 180 ).toInt();
-  pbnMeasureColour->setColor( QColor( myRed, myGreen, myBlue ) );
+  pbnMeasureColor->setColor( QColor( myRed, myGreen, myBlue ) );
 
   capitaliseCheckBox->setChecked( settings.value( "qgis/capitaliseLayerName", QVariant( false ) ).toBool() );
 
@@ -228,7 +254,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   myRed = settings.value( "/qgis/digitizing/line_color_red", 255 ).toInt();
   myGreen = settings.value( "/qgis/digitizing/line_color_green", 0 ).toInt();
   myBlue = settings.value( "/qgis/digitizing/line_color_blue", 0 ).toInt();
-  mLineColourToolButton->setColor( QColor( myRed, myGreen, myBlue ) );
+  mLineColorToolButton->setColor( QColor( myRed, myGreen, myBlue ) );
 
   //default snap mode
   mDefaultSnapModeComboBox->insertItem( 0, tr( "To vertex" ), "to vertex" );
@@ -248,7 +274,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
     index = mDefaultSnappingToleranceComboBox->findText( tr( "pixels" ) );
   }
   mDefaultSnappingToleranceComboBox->setCurrentIndex( index );
-  if ( settings.value( "/qgis/digitizing/search_radius_vertex_edit_unit", 0 ).toInt() == QgsTolerance::MapUnits )
+  if ( settings.value( "/qgis/digitizing/search_radius_vertex_edit_unit", QgsTolerance::Pixels ).toInt() == QgsTolerance::MapUnits )
   {
     index = mSearchRadiusVertexEditComboBox->findText( tr( "map units" ) );
   }
@@ -256,7 +282,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   {
     index = mSearchRadiusVertexEditComboBox->findText( tr( "pixels" ) );
   }
-  mSearchRadiusVertexEditComboBox->setCurrentIndex( settings.value( "/qgis/digitizing/search_radius_vertex_edit_unit", 0 ).toInt() );
+  mSearchRadiusVertexEditComboBox->setCurrentIndex( index );
 
   //vertex marker
   mMarkersOnlyForSelectedCheckBox->setChecked( settings.value( "/qgis/digitizing/marker_only_for_selected", false ).toBool() );
@@ -265,7 +291,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   mMarkerStyleComboBox->addItem( tr( "Cross" ) );
   mMarkerStyleComboBox->addItem( tr( "None" ) );
 
-  QString markerStyle = settings.value( "/qgis/digitizing/marker_style", "SemiTransparentCircle" ).toString();
+  QString markerStyle = settings.value( "/qgis/digitizing/marker_style", "Cross" ).toString();
   if ( markerStyle == "SemiTransparentCircle" )
   {
     mMarkerStyleComboBox->setCurrentIndex( mMarkerStyleComboBox->findText( tr( "Semi transparent circle" ) ) );
@@ -278,7 +304,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   {
     mMarkerStyleComboBox->setCurrentIndex( mMarkerStyleComboBox->findText( tr( "None" ) ) );
   }
-  mMarkerSizeSpinBox->setValue( settings.value( "/qgis/digitizing/marker_size", 7 ).toInt() );
+  mMarkerSizeSpinBox->setValue( settings.value( "/qgis/digitizing/marker_size", 3 ).toInt() );
 
   chkDisableAttributeValuesDlg->setChecked( settings.value( "/qgis/digitizing/disable_enter_attribute_values_dialog", false ).toBool() );
 
@@ -294,22 +320,45 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   mOverlayAlgorithmComboBox->insertItem( 4, tr( "Popmusic chain (very slow)" ) );
 
   QString overlayAlgorithmString = settings.value( "qgis/overlayPlacementAlgorithm", "Central point" ).toString();
-  if ( overlayAlgorithmString == "Chain" ) {mOverlayAlgorithmComboBox->setCurrentIndex( 1 );}
-  else if ( overlayAlgorithmString == "Popmusic tabu chain" ) {mOverlayAlgorithmComboBox->setCurrentIndex( 2 );}
-  else if ( overlayAlgorithmString == "Popmusic tabu" ) {mOverlayAlgorithmComboBox->setCurrentIndex( 3 );}
-  else if ( overlayAlgorithmString == "Popmusic chain" ) {mOverlayAlgorithmComboBox->setCurrentIndex( 4 );}
-  else {mOverlayAlgorithmComboBox->setCurrentIndex( 0 );} //default is central point
+  if ( overlayAlgorithmString == "Chain" )
+  {
+    mOverlayAlgorithmComboBox->setCurrentIndex( 1 );
+  }
+  else if ( overlayAlgorithmString == "Popmusic tabu chain" )
+  {
+    mOverlayAlgorithmComboBox->setCurrentIndex( 2 );
+  }
+  else if ( overlayAlgorithmString == "Popmusic tabu" )
+  {
+    mOverlayAlgorithmComboBox->setCurrentIndex( 3 );
+  }
+  else if ( overlayAlgorithmString == "Popmusic chain" )
+  {
+    mOverlayAlgorithmComboBox->setCurrentIndex( 4 );
+  }
+  else
+  {
+    mOverlayAlgorithmComboBox->setCurrentIndex( 0 );
+  } //default is central point
+
+  restoreGeometry( settings.value( "/Windows/Options/geometry" ).toByteArray() );
+  listWidget->setCurrentRow( settings.value( "/Windows/Options/row" ).toInt() );
 }
 
 //! Destructor
-QgsOptions::~QgsOptions() {}
-
-void QgsOptions::on_pbnSelectionColour_clicked()
+QgsOptions::~QgsOptions()
 {
-  QColor color = QColorDialog::getColor( pbnSelectionColour->color(), this );
+  QSettings settings;
+  settings.setValue( "/Windows/Options/geometry", saveGeometry() );
+  settings.setValue( "/Windows/Options/row", listWidget->currentRow() );
+}
+
+void QgsOptions::on_pbnSelectionColor_clicked()
+{
+  QColor color = QColorDialog::getColor( pbnSelectionColor->color(), this );
   if ( color.isValid() )
   {
-    pbnSelectionColour->setColor( color );
+    pbnSelectionColor->setColor( color );
   }
 }
 
@@ -322,21 +371,21 @@ void QgsOptions::on_pbnCanvasColor_clicked()
   }
 }
 
-void QgsOptions::on_pbnMeasureColour_clicked()
+void QgsOptions::on_pbnMeasureColor_clicked()
 {
-  QColor color = QColorDialog::getColor( pbnMeasureColour->color(), this );
+  QColor color = QColorDialog::getColor( pbnMeasureColor->color(), this );
   if ( color.isValid() )
   {
-    pbnMeasureColour->setColor( color );
+    pbnMeasureColor->setColor( color );
   }
 }
 
-void QgsOptions::on_mLineColourToolButton_clicked()
+void QgsOptions::on_mLineColorToolButton_clicked()
 {
-  QColor color = QColorDialog::getColor( mLineColourToolButton->color(), this );
+  QColor color = QColorDialog::getColor( mLineColorToolButton->color(), this );
   if ( color.isValid() )
   {
-    mLineColourToolButton->setColor( color );
+    mLineColorToolButton->setColor( color );
   }
 }
 
@@ -392,6 +441,9 @@ void QgsOptions::saveOptions()
     proxyExcludeString += mExcludeUrlListWidget->item( i )->text();
   }
   settings.setValue( "proxy/proxyExcludedUrls", proxyExcludeString );
+
+  //wms search url
+  settings.setValue( "/qgis/WMSSearchUrl", leWmsSearch->text() );
 
   //general settings
   settings.setValue( "/Map/identifyMode", cmbIdentifyMode->itemData( cmbIdentifyMode->currentIndex() ).toInt() );
@@ -474,8 +526,25 @@ void QgsOptions::saveOptions()
     settings.setValue( "/qgis/measure/displayunits", "meters" );
   }
   settings.setValue( "/qgis/measure/ellipsoid", getEllipsoidAcronym( cmbEllipsoid->currentText() ) );
-  //set the colour for selections
-  QColor myColor = pbnSelectionColour->color();
+
+  if ( mDegreesRadioButton->isChecked() )
+  {
+
+  }
+
+  QString angleUnitString = "degrees";
+  if ( mRadiansRadioButton->isChecked() )
+  {
+    angleUnitString = "radians";
+  }
+  else if ( mGonRadioButton->isChecked() )
+  {
+    angleUnitString = "gon";
+  }
+  settings.setValue( "/qgis/measure/angleunits", angleUnitString );
+
+  //set the color for selections
+  QColor myColor = pbnSelectionColor->color();
   settings.setValue( "/qgis/default_selection_color_red", myColor.red() );
   settings.setValue( "/qgis/default_selection_color_green", myColor.green() );
   settings.setValue( "/qgis/default_selection_color_blue", myColor.blue() );
@@ -487,7 +556,7 @@ void QgsOptions::saveOptions()
   settings.setValue( "/qgis/default_canvas_color_blue", myColor.blue() );
 
   //set the default color for the measure tool
-  myColor = pbnMeasureColour->color();
+  myColor = pbnMeasureColor->color();
   settings.setValue( "/qgis/default_measure_color_red", myColor.red() );
   settings.setValue( "/qgis/default_measure_color_green", myColor.green() );
   settings.setValue( "/qgis/default_measure_color_blue", myColor.blue() );
@@ -497,7 +566,7 @@ void QgsOptions::saveOptions()
 
   //digitizing
   settings.setValue( "/qgis/digitizing/line_width", mLineWidthSpinBox->value() );
-  QColor digitizingColor = mLineColourToolButton->color();
+  QColor digitizingColor = mLineColorToolButton->color();
   settings.setValue( "/qgis/digitizing/line_color_red", digitizingColor.red() );
   settings.setValue( "/qgis/digitizing/line_color_green", digitizingColor.green() );
   settings.setValue( "/qgis/digitizing/line_color_blue", digitizingColor.blue() );

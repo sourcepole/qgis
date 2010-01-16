@@ -7,6 +7,7 @@
 
 %Import core/core.sip
 
+%Include qgslegendinterface.sip
 %Include qgisinterface.sip
 %Include qgscomposerview.sip
 %Include qgsencodingfiledialog.sip
@@ -22,6 +23,7 @@
 %Include qgsmaptoolzoom.sip
 %Include qgsmapoverviewcanvas.sip
 %Include qgsmessageviewer.sip
+%Include qgsprojectbadlayerguihandler.sip
 %Include qgsprojectionselector.sip
 %Include qgsquickprint.sip
 %Include qgsrubberband.sip

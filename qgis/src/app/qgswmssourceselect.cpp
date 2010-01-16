@@ -56,10 +56,10 @@ QgsWMSSourceSelect::QgsWMSSourceSelect( QWidget * parent, Qt::WFlags fl )
     mWmsProvider( 0 )
 {
   setupUi( this );
+
   mAddButton = new QPushButton( tr( "&Add" ) );
   buttonBox->addButton( mAddButton, QDialogButtonBox::ActionRole );
   connect( mAddButton, SIGNAL( clicked() ), this, SLOT( addClicked() ) );
-  connect( buttonBox, SIGNAL( helpRequested() ), this, SLOT( helpClicked() ) );
 
   mLayerUpButton->setIcon( QgisApp::getThemeIcon( "/mActionArrowUp.png" ) );
   mLayerDownButton->setIcon( QgisApp::getThemeIcon( "/mActionArrowDown.png" ) );
@@ -206,13 +206,6 @@ void QgsWMSSourceSelect::on_btnDelete_clicked()
     cmbConnections->removeItem( cmbConnections->currentIndex() );  // populateConnectionList();
     setConnectionListPosition();
   }
-}
-
-void QgsWMSSourceSelect::helpClicked()
-{
-
-  QgsContextHelp::run( context_id );
-
 }
 
 QgsNumericSortTreeWidgetItem *QgsWMSSourceSelect::createItem(
@@ -828,7 +821,9 @@ bool QgsWMSSourceSelect::retrieveSearchResults( const QString& searchTerm, QByte
   }
   // Get username/password from settings for protected WMS
 
-  QUrl url( QString( "http://geopole.org/wms/search?search=%1&type=rss" ).arg( searchTerm ) );
+  QString mySearchUrl = settings.value("/qgis/WMSSearchUrl", "http://geopole.org/wms/search?search=%1&type=rss").toString();
+  QUrl url( mySearchUrl.arg( searchTerm ) );
+  QgsDebugMsg( url.toString() );
   QgsHttpTransaction http( url.toEncoded(),
                            proxyHost, proxyPort, proxyUser, proxyPassword, proxyType );
 

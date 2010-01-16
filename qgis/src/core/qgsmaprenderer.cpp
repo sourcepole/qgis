@@ -58,6 +58,8 @@ QgsMapRenderer::QgsMapRenderer()
   mDestCRS = new QgsCoordinateReferenceSystem( GEO_EPSG_CRS_ID, QgsCoordinateReferenceSystem::EpsgCrsId ); //WGS 84
 
   mOutputUnits = QgsMapRenderer::Millimeters;
+
+  mLabelingEngine = NULL;
 }
 
 QgsMapRenderer::~QgsMapRenderer()
@@ -65,6 +67,7 @@ QgsMapRenderer::~QgsMapRenderer()
   delete mScaleCalculator;
   delete mDistArea;
   delete mDestCRS;
+  delete mLabelingEngine;
 }
 
 
@@ -177,16 +180,10 @@ void QgsMapRenderer::adjustExtentToSize()
     dymax = mExtent.yMaximum() + whitespace;
   }
 
-#ifdef QGISDEBUG
-  QString myMessage = "+-------------------MapRenderer--------------------------------+\n";
-  myMessage += QString( "Map units per pixel (x,y) : %1, %2\n" ).arg( mapUnitsPerPixelX ).arg( mapUnitsPerPixelY );
-  myMessage += QString( "Pixmap dimensions (x,y) : %1, %2\n" ).arg( myWidth ).arg( myHeight );
-  myMessage += QString( "Extent dimensions (x,y) : %1, %2\n" ).arg( mExtent.width() ).arg( mExtent.height() );
-  myMessage += mExtent.toString();
-  std::cout << myMessage.toLocal8Bit().constData() << std::endl; // OK
-
-#endif
-
+  QgsDebugMsg( QString( "Map units per pixel (x,y) : %1, %2\n" ).arg( mapUnitsPerPixelX ).arg( mapUnitsPerPixelY ) );
+  QgsDebugMsg( QString( "Pixmap dimensions (x,y) : %1, %2\n" ).arg( myWidth ).arg( myHeight ) );
+  QgsDebugMsg( QString( "Extent dimensions (x,y) : %1, %2\n" ).arg( mExtent.width() ).arg( mExtent.height() ) );
+  QgsDebugMsg( mExtent.toString() );
 
   // update extent
   mExtent.setXMinimum( dxmin );
@@ -197,9 +194,7 @@ void QgsMapRenderer::adjustExtentToSize()
   // update the scale
   updateScale();
 
-#ifdef QGISDEBUG
-  QgsLogger::debug( "Scale (assuming meters as map units) = 1", mScale, 1, __FILE__, __FUNCTION__, __LINE__ );
-#endif
+  QgsDebugMsg( QString( "Scale (assuming meters as map units) = 1:%1" ).arg( mScale ) );
 
   newCoordXForm.setParameters( mMapUnitsPerPixel, dxmin, dymin, myHeight );
   mRenderContext.setMapToPixel( newCoordXForm );
@@ -209,7 +204,7 @@ void QgsMapRenderer::adjustExtentToSize()
 
 void QgsMapRenderer::render( QPainter* painter )
 {
-  //flag to see if the render context has changed 
+  //flag to see if the render context has changed
   //since the last time we rendered. If it hasnt changed we can
   //take some shortcuts with rendering
   bool mySameAsLastFlag = true;
@@ -218,7 +213,7 @@ void QgsMapRenderer::render( QPainter* painter )
 
   if ( mExtent.isEmpty() )
   {
-    QgsLogger::debug( "empty extent... not rendering" );
+    QgsDebugMsg( "empty extent... not rendering" );
     return;
   }
 
@@ -282,16 +277,20 @@ void QgsMapRenderer::render( QPainter* painter )
     mySameAsLastFlag = false;
   }
 
-  // know we know if this render is just a repeat of the last time, we 
+  mRenderContext.setLabelingEngine( mLabelingEngine );
+  if ( mLabelingEngine )
+    mLabelingEngine->init();
+
+  // know we know if this render is just a repeat of the last time, we
   // can clear caches if it has changed
   if ( !mySameAsLastFlag )
   {
-      //clear the cache pixmap if we changed resolution / extent
-      QSettings mySettings;
-      if ( mySettings.value ( "/qgis/enable_render_caching", false ).toBool() )
-      {
-        QgsMapLayerRegistry::instance()->clearAllLayerCaches();
-      }
+    //clear the cache pixmap if we changed resolution / extent
+    QSettings mySettings;
+    if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
+    {
+      QgsMapLayerRegistry::instance()->clearAllLayerCaches();
+    }
   }
 
   bool placeOverlays = false;
@@ -315,7 +314,7 @@ void QgsMapRenderer::render( QPainter* painter )
       break;
     }
 
-    // Store the painter in case we need to swap it out for the 
+    // Store the painter in case we need to swap it out for the
     // cache painter
     QPainter * mypContextPainter = mRenderContext.painter();
 
@@ -336,7 +335,7 @@ void QgsMapRenderer::render( QPainter* painter )
 
     if ( !ml )
     {
-      QgsLogger::warning( "Layer not found in registry!" );
+      QgsDebugMsg( "Layer not found in registry!" );
       continue;
     }
 
@@ -407,25 +406,27 @@ void QgsMapRenderer::render( QPainter* painter )
       }
 
       // Force render of layers that are being edited
+      // or if there's a labeling engine that needs the layer to register features
       if ( ml->type() == QgsMapLayer::VectorLayer )
       {
         QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
-        if ( vl->isEditable() )
+        if ( vl->isEditable() ||
+             ( mRenderContext.labelingEngine() && mRenderContext.labelingEngine()->willUseLayer( vl ) ) )
         {
           ml->setCacheImage( 0 );
         }
       }
-        
+
       QSettings mySettings;
       if ( ! split )//render caching does not yet cater for split extents
       {
-        if ( mySettings.value ( "/qgis/enable_render_caching", false ).toBool() )
+        if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
         {
-          if ( !mySameAsLastFlag || ml->cacheImage() == 0 ) 
+          if ( !mySameAsLastFlag || ml->cacheImage() == 0 )
           {
             QgsDebugMsg( "\n\n\nCaching enabled but layer redraw forced by extent change or empty cache\n\n\n" );
-            QImage * mypImage = new QImage( mRenderContext.painter()->device()->width(), 
-                mRenderContext.painter()->device()->height(), QImage::Format_ARGB32 ); 
+            QImage * mypImage = new QImage( mRenderContext.painter()->device()->width(),
+                                            mRenderContext.painter()->device()->height(), QImage::Format_ARGB32 );
             mypImage->fill( 0 );
             ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
             QPainter * mypPainter = new QPainter( ml->cacheImage() );
@@ -433,13 +434,13 @@ void QgsMapRenderer::render( QPainter* painter )
             {
               mypPainter->setRenderHint( QPainter::Antialiasing );
             }
-            mRenderContext.setPainter( mypPainter  );
+            mRenderContext.setPainter( mypPainter );
           }
           else if ( mySameAsLastFlag )
           {
             //draw from cached image
             QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
-            mypContextPainter->drawImage( 0,0, *(ml->cacheImage()) );
+            mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
             disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
             //short circuit as there is nothing else to do...
             continue;
@@ -465,8 +466,9 @@ void QgsMapRenderer::render( QPainter* painter )
       }
       else
       {
-            QgsDebugMsg( "\n\n\nLayer rendered without issues\n\n\n" );
+        QgsDebugMsg( "Layer rendered without issues" );
       }
+
       if ( split )
       {
         mRenderContext.setExtent( r2 );
@@ -482,16 +484,16 @@ void QgsMapRenderer::render( QPainter* painter )
         mRenderContext.painter()->restore();
       }
 
-      if ( mySettings.value ( "/qgis/enable_render_caching", false ).toBool() )
+      if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
       {
         if ( !split )
         {
           // composite the cached image into our view and then clean up from caching
           // by reinstating the painter as it was swapped out for caching renders
           delete mRenderContext.painter();
-          mRenderContext.setPainter( mypContextPainter  );
+          mRenderContext.setPainter( mypContextPainter );
           //draw from cached image that we created further up
-          mypContextPainter->drawImage( 0,0, *(ml->cacheImage()) );
+          mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
         }
       }
       disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
@@ -499,7 +501,7 @@ void QgsMapRenderer::render( QPainter* painter )
     else // layer not visible due to scale
     {
       QgsDebugMsg( "Layer not rendered because it is not within the defined "
-          "visibility scale range" );
+                   "visibility scale range" );
     }
 
   } // while (li.hasPrevious())
@@ -572,6 +574,16 @@ void QgsMapRenderer::render( QPainter* painter )
   // make sure progress bar arrives at 100%!
   emit drawingProgress( 1, 1 );
 
+  if ( mLabelingEngine )
+  {
+    // set correct extent
+    mRenderContext.setExtent( mExtent );
+    mRenderContext.setCoordinateTransform( NULL );
+
+    mLabelingEngine->drawLabeling( mRenderContext );
+    mLabelingEngine->exit();
+  }
+
   QgsDebugMsg( "Rendering completed in (seconds): " + QString( "%1" ).arg( renderTime.elapsed() / 1000.0 ) );
 
   mDrawing = false;
@@ -635,9 +647,9 @@ void QgsMapRenderer::setDestinationSrs( const QgsCoordinateReferenceSystem& srs 
 
 const QgsCoordinateReferenceSystem& QgsMapRenderer::destinationSrs()
 {
-  QgsDebugMsg( "* Returning destCRS" );
-  QgsDebugMsg( "* DestCRS.srsid() = " + QString::number( mDestCRS->srsid() ) );
-  QgsDebugMsg( "* DestCRS.proj4() = " + mDestCRS->toProj4() );
+  QgsDebugMsgLevel( "* Returning destCRS", 3 );
+  QgsDebugMsgLevel( "* DestCRS.srsid() = " + QString::number( mDestCRS->srsid() ), 3 );
+  QgsDebugMsgLevel( "* DestCRS.proj4() = " + mDestCRS->toProj4(), 3 );
   return *mDestCRS;
 }
 
@@ -691,7 +703,7 @@ bool QgsMapRenderer::splitLayersExtent( QgsMapLayer* layer, QgsRectangle& extent
     catch ( QgsCsException &cse )
     {
       Q_UNUSED( cse );
-      QgsLogger::warning( "Transform error caught in " + QString( __FILE__ ) + ", line " + QString::number( __LINE__ ) );
+      QgsDebugMsg( "Transform error caught" );
       extent = QgsRectangle( -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX );
       r2     = QgsRectangle( -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX );
     }
@@ -735,7 +747,7 @@ QgsPoint QgsMapRenderer::layerToMapCoordinates( QgsMapLayer* theLayer, QgsPoint 
     catch ( QgsCsException &cse )
     {
       Q_UNUSED( cse );
-      QgsDebugMsg( QString( "Transform error caught:%s" ).arg( cse.what() ) );
+      QgsDebugMsg( QString( "Transform error caught: %1" ).arg( cse.what() ) );
     }
   }
   else
@@ -756,7 +768,7 @@ QgsPoint QgsMapRenderer::mapToLayerCoordinates( QgsMapLayer* theLayer, QgsPoint 
     }
     catch ( QgsCsException &cse )
     {
-      QgsDebugMsg( QString( "Transform error caught: %s" ).arg( cse.what() ) );
+      QgsDebugMsg( QString( "Transform error caught: %1" ).arg( cse.what() ) );
       throw cse; //let client classes know there was a transformation error
     }
   }
@@ -803,7 +815,7 @@ void QgsMapRenderer::updateFullExtent()
     QgsMapLayer * lyr = registry->mapLayer( *it );
     if ( lyr == NULL )
     {
-      QgsLogger::warning( "WARNING: layer '" + ( *it ) + "' not found in map layer registry!" );
+      QgsDebugMsg( QString( "WARNING: layer '%1' not found in map layer registry!" ).arg( *it ) );
     }
     else
     {
@@ -1040,4 +1052,12 @@ bool QgsMapRenderer::writeXML( QDomNode & theNode, QDomDocument & theDoc )
   destinationSrs().writeXML( srsNode, theDoc );
 
   return true;
+}
+
+void QgsMapRenderer::setLabelingEngine( QgsLabelingEngineInterface* iface )
+{
+  if ( mLabelingEngine )
+    delete mLabelingEngine;
+
+  mLabelingEngine = iface;
 }

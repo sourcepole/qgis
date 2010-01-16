@@ -53,17 +53,6 @@ typedef QList<int> QgsAttributeList;
 typedef QSet<int> QgsFeatureIds;
 typedef QSet<int> QgsAttributeIds;
 
-class QgsLabelingEngineInterface
-{
-public:
-  virtual ~QgsLabelingEngineInterface() {}
-  virtual int prepareLayer(QgsVectorLayer* layer, int& attrIndex) = 0;
-  virtual void registerFeature(QgsVectorLayer* layer, QgsFeature& feat) = 0;
-  //void calculateLabeling() = 0;
-  //void drawLabeling(QgsRenderContext& context) = 0;
-};
-
-
 
 /** \ingroup core
  * Vector layer backed by a data source provider.
@@ -86,7 +75,8 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
       FileName,
       Enumeration,
       Immutable,   /*The attribute value should not be changed in the attribute form*/
-      Hidden       /*The attribute value should not be shown in the attribute form @added in 1.4 */
+      Hidden,      /*The attribute value should not be shown in the attribute form @added in 1.4 */
+      TextEdit     /*multiline edit @added in 1.4*/
     };
 
     struct RangeData
@@ -176,15 +166,15 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /** Sets the renderer. If a renderer is already present, it is deleted */
     void setRenderer( QgsRenderer * r );
-    
+
     /** Return renderer V2. Added in QGIS 1.4 */
     QgsFeatureRendererV2* rendererV2();
     /** Set renderer V2. Added in QGIS 1.4 */
-    void setRendererV2(QgsFeatureRendererV2* r);
+    void setRendererV2( QgsFeatureRendererV2* r );
     /** Return whether using renderer V2. Added in QGIS 1.4 */
     bool isUsingRendererV2();
     /** set whether to use renderer V2 for drawing. Added in QGIS 1.4 */
-    void setUsingRendererV2(bool usingRendererV2);
+    void setUsingRendererV2( bool usingRendererV2 );
 
     /** Draw layer with renderer V2. Added in QGIS 1.4 */
     void drawRendererV2( QgsRenderContext& rendererContext, bool labeling );
@@ -343,8 +333,8 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /**Adds a vertex to segments which intersect point p but don't
      already have a vertex there. If a feature already has a vertex at position p,
-     no additional vertex is inserted. This method is usefull for topological
-    editing.
+     no additional vertex is inserted. This method is useful for topological
+     editing.
     @param p position of the vertex
     @return 0 in case of success*/
     int addTopologicalPoints( const QgsPoint& p );
@@ -360,9 +350,6 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /** Label is on */
     bool hasLabelsEnabled( void ) const;
-
-    /** Assign a custom labeling engine with layer. Added in v1.4 */
-    void setLabelingEngine(QgsLabelingEngineInterface* engine);
 
     /** Returns true if the provider is in editing mode */
     virtual bool isEditable() const;
@@ -477,10 +464,10 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /**set edit type*/
     void setEditType( int idx, EditType edit );
- 
+
     /** set string representing 'true' for a checkbox (added in 1.4) */
     void setCheckedState( int idx, QString checked, QString notChecked );
-    
+
     /** return string representing 'true' for a checkbox (added in 1.4) */
     QPair<QString, QString> checkedState( int idx );
 
@@ -489,6 +476,12 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
     /** set edit form (added in 1.4) */
     void setEditForm( QString ui );
+
+    /** get python function for edit form initialization (added in 1.4) */
+    QString editFormInit();
+
+    /** set python function for edit form initialization (added in 1.4) */
+    void setEditFormInit( QString function );
 
     /**access value map*/
     QMap<QString, QVariant> &valueMap( int idx );
@@ -535,6 +528,24 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     /** Execute redo operation. To be called only from QgsVectorLayerUndoCommand. */
     void redoEditCommand( QgsUndoCommand* cmd );
 
+    /** Returns the index of a field name or -1 if the field does not exist
+      @note this method was added in version 1.4
+     */
+    int fieldNameIndex( const QString& fieldName ) const;
+
+    /** Editing vertex markers
+      @note public from version 1.4 */
+    enum VertexMarkerType
+    {
+      SemiTransparentCircle,
+      Cross,
+      NoMarker  /* added in version 1.1 */
+    };
+
+    /** Draws a vertex symbol at (screen) coordinates x, y. (Useful to assist vertex editing.)
+      @note public and static from version 1.4 */
+    static void drawVertexMarker( double x, double y, QPainter& p, QgsVectorLayer::VertexMarkerType type, int vertexSize );
+
   public slots:
     /** Select feature by its ID, optionally emit signal selectionChanged() */
     void select( int featureId, bool emitSignal = TRUE );
@@ -570,13 +581,6 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     void attributeValueChanged( int fid, int idx, const QVariant & );
 
   private:                       // Private methods
-
-    enum VertexMarkerType
-    {
-      SemiTransparentCircle,
-      Cross,
-      NoMarker  /* added in version 1.1 */
-    };
 
     /** vector layers are not copyable */
     QgsVectorLayer( QgsVectorLayer const & rhs );
@@ -618,9 +622,6 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     /**Deletes the geometries in mCachedGeometries*/
     void deleteCachedGeometries();
 
-    /** Draws a vertex symbol at (screen) coordinates x, y. (Useful to assist vertex editing.) */
-    void drawVertexMarker( int x, int y, QPainter& p, QgsVectorLayer::VertexMarkerType type, int vertexSize );
-
     /**Snaps to a geometry and adds the result to the multimap if it is within the snapping result
      @param startPoint start point of the snap
      @param geom geometry to snap
@@ -636,10 +637,10 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     int boundingBoxFromPointList( const QList<QgsPoint>& list, double& xmin, double& ymin, double& xmax, double& ymax ) const;
 
     /**Reads vertex marker type from settings*/
-    QgsVectorLayer::VertexMarkerType currentVertexMarkerType();
+    static QgsVectorLayer::VertexMarkerType currentVertexMarkerType();
 
     /**Reads vertex marker size from settings*/
-    int currentVertexMarkerSize();
+    static int currentVertexMarkerSize();
 
     /**Update feature with uncommited attribute updates*/
     void updateFeatureAttributes( QgsFeature &f );
@@ -732,20 +733,19 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     /** Geometry type as defined in enum WkbType (qgis.h) */
     int mWkbType;
 
+    QgsUndoCommand * mActiveCommand;
+
     /** Renderer object which holds the information about how to display the features */
     QgsRenderer *mRenderer;
-    
+
     /** Renderer V2 */
     QgsFeatureRendererV2 *mRendererV2;
-    
+
     /** whether to use V1 or V2 renderer */
     bool mUsingRendererV2;
 
     /** Label */
     QgsLabel *mLabel;
-
-    QgsLabelingEngineInterface* mLabelingEngine;
-
 
     /** Display labels */
     bool mLabelOn;
@@ -767,8 +767,9 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     QMap< QString, EditType > mEditTypes;
     QMap< QString, QMap<QString, QVariant> > mValueMaps;
     QMap< QString, RangeData > mRanges;
-    QMap< QString, QPair<QString,QString> > mCheckedStates;
-    QString mEditForm;
+    QMap< QString, QPair<QString, QString> > mCheckedStates;
+
+    QString mEditForm, mEditFormInit;
 
     bool mFetching;
     QgsRectangle mFetchRect;
@@ -778,8 +779,6 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     QSet<int> mFetchConsidered;
     QgsGeometryMap::iterator mFetchChangedGeomIt;
     QgsFeatureList::iterator mFetchAddedFeaturesIt;
-
-    QgsUndoCommand * mActiveCommand;
 };
 
 #endif

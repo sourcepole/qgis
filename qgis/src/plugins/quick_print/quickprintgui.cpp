@@ -98,7 +98,7 @@ void QuickPrintGui::writeSettings()
 void QuickPrintGui::on_buttonBox_accepted()
 {
   writeSettings();
-  QSettings mySettings;  // where we keep last used filter in persistant state
+  QSettings mySettings;  // where we keep last used filter in persistent state
   QString myLastUsedDir = mySettings.value( "quickprint/lastSaveAsPdfDir", "." ).toString();
 
   //create a file dialog
@@ -166,9 +166,3 @@ void QuickPrintGui::on_buttonBox_rejected()
 {
   reject();
 }
-
-void QuickPrintGui::on_buttonBox_helpRequested()
-{
-  QgsContextHelp::run( context_id );
-}
-

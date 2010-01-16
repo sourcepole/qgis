@@ -37,6 +37,7 @@ class QgsMapLayer;
 class QgsMapCanvas;
 class QgsRasterLayer;
 class QgsVectorLayer;
+class QgsLegendInterface;
 
 /** \ingroup gui
  * QgisInterface
@@ -61,6 +62,11 @@ class GUI_EXPORT QgisInterface : public QObject
 
     /** Virtual destructor */
     virtual ~QgisInterface();
+
+    /** Get pointer to legend interface
+      \note added in 1.4
+     */
+    virtual QgsLegendInterface* legendInterface() = 0;
 
 
   public slots: // TODO: do these functions really need to be slots?
@@ -94,6 +100,11 @@ class GUI_EXPORT QgisInterface : public QObject
 
     //! Get pointer to the active layer (layer selected in the legend)
     virtual QgsMapLayer *activeLayer() = 0;
+
+    //! Set the active layer (layer gets selected in the legend)
+    //! returns true if the layer exists, false otherwise
+    //! added in 1.4
+    virtual bool setActiveLayer( QgsMapLayer * ) = 0;
 
     //! Add an icon to the plugins toolbar
     virtual int addToolBarIcon( QAction *qAction ) = 0;
@@ -281,7 +292,12 @@ class GUI_EXPORT QgisInterface : public QObject
      *  The pointer to layer can be null if no layer is selected
      */
     void currentLayerChanged( QgsMapLayer * layer );
-
+    /**This signal is emitted when a new composer instance has been created
+       @note added in version 1.4*/
+    void composerAdded( QgsComposerView* v );
+    /**This signal is emitted before a new composer instance is going to be removed
+       @note added in version 1.4*/
+    void composerWillBeRemoved( QgsComposerView* v );
 };
 
 // FIXME: also in core/qgis.h

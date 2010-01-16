@@ -25,6 +25,10 @@ from ui_qgsplugininstallerpluginerrorbase import Ui_QgsPluginInstallerPluginErro
 from ui_qgsplugininstallerbase import Ui_QgsPluginInstallerDialogBase
 from installer_data import *
 
+try:
+  from qgis.utils import startPlugin, unloadPlugin
+except Exception:
+  pass
 
 
 # --- common functions ------------------------------------------------------------------- #
@@ -259,6 +263,8 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
     self.connect(self.buttonUninstall, SIGNAL("clicked()"), self.uninstallPlugin)
     self.buttonInstall.setEnabled(False)
     self.buttonUninstall.setEnabled(False)
+    self.buttonHelp.setEnabled(QGIS_14)
+    self.connect(self.buttonHelp, SIGNAL("clicked()"), self.runHelp)
     # repositories handling
     self.connect(self.treeRepositories, SIGNAL("doubleClicked(QModelIndex)"), self.editRepository)
     self.connect(self.buttonFetchRepositories, SIGNAL("clicked()"), self.addKnownRepositories)
@@ -305,10 +311,14 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
       for key in repositories.all():
         repositories.killConnection(key)
 
-    # display error messages for every unavailable reposioty, except the case if all repositories are unavailable!
+    # display error messages for every unavailable reposioty, unless Shift pressed nor all repositories are unavailable
+    keepQuiet = QgsApplication.keyboardModifiers() == Qt.KeyboardModifiers(Qt.ShiftModifier)
     if repositories.allUnavailable() and repositories.allUnavailable() != repositories.allEnabled():
       for key in repositories.allUnavailable():
-        QMessageBox.warning(self, self.tr("QGIS Python Plugin Installer"), self.tr("Error reading repository:") + " " + key + "\n" + repositories.all()[key]["error"])
+        if not keepQuiet:
+          QMessageBox.warning(self, self.tr("QGIS Python Plugin Installer"), self.tr("Error reading repository:") + " " + key + "\n" + repositories.all()[key]["error"])
+        if QgsApplication.keyboardModifiers() == Qt.KeyboardModifiers(Qt.ShiftModifier):
+          keepQuiet = True
 
 
   # ----------------------------------------- #
@@ -494,7 +504,7 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
           a.setToolTip(4,"")
         a.setText(5,repository)
         a.setToolTip(5,p["url"])
-        # set fonts and colours
+        # set fonts and colors
         for i in [0,1,2,3,4,5]:
           if p["error"]:
             a.setForeground(i,QBrush(QColor(Qt.red)))
@@ -593,9 +603,17 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
       plugin = plugins.all()[key]
       if not plugin["error"]:
         if previousStatus in ["not installed", "new"]:
-          infoString = (self.tr("Plugin installed successfully"), self.tr("Python plugin installed.\nNow you need to enable it in Plugin Manager."))
+          if QGIS_14: 
+            infoString = (self.tr("Plugin installed successfully"), self.tr("Plugin installed successfully"))
+            settings = QSettings()
+            settings.setValue("/PythonPlugins/"+plugin["localdir"], QVariant(True))
+          else: infoString = (self.tr("Plugin installed successfully"), self.tr("Python plugin installed.\nNow you need to enable it in Plugin Manager."))
         else:
           infoString = (self.tr("Plugin reinstalled successfully"), self.tr("Python plugin reinstalled.\nYou need to restart Quantum GIS in order to reload it."))
+        try:
+          startPlugin(plugin["localdir"])
+        except:
+          pass
       else:
         if plugin["error"] == "incompatible":
           message = self.tr("The plugin is designed for a newer version of Quantum GIS. The minimum required version is:")
@@ -649,7 +667,7 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
     plugin = plugins.all()[key]
     if not plugin:
       return
-    warning = self.tr("Are you sure you want to uninstall the following plugin?") + "\n" + plugin["name"]
+    warning = self.tr("Are you sure you want to uninstall the following plugin?") + "\n(" + plugin["name"] + ")"
     if plugin["status"] == "orphan" and not plugin["error"]:
       warning += "\n\n"+self.tr("Warning: this plugin isn't available in any accessible repository!")
     if QMessageBox.warning(self, self.tr("QGIS Python Plugin Installer"), warning , QMessageBox.Yes, QMessageBox.No) == QMessageBox.No:
@@ -660,6 +678,10 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
       QMessageBox.warning(self, self.tr("Plugin uninstall failed"), result)
     else:
       # safe remove
+      try:
+        unloadPlugin(plugin["localdir"])
+      except:
+        pass
       try:
         exec ("plugins[%s].unload()" % plugin["localdir"])
         exec ("del plugins[%s]" % plugin["localdir"])
@@ -672,7 +694,8 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
       plugins.getAllInstalled()
       plugins.rebuild()
       self.populatePluginTree()
-      QMessageBox.information(self, self.tr("Plugin uninstalled successfully"), self.tr("Python plugin uninstalled. Note that you may need to restart Quantum GIS in order to remove it completely."))
+      if QGIS_14: QMessageBox.information(self, self.tr("Plugin uninstalled successfully"), self.tr("Plugin uninstalled successfully"))
+      else: QMessageBox.information(self, self.tr("Plugin uninstalled successfully"), self.tr("Python plugin uninstalled. Note that you may need to restart Quantum GIS in order to remove it completely."))
       history.markChange(key,'D')
 
 
@@ -832,6 +855,12 @@ class QgsPluginInstallerDialog(QDialog, Ui_QgsPluginInstallerDialogBase):
     plugins.rebuild()
     self.populateMostWidgets()
     self.populatePluginTree()
+
+
+  # ----------------------------------------- #
+  def runHelp(self):
+    """ open the context help browser """
+    QgsContextHelp.run("QgsPluginInstallerDialog")
 
 
   # ----------------------------------------- #

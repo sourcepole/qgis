@@ -5,6 +5,21 @@
 
 SET(QGIS_CORE_SRCS
 
+  gps/qextserialport/qextserialport.cpp
+  gps/qextserialport/qextserialenumerator.cpp
+
+  gps/qgsgpsconnection.cpp
+  gps/qgsgpsconnectionregistry.cpp
+  gps/qgsnmeaconnection.cpp
+  gps/qgsgpsdetector.cpp
+  gps/parse.c
+  gps/sentence.c
+  gps/info.c
+  gps/time.c
+  gps/gmath.c
+  gps/tok.c
+  gps/context.c
+
   symbology-ng/qgssymbolv2.cpp
   symbology-ng/qgssymbollayerv2.cpp
   symbology-ng/qgssymbollayerv2registry.cpp
@@ -19,6 +34,7 @@ SET(QGIS_CORE_SRCS
   symbology-ng/qgsgraduatedsymbolrendererv2.cpp
   symbology-ng/qgsvectorcolorrampv2.cpp
   symbology-ng/qgsstylev2.cpp
+  symbology-ng/qgssymbologyv2conversion.cpp
 
   qgis.cpp
   qgsapplication.cpp
@@ -29,7 +45,6 @@ SET(QGIS_CORE_SRCS
   qgscoordinatetransform.cpp
   qgsdatasourceuri.cpp
   qgsdistancearea.cpp
-  qgsexception.cpp
   qgsfeature.cpp
   qgsfield.cpp
   qgsgeometry.cpp
@@ -71,12 +86,15 @@ SET(QGIS_CORE_SRCS
   qgsvectorlayerundocommand.cpp
   qgsvectoroverlay.cpp
 
+  composer/qgscomposerarrow.cpp
   composer/qgscomposeritem.cpp
   composer/qgscomposeritemgroup.cpp
   composer/qgscomposerlabel.cpp
   composer/qgscomposerpicture.cpp
   composer/qgscomposermap.cpp
+  composer/qgscomposertable.cpp
   composer/qgscomposerscalebar.cpp
+  composer/qgscomposershape.cpp
   composer/qgslegendmodel.cpp
   composer/qgscomposerlegend.cpp
   composer/qgspaperitem.cpp
@@ -128,6 +146,20 @@ SET(QGIS_CORE_SRCS
   spatialindex/qgsspatialindex.cpp
   
   )
+
+IF(WIN32)
+    SET(QGIS_CORE_SRCS
+        ${QGIS_CORE_SRCS}
+        gps/qextserialport/win_qextserialport.cpp
+        )
+    ADD_DEFINITIONS(-D_TTY_WIN_)
+ELSE(WIN32)
+    SET(QGIS_CORE_SRCS
+        ${QGIS_CORE_SRCS}
+        gps/qextserialport/posix_qextserialport.cpp
+    )
+    ADD_DEFINITIONS(-D_TTY_POSIX_)
+ENDIF(WIN32)
 
 IF (WITH_INTERNAL_SPATIALITE)
   IF (WIN32 OR APPLE)
@@ -181,29 +213,39 @@ SET_SOURCE_FILES_PROPERTIES(
 ENDIF (MSVC AND PEDANTIC)
 
 SET(QGIS_CORE_MOC_HDRS
+  qgsapplication.h
+  qgscontexthelp.h
+  qgscoordinatetransform.h
+  qgsdataprovider.h
+  qgshttptransaction.h
+  qgsmaplayer.h
+  qgsmaplayerregistry.h
+  qgsmaprenderer.h
+  qgsmessageoutput.h
+  qgsproject.h
+  qgsrunprocess.h
+  qgsvectorlayer.h
+  qgsrasterdataprovider.h
 
-qgsapplication.h
-qgscontexthelp.h
-qgscoordinatetransform.h
-qgsdataprovider.h
-qgshttptransaction.h
-qgsmaplayer.h
-qgsmaplayerregistry.h
-qgsmaprenderer.h
-qgsmessageoutput.h
-qgsproject.h
-qgsrunprocess.h
-qgsvectorlayer.h
-qgsrasterdataprovider.h
-composer/qgscomposerlegend.h
-composer/qgscomposermap.h
-composer/qgscomposerpicture.h
-composer/qgscomposerscalebar.h
-composer/qgscomposeritemgroup.h
-composer/qgscomposition.h
-composer/qgslegendmodel.h
-symbology/qgsmarkercatalogue.h
-raster/qgsrasterlayer.h
+  composer/qgscomposerlegend.h
+  composer/qgscomposermap.h
+  composer/qgscomposerpicture.h
+  composer/qgscomposerscalebar.h
+  composer/qgscomposeritem.h
+  composer/qgscomposeritemgroup.h
+  composer/qgscomposershape.h
+  composer/qgscomposertable.h
+  composer/qgscomposition.h
+
+  composer/qgslegendmodel.h
+  symbology/qgsmarkercatalogue.h
+  raster/qgsrasterlayer.h
+
+  gps/qgsgpsconnection.h
+  gps/qgsgpsdetector.h
+  gps/qgsnmeaconnection.h
+  gps/qextserialport/qextserialport.h
+  gps/qextserialport/qextserialenumerator.h
 )
 
 QT4_WRAP_CPP(QGIS_CORE_MOC_SRCS ${QGIS_CORE_MOC_HDRS})
@@ -217,6 +259,7 @@ INCLUDE_DIRECTORIES(
   symbology
   spatialindex/include
   symbology-ng
+  gps/qextserialport
   ${PROJ_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
@@ -276,24 +319,25 @@ ADD_DEPENDENCIES(qgis_core svnversion)
 
 # because of htonl
 IF (WIN32)
-  SET(PLATFORM_LIBRARIES wsock32)
-  IF (MSVC)
-    #needed for linking to gdal which needs odbc
-    SET(PLATFORM_LIBRARIES ${PLATFORM_LIBRARIES} odbc32 odbccp32)
-  ENDIF (MSVC)
+  FIND_LIBRARY(SETUPAPI_LIBRARY setupapi)
+  TARGET_LINK_LIBRARIES(qgis_core wsock32 ${SETUPAPI_LIBRARY})
 ENDIF (WIN32)
 
+IF(APPLE)
+  TARGET_LINK_LIBRARIES(qgis_core "-framework CoreFoundation -framework IOKit")
+ENDIF(APPLE)
+
 TARGET_LINK_LIBRARIES(qgis_core
+  ${QT_QTMAIN_LIBRARY} 
+  ${QT_QTXML_LIBRARY} 
   ${QT_QTCORE_LIBRARY} 
   ${QT_QTGUI_LIBRARY} 
-  ${QT_QTXML_LIBRARY} 
-  ${QT_QTSVG_LIBRARY} 
   ${QT_QTNETWORK_LIBRARY} 
-  ${QT_QTMAIN_LIBRARY} 
+  ${QT_QTSVG_LIBRARY} 
+
   ${PROJ_LIBRARY}
   ${GEOS_LIBRARY}
   ${GDAL_LIBRARY}
-  ${PLATFORM_LIBRARIES}
 )
 
 IF (WITH_INTERNAL_SPATIALITE)
@@ -320,83 +364,83 @@ INSTALL(TARGETS qgis_core
 # Added by Tim to install headers
 
 SET(QGIS_CORE_HDRS
-qgis.h
-qgsapplication.h
-qgsattributeaction.h
-qgscentralpointpositionmanager.h
-qgsclipper.h
-qgscontexthelp.h
-qgscoordinatetransform.h
-qgsdatasourceuri.h
-qgsdistancearea.h
-qgscsexception.h
-qgsexception.h
-qgsfeature.h
-qgsfield.h
-qgsgeometry.h
-qgshttptransaction.h
-qgslabel.h
-qgslabelattributes.h
-qgslogger.h
-qgsmaplayer.h
-qgsmaplayerregistry.h
-qgsmaprenderer.h
-qgsmaptopixel.h
-qgsmessageoutput.h
-qgsoverlayobjectpositionmanager.h
-qgspalobjectpositionmanager.h
-qgspluginlayerregistry.h
-qgspoint.h
-qgsproject.h
-qgsprojectfiletransform.h
-qgsprojectproperty.h
-qgsprojectversion.h
-qgsprovidercountcalcevent.h
-qgsproviderextentcalcevent.h
-qgsprovidermetadata.h
-qgsproviderregistry.h
-qgsrasterdataprovider.h
-qgsrectangle.h
-qgsrendercontext.h
-qgsrunprocess.h
-qgsscalecalculator.h
-qgssearchstring.h
-qgssearchtreenode.h
-qgssnapper.h
-qgscoordinatereferencesystem.h
-qgsvectordataprovider.h
-qgsvectorfilewriter.h
-qgsvectorlayer.h
-qgsvectoroverlay.h
-qgstolerance.h
+  qgis.h
+  qgsapplication.h
+  qgsattributeaction.h
+  qgscentralpointpositionmanager.h
+  qgsclipper.h
+  qgscontexthelp.h
+  qgscoordinatetransform.h
+  qgsdatasourceuri.h
+  qgsdistancearea.h
+  qgscsexception.h
+  qgsexception.h
+  qgsfeature.h
+  qgsfield.h
+  qgsgeometry.h
+  qgshttptransaction.h
+  qgslabel.h
+  qgslabelattributes.h
+  qgslogger.h
+  qgsmaplayer.h
+  qgsmaplayerregistry.h
+  qgsmaprenderer.h
+  qgsmaptopixel.h
+  qgsmessageoutput.h
+  qgsoverlayobjectpositionmanager.h
+  qgspalobjectpositionmanager.h
+  qgspluginlayerregistry.h
+  qgspoint.h
+  qgsproject.h
+  qgsprojectfiletransform.h
+  qgsprojectproperty.h
+  qgsprojectversion.h
+  qgsprovidercountcalcevent.h
+  qgsproviderextentcalcevent.h
+  qgsprovidermetadata.h
+  qgsproviderregistry.h
+  qgsrasterdataprovider.h
+  qgsrectangle.h
+  qgsrendercontext.h
+  qgsrunprocess.h
+  qgsscalecalculator.h
+  qgssearchstring.h
+  qgssearchtreenode.h
+  qgssnapper.h
+  qgscoordinatereferencesystem.h
+  qgsvectordataprovider.h
+  qgsvectorfilewriter.h
+  qgsvectorlayer.h
+  qgsvectoroverlay.h
+  qgstolerance.h
 
-raster/qgscliptominmaxenhancement.h
-raster/qgscolorrampshader.h
-raster/qgscolorrampshader.h
-raster/qgscontrastenhancement.h
-raster/qgscontrastenhancementfunction.h
-raster/qgsfreakoutshader.h
-raster/qgslinearminmaxenhancement.h
-raster/qgslinearminmaxenhancementwithclip.h
-raster/qgspseudocolorshader.h
-raster/qgsrasterbandstats.h
-raster/qgsrasterlayer.h
-raster/qgsrastertransparency.h
-raster/qgsrastershader.h
-raster/qgsrastershaderfunction.h
-raster/qgsrasterviewport.h
+  raster/qgscliptominmaxenhancement.h
+  raster/qgscolorrampshader.h
+  raster/qgscolorrampshader.h
+  raster/qgscontrastenhancement.h
+  raster/qgscontrastenhancementfunction.h
+  raster/qgsfreakoutshader.h
+  raster/qgslinearminmaxenhancement.h
+  raster/qgslinearminmaxenhancementwithclip.h
+  raster/qgspseudocolorshader.h
+  raster/qgsrasterbandstats.h
+  raster/qgsrasterlayer.h
+  raster/qgsrastertransparency.h
+  raster/qgsrastershader.h
+  raster/qgsrastershaderfunction.h
+  raster/qgsrasterviewport.h
+  
+  renderer/qgscontinuouscolorrenderer.h
+  renderer/qgsgraduatedsymbolrenderer.h
+  renderer/qgsrenderer.h
+  renderer/qgssinglesymbolrenderer.h
+  renderer/qgsuniquevaluerenderer.h
 
-renderer/qgscontinuouscolorrenderer.h
-renderer/qgsgraduatedsymbolrenderer.h
-renderer/qgsrenderer.h
-renderer/qgssinglesymbolrenderer.h
-renderer/qgsuniquevaluerenderer.h
+  symbology/qgsmarkercatalogue.h
+  symbology/qgssymbol.h
+  symbology/qgssymbologyutils.h
 
-symbology/qgsmarkercatalogue.h
-symbology/qgssymbol.h
-symbology/qgssymbologyutils.h
-
-spatialindex/qgsspatialindex.h
+  spatialindex/qgsspatialindex.h
 )
 
 INSTALL(CODE "MESSAGE(\"Installing CORE headers...\")")

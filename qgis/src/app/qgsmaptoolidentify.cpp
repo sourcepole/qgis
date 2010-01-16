@@ -38,6 +38,7 @@
 #include <QMouseEvent>
 #include <QCursor>
 #include <QPixmap>
+#include <QStatusBar>
 
 QgsMapToolIdentify::QgsMapToolIdentify( QgsMapCanvas* canvas )
     : QgsMapTool( canvas )
@@ -156,7 +157,7 @@ void QgsMapToolIdentify::canvasReleaseEvent( QMouseEvent * e )
     {
       results()->clear();
     }
-    QMessageBox::information( 0, tr( "Identify results" ), tr( "No features at this position found." ) );
+    QgisApp::instance()->statusBar()->showMessage( tr( "No features at this position found." ) );
   }
 }
 
@@ -204,6 +205,9 @@ bool QgsMapToolIdentify::identifyVectorLayer( QgsVectorLayer *layer, int x, int 
   QSettings settings;
   double identifyValue = settings.value( "/Map/identifyRadius", QGis::DEFAULT_IDENTIFY_RADIUS ).toDouble();
   QString ellipsoid = settings.value( "/qgis/measure/ellipsoid", "WGS84" ).toString();
+
+  if ( identifyValue <= 0.0 )
+    identifyValue = QGis::DEFAULT_IDENTIFY_RADIUS;
 
   int featureCount = 0;
   const QgsFieldMap& fields = layer->pendingFields();

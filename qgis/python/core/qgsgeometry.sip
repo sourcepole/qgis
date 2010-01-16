@@ -195,7 +195,11 @@ not disjoint with existing polygons of the feature*/
      @return 0 in case of success*/
     int translate(double dx, double dy);
 
- /**Splits this geometry according to a given line. Note that the geometry is only splitted once. If there are several intersections
+ /**Transform this geometry as described by CoordinateTranasform ct
+     @return 0 in case of success*/
+    int transform( const QgsCoordinateTransform& ct );
+
+ /**Splits this geometry according to a given line. Note that the geometry is only split once. If there are several intersections
     between geometry and splitLine, only the first one is considered.
     @param splitLine the line that splits the geometry
     @param newGeometrys OUT: list of new geometries that have been created with the split
@@ -304,6 +308,20 @@ not disjoint with existing polygons of the feature*/
       @return TRUE on success
       @note added in version 1.2 */
     bool deletePart( int partNum );
+
+    /**Converts single type geometry into multitype geometry
+     e.g. a polygon into a multipolygon geometry with one polygon
+    @return true in case of success and false else*/
+    bool convertToMultiType();
+
+    /** Modifies geometry to avoid intersections with the layers specified in project properties
+     *  @return 0 in case of success,
+     *          1 if geometry is not of polygon type,
+     *          2 if avoid intersection would change the geometry type,
+     *          3 other error during intersection removal
+     *  @note added in 1.5
+     */
+    int avoidIntersections();
 
 }; // class QgsGeometry
 

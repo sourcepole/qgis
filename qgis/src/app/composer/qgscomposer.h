@@ -19,13 +19,17 @@
 #define QGSCOMPOSER_H
 #include "ui_qgscomposerbase.h"
 #include "qgscomposeritem.h"
+#include "qgscontexthelp.h"
 
 class QgisApp;
+class QgsComposerArrow;
 class QgsComposerLabel;
 class QgsComposerLegend;
 class QgsComposerMap;
 class QgsComposerPicture;
 class QgsComposerScaleBar;
+class QgsComposerShape;
+class QgsComposerTable;
 class QgsComposerView;
 class QgsComposition;
 class QgsMapCanvas;
@@ -126,6 +130,9 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
     //! Select item
     void on_mActionSelectMoveItem_triggered();
 
+    //! Add arrow
+    void on_mActionAddArrow_triggered();
+
     //! Add new map
     void on_mActionAddNewMap_triggered();
 
@@ -140,6 +147,12 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
 
     //! Add new picture
     void on_mActionAddImage_triggered();
+
+    //! Add ellipse shape item
+    void on_mActionAddBasicShape_triggered();
+
+    //! Add attribute table
+    void on_mActionAddTable_triggered();
 
     //! Save composer as template
     void on_mActionSaveAsTemplate_triggered();
@@ -188,8 +201,8 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
     //! Save window state
     void saveWindowState();
 
-    //! Slot for when the help button is clicked
-    void on_buttonBox_helpRequested();
+    /**Add a composer arrow to the item/widget map and crete a configuration widget for it*/
+    void addComposerArrow( QgsComposerArrow* arrow );
 
     /**Add a composer map to the item/widget map and creates a configuration widget for it*/
     void addComposerMap( QgsComposerMap* map );
@@ -206,6 +219,12 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
     /**Adds a composer picture to the item/widget map and creates a configuration widget*/
     void addComposerPicture( QgsComposerPicture* picture );
 
+    /**Adds a composer shape to the item/widget map and creates a configuration widget*/
+    void addComposerShape( QgsComposerShape* shape );
+
+    /**Adds a composer table to the item/widget map and creates a configuration widget*/
+    void addComposerTable( QgsComposerTable* table );
+
     /**Removes item from the item/widget map and deletes the configuration widget*/
     void deleteItem( QgsComposerItem* item );
 
@@ -219,12 +238,14 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
 
     //! Sets state from Dom document
     void readXML( const QDomDocument& doc );
-    void readXML( const QDomElement& composerElem, const QDomDocument& doc );
+    void readXML( const QDomElement& composerElem, const QDomDocument& doc, bool fromTemplate = false );
 
     void setSelectionTool();
 
     //! Raise, unminimize and activate this window
     void activate();
+
+    void on_mButtonBox_helpRequested() { QgsContextHelp::run( metaObject()->className() ); }
 
   private:
 
@@ -278,10 +299,6 @@ class QgsComposer: public QMainWindow, private Ui::QgsComposerBase
 
     //! Window menu action to select this window
     QAction *mWindowAction;
-
-    //! Help context id
-    static const int context_id = 985715179;
-
 };
 
 #endif

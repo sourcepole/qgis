@@ -341,7 +341,7 @@ struct QgsProject::Imp
 
 
 QgsProject::QgsProject()
-    : imp_( new QgsProject::Imp )
+    : imp_( new QgsProject::Imp ), mBadLayerHandler( new QgsProjectBadLayerDefaultHandler() )
 {
   // Set some default project properties
   // XXX THESE SHOULD BE MOVED TO STATUSBAR RELATED SOURCE
@@ -356,6 +356,8 @@ QgsProject::QgsProject()
 
 QgsProject::~QgsProject()
 {
+  delete mBadLayerHandler;
+
   // note that std::auto_ptr automatically deletes imp_ when it's destroyed
 } // QgsProject dtor
 
@@ -643,7 +645,7 @@ static QgsProjectVersion _getVersion( QDomDocument const &doc )
    </maplayer>
 
 */
-std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument const &doc )
+QPair< bool, QList<QDomNode> > QgsProject::_getMapLayers( QDomDocument const &doc )
 {
   // Layer order is set by the restoring the legend settings from project file.
   // This is done on the 'readProject( ... ) signal
@@ -654,7 +656,7 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
 
   QString wk;
 
-  std::list<QDomNode> brokenNodes; // a list of Dom nodes corresponding to layers
+  QList<QDomNode> brokenNodes; // a list of Dom nodes corresponding to layers
   // that we were unable to load; this could be
   // because the layers were removed or
   // re-located after the project was last saved
@@ -663,7 +665,7 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
 
   if ( 0 == nl.count() )      // if we have no layers to process, bail
   {
-    return make_pair( true, brokenNodes ); // Decided to return "true" since it's
+    return qMakePair( true, brokenNodes ); // Decided to return "true" since it's
     // possible for there to be a project with no
     // layers; but also, more imporantly, this
     // would cause the tests/qgsproject to fail
@@ -705,7 +707,7 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
     {
       QgsDebugMsg( "Unable to create layer" );
 
-      return make_pair( false, brokenNodes );
+      return qMakePair( false, brokenNodes );
     }
 
     // have the layer restore state that is stored in Dom node
@@ -727,7 +729,7 @@ std::pair< bool, std::list<QDomNode> > QgsProject::_getMapLayers( QDomDocument c
     emit layerLoaded( i + 1, nl.count() );
   }
 
-  return make_pair( returnStatus, brokenNodes );
+  return qMakePair( returnStatus, brokenNodes );
 
 } // _getMapLayers
 
@@ -752,6 +754,8 @@ bool QgsProject::read( QFileInfo const &file )
 */
 bool QgsProject::read()
 {
+  clearError();
+
   std::auto_ptr< QDomDocument > doc =
     std::auto_ptr < QDomDocument > ( new QDomDocument( "qgis" ) );
 
@@ -760,7 +764,8 @@ bool QgsProject::read()
     imp_->file.close();     // even though we got an error, let's make
     // sure it's closed anyway
 
-    throw QgsIOException( tr( "Unable to open %1" ).arg( imp_->file.fileName() ) );
+    setError( tr( "Unable to open %1" ).arg( imp_->file.fileName() ) );
+    return false;
   }
 
   // location of problem associated with errorMsg
@@ -781,7 +786,8 @@ bool QgsProject::read()
 
     imp_->file.close();
 
-    throw QgsException( tr( "%1 for file %2" ).arg( errorString ).arg( imp_->file.fileName() ) );
+    setError( tr( "%1 for file %2" ).arg( errorString ).arg( imp_->file.fileName() ) );
+    return false;
   }
 
   imp_->file.close();
@@ -836,7 +842,7 @@ bool QgsProject::read()
 
 
   // get the map layers
-  std::pair< bool, std::list<QDomNode> > getMapLayersResults =  _getMapLayers( *doc );
+  QPair< bool, QList<QDomNode> > getMapLayersResults =  _getMapLayers( *doc );
 
   // review the integrity of the retrieved map layers
 
@@ -844,18 +850,14 @@ bool QgsProject::read()
   {
     QgsDebugMsg( "Unable to get map layers from project file." );
 
-    if ( ! getMapLayersResults.second.empty() )
+    if ( ! getMapLayersResults.second.isEmpty() )
     {
       QgsDebugMsg( "there are " + QString::number( getMapLayersResults.second.size() ) + " broken layers" );
     }
 
-    // Since we could be executing this from the test harness which
-    // doesn't *have* layers -- nor a GUI for that matter -- we'll just
-    // leave in the whining and boldly stomp on.
-    emit readProject( *doc );
-    throw QgsProjectBadLayerException( getMapLayersResults.second, *doc );
-
-//         return false;
+    // we let a custom handler to decide what to do with missing layers
+    // (default implementation ignores them, there's also a GUI handler that lets user choose correct path)
+    mBadLayerHandler->handleBadLayers( getMapLayersResults.second, *doc );
   }
 
   // read the project: used by map canvas and legend
@@ -926,6 +928,8 @@ bool QgsProject::write( QFileInfo const &file )
 
 bool QgsProject::write()
 {
+  clearError();
+
   // if we have problems creating or otherwise writing to the project file,
   // let's find out up front before we go through all the hand-waving
   // necessary to create all the Dom objects
@@ -934,7 +938,8 @@ bool QgsProject::write()
     imp_->file.close();         // even though we got an error, let's make
     // sure it's closed anyway
 
-    throw QgsIOException( tr( "Unable to save to file %1" ).arg( imp_->file.fileName() ) );
+    setError( tr( "Unable to save to file %1" ).arg( imp_->file.fileName() ) );
+    return false;
   }
   QFileInfo myFileInfo( imp_->file );
   if ( !myFileInfo.isWritable() )
@@ -942,8 +947,9 @@ bool QgsProject::write()
     // even though we got an error, let's make
     // sure it's closed anyway
     imp_->file.close();
-    throw QgsIOException( tr( "%1 is not writeable. Please adjust permissions (if possible) and try again." )
-                          .arg( imp_->file.fileName() ) );
+    setError( tr( "%1 is not writeable. Please adjust permissions (if possible) and try again." )
+              .arg( imp_->file.fileName() ) );
+    return false;
   }
 
   QDomImplementation DomImplementation;
@@ -1027,10 +1033,11 @@ bool QgsProject::write()
   //
   if ( projectFileStream.pos() == -1  || imp_->file.error() != QFile::NoError )
   {
-    throw QgsIOException( tr( "Unable to save to file %1. Your project "
-                              "may be corrupted on disk. Try clearing some space on the volume and "
-                              "check file permissions before pressing save again." )
-                          .arg( imp_->file.fileName() ) );
+    setError( tr( "Unable to save to file %1. Your project "
+                  "may be corrupted on disk. Try clearing some space on the volume and "
+                  "check file permissions before pressing save again." )
+              .arg( imp_->file.fileName() ) );
+    return false;
   }
 
   dirty( false );               // reset to pristine state
@@ -1372,7 +1379,7 @@ QString QgsProject::readPath( QString src ) const
   int pos;
   while (( pos = projElems.indexOf( ".." ) ) > 0 )
   {
-    // remove preceeding element and ..
+    // remove preceding element and ..
     projElems.removeAt( pos - 1 );
     projElems.removeAt( pos - 1 );
   }
@@ -1459,4 +1466,30 @@ QString QgsProject::writePath( QString src ) const
   }
 
   return srcElems.join( "/" );
+}
+
+void QgsProject::setError( QString errorMessage )
+{
+  mErrorMessage = errorMessage;
+}
+
+QString QgsProject::error() const
+{
+  return mErrorMessage;
+}
+
+void QgsProject::clearError()
+{
+  setError( QString() );
+}
+
+void QgsProject::setBadLayerHandler( QgsProjectBadLayerHandler* handler )
+{
+  delete mBadLayerHandler;
+  mBadLayerHandler = handler;
+}
+
+void QgsProjectBadLayerDefaultHandler::handleBadLayers( QList<QDomNode> /*layers*/, QDomDocument /*projectDom*/ )
+{
+  // just ignore any bad layers
 }

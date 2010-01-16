@@ -1,7 +1,7 @@
 /** \ingroup MapComposer
  * A composer class that displays svg files or raster format (jpg, png, ...)
  * */
-class QgsComposerPicture: QObject, QgsComposerItem
+class QgsComposerPicture: QgsComposerItem
 {
 
 %TypeHeaderCode
@@ -23,10 +23,6 @@ class QgsComposerPicture: QObject, QgsComposerItem
        corresponds to 1 scene size unit*/
     void setSceneRect( const QRectF& rectangle );
 
-    void setRotation( double rotation );
-
-    double rotation() const;
-
     /** stores state in Dom node
        * @param node is Dom node corresponding to 'Composer' tag
        * @param temp write template file
@@ -44,6 +40,9 @@ class QgsComposerPicture: QObject, QgsComposerItem
     int rotationMap() const;
     /**True if the rotation is taken from a map item*/
     bool useRotationMap() const;
+
+    public slots:
+    virtual void setRotation( double r );
 
 
   signals:

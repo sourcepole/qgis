@@ -21,6 +21,7 @@
 #include <QTime>
 #include <QPainter>
 
+#include <qgslogger.h>
 #include <qgsvectorlayer.h>
 #include <qgsmaplayerregistry.h>
 #include <qgsvectordataprovider.h>
@@ -216,6 +217,7 @@ void LayerSettings::calculateLabelSize( QString text, double& labelX, double& la
   labelY = fabs( ptSize.y() - ptZero.y() );
 }
 
+
 void LayerSettings::registerFeature( QgsFeature& f )
 {
   QString labelText = f.attributeMap()[fieldIndex].toString();
@@ -232,8 +234,16 @@ void LayerSettings::registerFeature( QgsFeature& f )
   geometries.append( lbl );
 
   // register feature to the layer
-  if ( !palLayer->registerFeature( lbl->strId(), lbl, labelX, labelY, labelText.toUtf8().constData() ) )
+  try
+  {
+    if ( !palLayer->registerFeature( lbl->strId(), lbl, labelX, labelY, labelText.toUtf8().constData() ) )
+      return;
+  }
+  catch ( std::exception* e )
+  {
+    QgsDebugMsg( QString( "Ignoring feature %1 due PAL exception: " ).arg( f.id() ) + QString::fromLatin1( e->what() ) );
     return;
+  }
 
   // TODO: only for placement which needs character info
   pal::Feature* feat = palLayer->getFeature( lbl->strId() );
@@ -268,14 +278,21 @@ PalLabeling::PalLabeling( QgsMapRenderer* mapRenderer )
 
   mShowingCandidates = FALSE;
   mShowingAllLabels = FALSE;
-
-  initPal();
 }
 
 
 PalLabeling::~PalLabeling()
 {
-  delete mPal;
+  // make sure we've freed everything
+  exit();
+}
+
+
+bool PalLabeling::willUseLayer( QgsVectorLayer* layer )
+{
+  LayerSettings lyrTmp;
+  lyrTmp.readFromLayer( layer );
+  return lyrTmp.enabled;
 }
 
 
@@ -289,7 +306,7 @@ int PalLabeling::prepareLayer( QgsVectorLayer* layer, int& attrIndex )
     return 0;
 
   // find out which field will be needed
-  int fldIndex = layer->dataProvider()->fieldNameIndex( lyrTmp.fieldName );
+  int fldIndex = layer->fieldNameIndex( lyrTmp.fieldName );
   if ( fldIndex == -1 )
     return 0;
   attrIndex = fldIndex;
@@ -309,6 +326,7 @@ int PalLabeling::prepareLayer( QgsVectorLayer* layer, int& attrIndex )
     case LayerSettings::Curved:      arrangement = P_CURVED; break;
     case LayerSettings::Horizontal:  arrangement = P_HORIZ; break;
     case LayerSettings::Free:        arrangement = P_FREE; break;
+    default: Q_ASSERT( "unsupported placement" && 0 ); return 0; break;
   }
 
   // create the pal layer
@@ -356,7 +374,7 @@ void PalLabeling::registerFeature( QgsVectorLayer* layer, QgsFeature& f )
 }
 
 
-void PalLabeling::initPal()
+void PalLabeling::init()
 {
   // delete if exists already
   if ( mPal )
@@ -367,6 +385,7 @@ void PalLabeling::initPal()
   SearchMethod s;
   switch ( mSearch )
   {
+    default:
     case Chain: s = CHAIN; break;
     case Popmusic_Tabu: s = POPMUSIC_TABU; break;
     case Popmusic_Chain: s = POPMUSIC_CHAIN; break;
@@ -379,6 +398,12 @@ void PalLabeling::initPal()
   mPal->setPointP( mCandPoint );
   mPal->setLineP( mCandLine );
   mPal->setPolyP( mCandPolygon );
+}
+
+void PalLabeling::exit()
+{
+  delete mPal;
+  mPal = NULL;
 }
 
 LayerSettings& PalLabeling::layer( const char* layerName )
@@ -394,8 +419,10 @@ LayerSettings& PalLabeling::layer( const char* layerName )
 }
 
 
-void PalLabeling::doLabeling( QPainter* painter, QgsRectangle extent )
+void PalLabeling::drawLabeling( QgsRenderContext& context )
 {
+  QPainter* painter = context.painter();
+  QgsRectangle extent = context.extent();
 
   QTime t;
   t.start();
@@ -413,7 +440,7 @@ void PalLabeling::doLabeling( QPainter* painter, QgsRectangle extent )
   }
   catch ( std::exception& e )
   {
-    std::cerr << "PAL EXCEPTION :-( " << e.what() << std::endl;
+    QgsDebugMsg( "PAL EXCEPTION :-( " + QString::fromLatin1( e.what() ) );
     mActiveLayers.clear(); // clean up
     return;
   }
@@ -442,7 +469,7 @@ void PalLabeling::doLabeling( QPainter* painter, QgsRectangle extent )
   // find the solution
   labels = mPal->solveProblem( problem, mShowingAllLabels );
 
-  std::cout << "LABELING work:   " << t.elapsed() << "ms  ... labels# " << labels->size() << std::endl;
+  QgsDebugMsg( QString( "LABELING work:  %1 ms ... labels# %2" ).arg( t.elapsed() ).arg( labels->size() ) );
   t.restart();
 
   painter->setRenderHint( QPainter::Antialiasing );
@@ -459,7 +486,7 @@ void PalLabeling::doLabeling( QPainter* painter, QgsRectangle extent )
     drawLabel( *it, painter, xform );
   }
 
-  std::cout << "LABELING draw:   " << t.elapsed() << "ms" << std::endl;
+  QgsDebugMsg( QString( "LABELING draw:  %1 ms" ).arg( t.elapsed() ) );
 
   delete problem;
   delete labels;
@@ -476,8 +503,6 @@ void PalLabeling::doLabeling( QPainter* painter, QgsRectangle extent )
   // labeling is done: clear the active layers hashtable
   mActiveLayers.clear();
 
-  // re-create PAL
-  initPal();
 }
 
 void PalLabeling::numCandidatePositions( int& candPoint, int& candLine, int& candPolygon )
@@ -537,7 +562,7 @@ void PalLabeling::drawLabel( pal::LabelPosition* label, QPainter* painter, const
   QString text = (( MyLabel* )label->getFeaturePart()->getUserGeometry() )->text();
   QString txt = ( label->getPartId() == -1 ? text : QString( text[label->getPartId()] ) );
 
-  QgsDebugMsg( "drawLabel " + QString::number( drawBuffer ) + " " + txt );
+  //QgsDebugMsg( "drawLabel " + QString::number( drawBuffer ) + " " + txt );
 
   // shift by one as we have 2px border
   painter->save();

@@ -90,7 +90,7 @@ void CoordinateCapture::initGui()
 
   setSourceCrs(); //set up the source CRS
   mTransform.setDestCRS( mCrs ); // set the CRS in the transform
-  mUserCrsDisplayPrecision = ( mCrs.mapUnits() == QGis::Degrees ) ? 3 : 5; // precision depends on CRS units
+  mUserCrsDisplayPrecision = ( mCrs.mapUnits() == QGis::Degrees ) ? 5 : 3; // precision depends on CRS units
 
   // Create the action for tool
   mQActionPointer = new QAction( QIcon(), tr( "Coordinate Capture" ), this );
@@ -181,14 +181,14 @@ void CoordinateCapture::setCRS()
   {
     mCrs.createFromSrsId( mySelector.selectedCrsId() );
     mTransform.setDestCRS( mCrs );
-    mUserCrsDisplayPrecision = ( mCrs.mapUnits() == QGis::Degrees ) ? 3 : 5; //precision depends on CRS units
+    mUserCrsDisplayPrecision = ( mCrs.mapUnits() == QGis::Degrees ) ? 5 : 3; //precision depends on CRS units
   }
 }
 
 void CoordinateCapture::setSourceCrs()
 {
   mTransform.setSourceCrs( mQGisIface->mapCanvas()->mapRenderer()->destinationSrs() );
-  mCanvasDisplayPrecision = ( mQGisIface->mapCanvas()->mapRenderer()->destinationSrs().mapUnits() == QGis::Degrees ) ? 3 : 5; // for the map canvas coordinate display
+  mCanvasDisplayPrecision = ( mQGisIface->mapCanvas()->mapRenderer()->destinationSrs().mapUnits() == QGis::Degrees ) ? 5 : 3; // for the map canvas coordinate display
 }
 
 void CoordinateCapture::mouseClicked( QgsPoint thePoint )

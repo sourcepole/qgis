@@ -62,7 +62,7 @@ namespace pal
    *
    *  \author Maxence Laurent <maxence _dot_ laurent _at_ heig-vd _dot_ ch>
    */
-  class Layer
+  class CORE_EXPORT Layer
   {
       friend class Pal;
       friend class FeaturePart;
@@ -98,13 +98,11 @@ namespace pal
       double min_scale;
       double max_scale;
 
+      /** optional flags used for some placement methods */
       Arrangement arrangement;
-
+      unsigned long arrangementFlags;
       LabelMode mode;
       bool mergeLines;
-
-      /** optional flags used for some placement methods */
-      unsigned long arrangementFlags;
 
       // indexes (spatial and id)
       RTree<FeaturePart*, double, 2, double, 8, 4> *rtree;
@@ -275,7 +273,7 @@ namespace pal
       void setLabelMode( LabelMode m ) { mode = m; }
       LabelMode getLabelMode() const { return mode; }
 
-      void setMergeConnectedLines(bool m) { mergeLines = m; }
+      void setMergeConnectedLines( bool m ) { mergeLines = m; }
       bool getMergeConnectedLines() const { return mergeLines; }
 
       /**

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>568</width>
-    <height>660</height>
+    <width>757</width>
+    <height>638</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,17 +24,144 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QGridLayout">
-   <item row="0" column="0" colspan="4">
-    <widget class="QTabWidget" name="tabBar">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QListWidget" name="listWidget">
+     <property name="minimumSize">
+      <size>
+       <width>110</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>110</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="showDropIndicator" stdset="0">
+      <bool>false</bool>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>false</bool>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>64</width>
+       <height>64</height>
+      </size>
+     </property>
+     <property name="textElideMode">
+      <enum>Qt::ElideNone</enum>
+     </property>
+     <property name="flow">
+      <enum>QListView::TopToBottom</enum>
+     </property>
+     <property name="isWrapping" stdset="0">
+      <bool>false</bool>
+     </property>
+     <property name="resizeMode">
+      <enum>QListView::Adjust</enum>
+     </property>
+     <property name="spacing">
+      <number>9</number>
+     </property>
+     <property name="viewMode">
+      <enum>QListView::IconMode</enum>
+     </property>
+     <property name="uniformItemSizes">
+      <bool>false</bool>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <item>
+      <property name="text">
+       <string>Symbology</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/symbology.png</normaloff>:/images/themes/default/propertyicons/symbology.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Transparency</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/transparency.png</normaloff>:/images/themes/default/propertyicons/transparency.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Colormap</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/colormap.png</normaloff>:/images/themes/default/propertyicons/colormap.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>General</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/general.png</normaloff>:/images/themes/default/propertyicons/general.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Metadata</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/metadata.png</normaloff>:/images/themes/default/propertyicons/metadata.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Pyramids</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/pyramids.png</normaloff>:/images/themes/default/propertyicons/pyramids.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Histogram</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../images/images.qrc">
+        <normaloff>:/images/themes/default/propertyicons/histogram.png</normaloff>:/images/themes/default/propertyicons/histogram.png</iconset>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="0" column="1" colspan="4">
+    <widget class="QStackedWidget" name="tabBar">
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tabPageSymbology">
-      <attribute name="title">
-       <string>Symbology</string>
-      </attribute>
       <layout class="QGridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
        <item row="0" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_3">
          <property name="title">
@@ -124,9 +251,6 @@
                 <property name="text">
                  <string>Red band</string>
                 </property>
-                <property name="buddy">
-                 <cstring>cboRed</cstring>
-                </property>
                </widget>
               </item>
               <item row="0" column="1" colspan="4">
@@ -156,9 +280,6 @@
                 <property name="text">
                  <string>Green band</string>
                 </property>
-                <property name="buddy">
-                 <cstring>cboGreen</cstring>
-                </property>
                </widget>
               </item>
               <item row="1" column="1" colspan="4">
@@ -187,9 +308,6 @@
                <widget class="QLabel" name="lblBlue">
                 <property name="text">
                  <string>Blue band</string>
-                </property>
-                <property name="buddy">
-                 <cstring>cboBlue</cstring>
                 </property>
                </widget>
               </item>
@@ -885,10 +1003,10 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tabPageTransparency">
-      <attribute name="title">
-       <string>Transparency</string>
-      </attribute>
       <layout class="QGridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_4">
          <property name="title">
@@ -1166,152 +1284,12 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tabPageColormap">
-      <attribute name="title">
-       <string>Colormap</string>
-      </attribute>
       <layout class="QGridLayout">
-       <item row="0" column="0" colspan="2">
-        <widget class="QLabel" name="mColorInterpolationLabel">
-         <property name="text">
-          <string>Color interpolation</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2" colspan="2">
-        <widget class="QComboBox" name="cboxColorInterpolation"/>
-       </item>
-       <item row="0" column="4" colspan="7">
-        <spacer>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>321</width>
-           <height>45</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0">
-        <widget class="QPushButton" name="pbtnAddColorMapEntry">
-         <property name="text">
-          <string>Add entry</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1" colspan="2">
-        <widget class="QPushButton" name="mDeleteEntryButton">
-         <property name="text">
-          <string>Delete entry</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3" colspan="2">
-        <widget class="QPushButton" name="pbtnSortColorMap">
-         <property name="text">
-          <string>Sort</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="5">
-        <spacer>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>41</width>
-           <height>27</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="6">
-        <widget class="QComboBox" name="cboxColorMapBand"/>
-       </item>
-       <item row="1" column="7">
-        <widget class="QToolButton" name="pbtnLoadColorMapFromBand">
-         <property name="toolTip">
-          <string>Load color map from band</string>
-         </property>
-         <property name="text">
-          <string>...</string>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>../../images/themes/default/mActionNewAttribute.png</normaloff>../../images/themes/default/mActionNewAttribute.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="8">
-        <spacer>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Minimum</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="9">
-        <widget class="QToolButton" name="pbtnLoadColorMapFromFile">
-         <property name="toolTip">
-          <string>Load color map from file</string>
-         </property>
-         <property name="text">
-          <string>...</string>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>../../images/themes/default/mActionFolder.png</normaloff>../../images/themes/default/mActionFolder.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="10">
-        <widget class="QToolButton" name="pbtnExportColorMapToFile">
-         <property name="toolTip">
-          <string>Export color map to file</string>
-         </property>
-         <property name="text">
-          <string>...</string>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>../../images/themes/default/mActionFileSave.png</normaloff>../../images/themes/default/mActionFileSave.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="11">
-        <widget class="QTreeWidget" name="mColormapTreeWidget">
-         <property name="columnCount">
-          <number>3</number>
-         </property>
-         <column>
-          <property name="text">
-           <string>1</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>1</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>2</string>
-          </property>
-         </column>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="11">
-        <widget class="QGroupBox" name="groupBox_9">
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <item row="1" column="0" colspan="2">
+        <widget class="QGroupBox" name="grpGenerateColorMap">
          <property name="title">
           <string>Generate new color map</string>
          </property>
@@ -1356,20 +1334,166 @@
          </layout>
         </widget>
        </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="grpColorMap">
+         <property name="title">
+          <string>Color map</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="mColorInterpolationLabel">
+            <property name="text">
+             <string>Color interpolation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QComboBox" name="cboxColorInterpolation"/>
+          </item>
+          <item row="0" column="4" colspan="7">
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>321</width>
+              <height>45</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pbtnAddColorMapEntry">
+            <property name="text">
+             <string>Add entry</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QPushButton" name="mDeleteEntryButton">
+            <property name="text">
+             <string>Delete entry</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QPushButton" name="pbtnSortColorMap">
+            <property name="text">
+             <string>Sort</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="5">
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>41</width>
+              <height>27</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="6">
+           <widget class="QComboBox" name="cboxColorMapBand"/>
+          </item>
+          <item row="1" column="7">
+           <widget class="QToolButton" name="pbtnLoadColorMapFromBand">
+            <property name="toolTip">
+             <string>Load color map from band</string>
+            </property>
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../images/themes/default/mActionNewAttribute.png</normaloff>../../images/themes/default/mActionNewAttribute.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="8">
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Minimum</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="9">
+           <widget class="QToolButton" name="pbtnLoadColorMapFromFile">
+            <property name="toolTip">
+             <string>Load color map from file</string>
+            </property>
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../images/themes/default/mActionFolder.png</normaloff>../../images/themes/default/mActionFolder.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="10">
+           <widget class="QToolButton" name="pbtnExportColorMapToFile">
+            <property name="toolTip">
+             <string>Export color map to file</string>
+            </property>
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../images/themes/default/mActionFileSave.png</normaloff>../../images/themes/default/mActionFileSave.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="11">
+           <widget class="QTreeWidget" name="mColormapTreeWidget">
+            <property name="columnCount">
+             <number>3</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>1</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>1</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>2</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabPageGeneral">
-      <attribute name="title">
-       <string>General</string>
-      </attribute>
       <layout class="QGridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
        <item row="0" column="0" colspan="2">
         <widget class="QLabel" name="lblDisplayName">
          <property name="text">
           <string>Display name</string>
-         </property>
-         <property name="buddy">
-          <cstring>leDisplayName</cstring>
          </property>
         </widget>
        </item>
@@ -1380,9 +1504,6 @@
         <widget class="QLabel" name="lblLayerSource">
          <property name="text">
           <string>Layer source</string>
-         </property>
-         <property name="buddy">
-          <cstring>leLayerSource</cstring>
          </property>
         </widget>
        </item>
@@ -1448,51 +1569,31 @@
           <property name="margin">
            <number>11</number>
           </property>
-          <item row="0" column="3">
-           <widget class="QSpinBox" name="spinMaximumScale">
-            <property name="toolTip">
-             <string>Maximum scale at which this layer will be displayed. </string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>100000000</number>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="2">
            <widget class="QLabel" name="textLabel1_2_2_2">
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
             <property name="text">
              <string>Maximum</string>
-            </property>
-            <property name="buddy">
-             <cstring>spinMaximumScale</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinMinimumScale">
-            <property name="toolTip">
-             <string>Minimum scale at which this layer will be displayed. </string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>100000000</number>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="textLabel1_3">
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
             <property name="text">
              <string>Minimum</string>
             </property>
-            <property name="buddy">
-             <cstring>spinMinimumScale</cstring>
-            </property>
            </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="leMaximumScale"/>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="leMinimumScale"/>
           </item>
          </layout>
         </widget>
@@ -1669,12 +1770,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tabPageMetadata">
-      <attribute name="title">
-       <string>Metadata</string>
-      </attribute>
       <layout class="QGridLayout">
        <property name="margin">
-        <number>11</number>
+        <number>0</number>
        </property>
        <item row="0" column="0">
         <widget class="QTextBrowser" name="txtbMetadata"/>
@@ -1682,10 +1780,10 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tabPagePyramids">
-      <attribute name="title">
-       <string>Pyramids</string>
-      </attribute>
       <layout class="QGridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
@@ -1712,8 +1810,8 @@
           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans Serif'; font-size:9pt;&quot;&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -1748,9 +1846,6 @@ p, li { white-space: pre-wrap; }
          <property name="text">
           <string>Resampling method</string>
          </property>
-         <property name="buddy">
-          <cstring>cboResamplingMethod</cstring>
-         </property>
         </widget>
        </item>
        <item row="3" column="1">
@@ -1784,10 +1879,10 @@ p, li { white-space: pre-wrap; }
       </layout>
      </widget>
      <widget class="QWidget" name="tabPageHistogram">
-      <attribute name="title">
-       <string>Histogram</string>
-      </attribute>
       <layout class="QGridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
        <item row="0" column="0" colspan="2">
         <widget class="QLabel" name="pixHistogram">
          <property name="sizePolicy">
@@ -1947,35 +2042,35 @@ p, li { white-space: pre-wrap; }
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="1" column="0" colspan="2">
     <widget class="QPushButton" name="pbnLoadDefaultStyle">
      <property name="text">
       <string>Restore Default Style</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="1" column="2">
     <widget class="QPushButton" name="pbnSaveDefaultStyle">
      <property name="text">
       <string>Save As Default</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="2">
+   <item row="1" column="3">
     <widget class="QPushButton" name="pbnLoadStyle">
      <property name="text">
       <string>Load Style ...</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
+   <item row="1" column="4">
     <widget class="QPushButton" name="pbnSaveStyleAs">
      <property name="text">
       <string>Save Style ...</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="4">
+   <item row="2" column="0" colspan="5">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -2005,8 +2100,8 @@ p, li { white-space: pre-wrap; }
   <tabstop>tableTransparency</tabstop>
   <tabstop>leDisplayName</tabstop>
   <tabstop>leLayerSource</tabstop>
-  <tabstop>spinMinimumScale</tabstop>
-  <tabstop>spinMaximumScale</tabstop>
+  <tabstop>leMinimumScale</tabstop>
+  <tabstop>leMaximumScale</tabstop>
   <tabstop>leSpatialRefSys</tabstop>
   <tabstop>pbnChangeSpatialRefSys</tabstop>
   <tabstop>tePyramidDescription</tabstop>
@@ -2026,7 +2121,9 @@ p, li { white-space: pre-wrap; }
   <tabstop>lstHistogramLabels</tabstop>
   <tabstop>sboxSingleBandStdDev</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../../images/images.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>
@@ -2035,12 +2132,28 @@ p, li { white-space: pre-wrap; }
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>458</x>
-     <y>589</y>
+     <x>476</x>
+     <y>620</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
      <y>526</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>listWidget</sender>
+   <signal>currentRowChanged(int)</signal>
+   <receiver>tabBar</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>59</x>
+     <y>12</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>722</x>
+     <y>14</y>
     </hint>
    </hints>
   </connection>

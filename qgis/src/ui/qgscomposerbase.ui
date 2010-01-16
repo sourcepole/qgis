@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>737</width>
+    <width>799</width>
     <height>609</height>
    </rect>
   </property>
@@ -20,7 +20,7 @@
    <property name="mouseTracking">
     <bool>true</bool>
    </property>
-   <layout class="QGridLayout" name="gridLayout">
+   <layout class="QGridLayout" name="gridLayout_1">
     <item row="0" column="0">
      <widget class="QSplitter" name="mSplitter">
       <property name="mouseTracking">
@@ -136,7 +136,7 @@
     <item row="1" column="0">
      <widget class="QDialogButtonBox" name="mButtonBox">
       <property name="standardButtons">
-       <set>QDialogButtonBox::Close</set>
+       <set>QDialogButtonBox::Close|QDialogButtonBox::Help</set>
       </property>
      </widget>
     </item>
@@ -169,6 +169,9 @@
    <addaction name="mActionAddNewLabel"/>
    <addaction name="mActionAddNewLegend"/>
    <addaction name="mActionAddNewScalebar"/>
+   <addaction name="mActionAddBasicShape"/>
+   <addaction name="mActionAddArrow"/>
+   <addaction name="mActionAddTable"/>
    <addaction name="mActionSelectMoveItem"/>
    <addaction name="mActionMoveItemContent"/>
    <addaction name="mActionGroupItems"/>
@@ -441,6 +444,33 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="mActionAddBasicShape">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add Basic Shape</string>
+   </property>
+  </action>
+  <action name="mActionAddArrow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add arrow</string>
+   </property>
+  </action>
+  <action name="mActionAddTable">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add table</string>
+   </property>
+   <property name="toolTip">
+    <string>Adds attribute table</string>
    </property>
   </action>
  </widget>

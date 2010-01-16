@@ -18,6 +18,7 @@
 /* $Id$ */
 
 #include <memory>
+#include <limits>
 
 #include "qgisapp.h"
 #include "qgsapplication.h"
@@ -56,6 +57,7 @@
 
 #include "qgsrendererv2propertiesdialog.h"
 #include "qgsstylev2.h"
+#include "qgssymbologyv2conversion.h"
 
 #if QT_VERSION < 0x040300
 #define toPlainText() text()
@@ -95,6 +97,7 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mToggleEditingButton->setIcon( QgisApp::getThemeIcon( "/mActionToggleEditing.png" ) );
   mCalculateFieldButton->setIcon( QgisApp::getThemeIcon( "/mActionCalculateField.png" ) );
 
+  connect( btnUseNewSymbology, SIGNAL( clicked() ), this, SLOT( useNewSymbology() ) );
 
   // Create the Label dialog tab
   QVBoxLayout *layout = new QVBoxLayout( labelOptionsFrame );
@@ -129,6 +132,7 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   leSpatialRefSys->setCursorPosition( 0 );
 
   leEditForm->setText( layer->editForm() );
+  leEditFormInit->setText( layer->editFormInit() );
 
   connect( sliderTransparency, SIGNAL( valueChanged( int ) ), this, SLOT( sliderTransparency_valueChanged( int ) ) );
 
@@ -143,10 +147,16 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
     position = stackedWidget->insertWidget( stackedWidget->count(), qobject_cast<QDialog*>( d ) );
     stackedWidget->setCurrentIndex( position ); //ugly, but otherwise the properties dialog is a mess
     mOverlayDialogs.push_back( d );
-    listWidget->insertItem( stackedWidget->count(), ( *it )->name() );
+    //shamelessly hard coded - what will we do if other types of layer plugins exist? TS
+    QListWidgetItem * mypItem = new QListWidgetItem( QgisApp::getThemeIcon( "propertyicons/diagram.png" ), ( *it )->name() );
+    listWidget->insertItem( stackedWidget->count(), mypItem );
   }
 
   stackedWidget->setCurrentIndex( 0 );
+
+  QSettings settings;
+  restoreGeometry( settings.value( "/Windows/VectorLayerProperties/geometry" ).toByteArray() );
+  listWidget->setCurrentRow( settings.value( "/Windows/VectorLayerProperties/row" ).toInt() );
 } // QgsVectorLayerProperties ctor
 
 void QgsVectorLayerProperties::loadRows()
@@ -195,12 +205,15 @@ void QgsVectorLayerProperties::setRow( int row, int idx, const QgsField &field )
 
   //set the alias for the attribute
   tblAttributes->setItem( row, attrAliasCol, new QTableWidgetItem( layer->attributeAlias( idx ) ) );
-
 }
 
 QgsVectorLayerProperties::~QgsVectorLayerProperties()
 {
   disconnect( labelDialog, SIGNAL( labelSourceSet() ), this, SLOT( setLabelCheckBox() ) );
+
+  QSettings settings;
+  settings.setValue( "/Windows/VectorLayerProperties/geometry", saveGeometry() );
+  settings.setValue( "/Windows/VectorLayerProperties/row", listWidget->currentRow() );
 }
 
 void QgsVectorLayerProperties::attributeTypeDialog( )
@@ -439,8 +452,7 @@ void QgsVectorLayerProperties::reset( void )
                                      "builder and allows you to create a subset of features to display on "
                                      "the map canvas rather than displaying all features in the layer" ) );
   txtSubsetSQL->setWhatsThis( tr( "The query used to limit the features in the "
-                                  "layer is shown here. This is currently only supported for PostgreSQL "
-                                  "layers. To enter or modify the query, click on the Query Builder button" ) );
+                                  "layer is shown here. To enter or modify the query, click on the Query Builder button" ) );
 
   //see if we are dealing with a pg layer here
   grpSubset->setEnabled( true );
@@ -464,8 +476,10 @@ void QgsVectorLayerProperties::reset( void )
 
   // set up the scale based layer visibility stuff....
   chkUseScaleDependentRendering->setChecked( layer->hasScaleBasedVisibility() );
-  spinMinimumScale->setValue(( int )layer->minimumScale() );
-  spinMaximumScale->setValue(( int )layer->maximumScale() );
+  leMinimumScale->setText( QString::number( layer->minimumScale(), 'f' ) );
+  leMinimumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
+  leMaximumScale->setText( QString::number( layer->maximumScale(), 'f' ) );
+  leMaximumScale->setValidator( new QDoubleValidator( 0, std::numeric_limits<float>::max(), 1000, this ) );
 
   // symbology initialization
   if ( legendtypecombobox->count() == 0 )
@@ -479,55 +493,8 @@ void QgsVectorLayerProperties::reset( void )
     }
   }
 
-  //find out the type of renderer in the vectorlayer, create a dialog with these settings and add it to the form
-  delete mRendererDialog;
-  mRendererDialog = 0;
-
-  if ( layer->isUsingRendererV2() )
-  {
-    mRendererDialog = new QgsRendererV2PropertiesDialog( layer, QgsStyleV2::defaultStyle(), true );
-
-    // hide unused widgets
-    legendtypecombobox->hide();
-    legendtypelabel->hide();
-    lblTransparencyPercent->hide();
-    sliderTransparency->hide();
-  }
-  else
-  {
-
-    QString rtype = layer->renderer()->name();
-    if ( rtype == "Single Symbol" )
-    {
-      mRendererDialog = new QgsSingleSymbolDialog( layer );
-      legendtypecombobox->setCurrentIndex( 0 );
-    }
-    else if ( rtype == "Graduated Symbol" )
-    {
-      mRendererDialog = new QgsGraduatedSymbolDialog( layer );
-      legendtypecombobox->setCurrentIndex( 1 );
-    }
-    else if ( rtype == "Continuous Color" )
-    {
-      mRendererDialog = new QgsContinuousColorDialog( layer );
-      legendtypecombobox->setCurrentIndex( 2 );
-    }
-    else if ( rtype == "Unique Value" )
-    {
-      mRendererDialog = new QgsUniqueValueDialog( layer );
-      legendtypecombobox->setCurrentIndex( 3 );
-    }
-
-    QObject::connect( legendtypecombobox, SIGNAL( activated( const QString & ) ), this,
-                      SLOT( alterLayerDialog( const QString & ) ) );
-
-  }
-
-  if ( mRendererDialog )
-  {
-    widgetStackRenderers->addWidget( mRendererDialog );
-    widgetStackRenderers->setCurrentWidget( mRendererDialog );
-  }
+  // load appropriate symbology page (V1 or V2)
+  updateSymbologyPage();
 
   // reset fields in label dialog
   layer->label()->setFields( layer->pendingFields() );
@@ -555,11 +522,6 @@ void QgsVectorLayerProperties::reset( void )
 // methods reimplemented from qt designer base class
 //
 
-void QgsVectorLayerProperties::on_buttonBox_helpRequested()
-{
-  QgsContextHelp::run( context_id );
-}
-
 QMap< QgsVectorLayer::EditType, QString > QgsVectorLayerProperties::editTypeMap;
 
 void QgsVectorLayerProperties::setupEditTypes()
@@ -579,6 +541,7 @@ void QgsVectorLayerProperties::setupEditTypes()
   editTypeMap.insert( QgsVectorLayer::Immutable, tr( "Immutable" ) );
   editTypeMap.insert( QgsVectorLayer::Hidden, tr( "Hidden" ) );
   editTypeMap.insert( QgsVectorLayer::CheckBox, tr( "Checkbox" ) );
+  editTypeMap.insert( QgsVectorLayer::TextEdit, tr( "Text edit" ) );
 }
 
 QString QgsVectorLayerProperties::editTypeButtonText( QgsVectorLayer::EditType type )
@@ -609,13 +572,14 @@ void QgsVectorLayerProperties::apply()
 
   // set up the scale based layer visibility stuff....
   layer->toggleScaleBasedVisibility( chkUseScaleDependentRendering->isChecked() );
-  layer->setMinimumScale( spinMinimumScale->value() );
-  layer->setMaximumScale( spinMaximumScale->value() );
+  layer->setMinimumScale( leMinimumScale->text().toFloat() );
+  layer->setMaximumScale( leMaximumScale->text().toFloat() );
 
   // update the display field
   layer->setDisplayField( displayFieldComboBox->currentText() );
 
   layer->setEditForm( leEditForm->text() );
+  layer->setEditFormInit( leEditFormInit->text() );
 
   actionDialog->apply();
 
@@ -718,9 +682,7 @@ void QgsVectorLayerProperties::apply()
 
 void QgsVectorLayerProperties::on_pbnQueryBuilder_clicked()
 {
-  // launch the query builder using the PostgreSQL connection
-  // from the provider
-
+  // launch the query builder
   QgsQueryBuilder *qb = new QgsQueryBuilder( layer, this );
 
   // Set the sql in the query builder to the same in the prop dialog
@@ -1006,7 +968,7 @@ void QgsVectorLayerProperties::on_pbnSaveDefaultStyle_clicked()
 
 void QgsVectorLayerProperties::on_pbnLoadStyle_clicked()
 {
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedDir = myQSettings.value( "style/lastStyleDir", "." ).toString();
   QString myFileName = QFileDialog::getOpenFileName( this, tr( "Load layer properties from style file (.qml)" ), myLastUsedDir, tr( "QGIS Layer Style File (*.qml)" ) );
   if ( myFileName.isNull() )
@@ -1035,7 +997,7 @@ void QgsVectorLayerProperties::on_pbnLoadStyle_clicked()
 
 void QgsVectorLayerProperties::on_pbnSaveStyleAs_clicked()
 {
-  QSettings myQSettings;  // where we keep last used filter in persistant state
+  QSettings myQSettings;  // where we keep last used filter in persistent state
   QString myLastUsedDir = myQSettings.value( "style/lastStyleDir", "." ).toString();
   QString myOutputFileName = QFileDialog::getSaveFileName( this, tr( "Save layer properties as style file (.qml)" ), myLastUsedDir, tr( "QGIS Layer Style File (*.qml)" ) );
   if ( myOutputFileName.isNull() ) //dialog canceled
@@ -1045,7 +1007,7 @@ void QgsVectorLayerProperties::on_pbnSaveStyleAs_clicked()
 
   apply(); // make sure the qml to save is uptodate
 
-  //ensure the user never ommitted the extension from the file name
+  //ensure the user never omitted the extension from the file name
   if ( !myOutputFileName.endsWith( ".qml", Qt::CaseInsensitive ) )
   {
     myOutputFileName += ".qml";
@@ -1139,4 +1101,93 @@ QList<QgsVectorOverlayPlugin*> QgsVectorLayerProperties::overlayPlugins() const
   }
 
   return pluginList;
+}
+
+void QgsVectorLayerProperties::setUsingNewSymbology( bool useNewSymbology )
+{
+  if ( useNewSymbology )
+  {
+    QgsSymbologyV2Conversion::rendererV1toV2( layer );
+  }
+  else
+  {
+    QgsSymbologyV2Conversion::rendererV2toV1( layer );
+  }
+
+  // update GUI!
+  updateSymbologyPage();
+}
+
+void QgsVectorLayerProperties::useNewSymbology()
+{
+  int res = QMessageBox::question( this, tr( "Symbology" ),
+                                   tr( "Do you wish to use the new symbology implementation for this layer?" ),
+                                   QMessageBox::Yes | QMessageBox::No );
+
+  if ( res != QMessageBox::Yes )
+    return;
+
+  setUsingNewSymbology( true );
+}
+
+void QgsVectorLayerProperties::updateSymbologyPage()
+{
+
+  //find out the type of renderer in the vectorlayer, create a dialog with these settings and add it to the form
+  delete mRendererDialog;
+  mRendererDialog = 0;
+
+  bool v2 = layer->isUsingRendererV2();
+
+  // hide unused widgets
+  legendtypecombobox->setVisible( !v2 );
+  legendtypelabel->setVisible( !v2 );
+  lblTransparencyPercent->setVisible( !v2 );
+  sliderTransparency->setVisible( !v2 );
+  btnUseNewSymbology->setVisible( !v2 );
+
+  if ( v2 )
+  {
+    mRendererDialog = new QgsRendererV2PropertiesDialog( layer, QgsStyleV2::defaultStyle(), true );
+
+    connect( mRendererDialog, SIGNAL( useNewSymbology( bool ) ), this, SLOT( setUsingNewSymbology( bool ) ) );
+
+  }
+  else
+  {
+
+    QString rtype = layer->renderer()->name();
+    if ( rtype == "Single Symbol" )
+    {
+      mRendererDialog = new QgsSingleSymbolDialog( layer );
+      legendtypecombobox->setCurrentIndex( 0 );
+    }
+    else if ( rtype == "Graduated Symbol" )
+    {
+      mRendererDialog = new QgsGraduatedSymbolDialog( layer );
+      legendtypecombobox->setCurrentIndex( 1 );
+    }
+    else if ( rtype == "Continuous Color" )
+    {
+      mRendererDialog = new QgsContinuousColorDialog( layer );
+      legendtypecombobox->setCurrentIndex( 2 );
+    }
+    else if ( rtype == "Unique Value" )
+    {
+      mRendererDialog = new QgsUniqueValueDialog( layer );
+      legendtypecombobox->setCurrentIndex( 3 );
+    }
+
+    QObject::connect( legendtypecombobox, SIGNAL( activated( const QString & ) ), this,
+                      SLOT( alterLayerDialog( const QString & ) ) );
+
+  }
+
+  if ( mRendererDialog )
+  {
+    widgetStackRenderers->addWidget( mRendererDialog );
+    widgetStackRenderers->setCurrentWidget( mRendererDialog );
+  }
+
+
 }

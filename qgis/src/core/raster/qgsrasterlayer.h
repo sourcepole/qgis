@@ -471,7 +471,7 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
 
     /** \brief Returns a string representation of drawing style
      *
-     * Implementaed mainly for serialisation / deserialisation of settings to xml.
+     * Implemented mainly for serialisation / deserialisation of settings to xml.
      * NOTE: May be deprecated in the future!. DrawingStyle drawingStyle() instead.
      * */
     QString drawingStyleAsString() const;
@@ -792,7 +792,7 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
 
     DrawingStyle mDrawingStyle;
 
-    /**  [ data provider interface ] Flag indicating wheter the layer is in editing mode or not*/
+    /**  [ data provider interface ] Flag indicating whether the layer is in editing mode or not*/
     bool mEditable;
 
     /** [ data provider interface ]The error message associated with the last error */

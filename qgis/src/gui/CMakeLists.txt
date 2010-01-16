@@ -19,6 +19,7 @@ symbology-ng/qgsvectorcolorbrewercolorrampv2dialog.cpp
 
 qgisgui.cpp
 qgisinterface.cpp
+qgslegendinterface.cpp
 qgscolorbutton.cpp
 qgscomposerview.cpp
 qgscursors.cpp
@@ -39,10 +40,12 @@ qgsmaptoolemitpoint.cpp
 qgsmaptoolpan.cpp
 qgsmaptoolzoom.cpp
 qgsmessageviewer.cpp
+qgsprojectbadlayerguihandler.cpp
 qgsprojectionselector.cpp
 qgsquickprint.cpp
 qgsrubberband.cpp
 qgsvertexmarker.cpp
+qgsludialog.cpp
 )
 
 SET(QGIS_GUI_MOC_HDRS
@@ -63,6 +66,7 @@ symbology-ng/qgsvectorcolorbrewercolorrampv2dialog.h
 qgscomposerview.h
 qgsdetaileditemdelegate.h
 qgsdetaileditemwidget.h
+qgslegendinterface.h
 qgisinterface.h
 qgsencodingfiledialog.h
 qgsgenericprojectionselector.h
@@ -72,6 +76,8 @@ qgsmaptoolemitpoint.h
 qgsmessageviewer.h
 qgsprojectionselector.h
 qgsquickprint.h
+qgsludialog.h
+qgsprojectbadlayerguihandler.h
 )
 
 QT4_WRAP_CPP(QGIS_GUI_MOC_SRCS ${QGIS_GUI_MOC_HDRS})
@@ -109,11 +115,6 @@ SET_TARGET_PROPERTIES(qgis_gui PROPERTIES VERSION ${COMPLETE_VERSION} SOVERSION 
 ADD_DEPENDENCIES(qgis_gui ui)
 
 TARGET_LINK_LIBRARIES(qgis_gui
-  ${QT_QTGUI_LIBRARY} 
-  ${QT_QTXML_LIBRARY} 
-  ${QT_QTSVG_LIBRARY} 
-  ${QT_QTNETWORK_LIBRARY} 
-  ${QT_QTMAIN_LIBRARY} 
   qgis_core
 )
 

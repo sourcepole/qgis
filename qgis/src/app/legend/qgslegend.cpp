@@ -116,11 +116,15 @@ void QgsLegend::handleCurrentItemChanged( QTreeWidgetItem* current, QTreeWidgetI
   emit currentLayerChanged( layer );
 }
 
-void QgsLegend::addGroup()
+int QgsLegend::addGroup( QString name, bool expand )
 {
-  QgsLegendGroup* group = new QgsLegendGroup( this, tr( "group" ) );
+  if ( name.isEmpty() )
+    name = tr( "group" ); // some default name if none specified
+  QgsLegendGroup* group = new QgsLegendGroup( this, name );
   group->setData( 0, Qt::UserRole, Qt::Checked );
-  setExpanded( indexFromItem( group ), true );
+  QModelIndex groupIndex = indexFromItem( group );
+  setExpanded( groupIndex, expand );
+  return groupIndex.row();
 }
 
 void QgsLegend::removeAll()
@@ -145,20 +149,27 @@ void QgsLegend::selectAll( bool select )
   bool renderFlagState = mMapCanvas->renderFlag();
   mMapCanvas->setRenderFlag( false );
 
-  QTreeWidgetItem* theItem = firstItem();
-
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     QgsLegendItem* litem = dynamic_cast<QgsLegendItem *>( theItem );
-    if ( litem && litem->type() == QgsLegendItem::LEGEND_LAYER_FILE )
+    if ( litem && litem->type() == QgsLegendItem::LEGEND_LAYER )
     {
       theItem->setCheckState( 0, ( select ? Qt::Checked : Qt::Unchecked ) );
       handleItemChange( theItem, 0 );
     }
-    theItem = nextItem( theItem );
   }
+
   // Turn on rendering (if it was on previously)
   mMapCanvas->setRenderFlag( renderFlagState );
+}
+
+void QgsLegend::removeGroup( int groupIndex )
+{
+  QgsLegendGroup * lg = dynamic_cast<QgsLegendGroup *>( topLevelItem( groupIndex ) );
+  if ( lg )
+  {
+    removeGroup( lg );
+  }
 }
 
 void QgsLegend::removeLayer( QString layer_key )
@@ -168,10 +179,9 @@ void QgsLegend::removeLayer( QString layer_key )
     return;
   }
 
-  QTreeWidgetItem* theItem = firstItem();
   QgsDebugMsg( "called." );
 
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     QgsLegendItem *li = dynamic_cast<QgsLegendItem *>( theItem );
     if ( li )
@@ -188,7 +198,6 @@ void QgsLegend::removeLayer( QString layer_key )
       }
 
     }
-    theItem = nextItem( theItem );
   }
 
   updateMapCanvasLayerSet();
@@ -355,6 +364,7 @@ void QgsLegend::mouseReleaseEvent( QMouseEvent * e )
 
   QgsLegendItem* origin = dynamic_cast<QgsLegendItem *>( mItemBeingMoved );
   mItemBeingMoved = NULL;
+  QModelIndex oldIndex = indexFromItem( origin );
 
   QgsLegendItem* dest = dynamic_cast<QgsLegendItem *>( destItem );
 
@@ -375,6 +385,7 @@ void QgsLegend::mouseReleaseEvent( QMouseEvent * e )
       {
         moveItem( origin, dest );
         setCurrentItem( origin );
+        emit itemMoved( oldIndex, indexFromItem( origin ) );
       }
     }
     else if ( mDropAction == BEFORE )// below center of item
@@ -385,6 +396,7 @@ void QgsLegend::mouseReleaseEvent( QMouseEvent * e )
         moveItem( origin, dest ); // Insert after, as above...
         moveItem( dest, origin ); // ... and then switch places!
         setCurrentItem( origin );
+        emit itemMoved( oldIndex, indexFromItem( origin ) );
       }
     }
     else if ( mDropAction == INTO_GROUP )
@@ -394,6 +406,7 @@ void QgsLegend::mouseReleaseEvent( QMouseEvent * e )
       {
         insertItem( origin, dest );
         setCurrentItem( origin );
+        emit itemMoved( oldIndex, indexFromItem( origin ) );
       }
     }
     else//no action
@@ -468,16 +481,17 @@ void QgsLegend::initPixmaps()
 int QgsLegend::getItemPos( QTreeWidgetItem* item )
 {
   int counter = 1;
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     if ( theItem == item )
     {
       return counter;
     }
-    theItem = nextItem( theItem );
+
     ++counter;
   }
+
   return -1;
 }
 
@@ -489,9 +503,6 @@ void QgsLegend::addLayer( QgsMapLayer * layer )
   }
 
   QgsLegendLayer* llayer = new QgsLegendLayer( layer );
-
-  llayer->updateIcon();
-  llayer->setToolTip( 0, layer->publicSource() );
 
   //set the correct check states
   blockSignals( true );
@@ -516,18 +527,13 @@ void QgsLegend::addLayer( QgsMapLayer * layer )
 
   // first layer?
   if ( mMapCanvas->layerCount() == 1 )
+  {
     mMapCanvas->zoomToFullExtent();
+    mMapCanvas->clearExtentHistory();
+  }
   setCurrentItem( llayer );
   //make the QTreeWidget item up-to-date
   doItemsLayout();
-
-  // setup connections that will update the layer icons
-  if ( qobject_cast<QgsVectorLayer *>( layer ) )
-  {
-    QgsDebugMsg( "Connecting signals for updating icons, layer " + layer->name() );
-    connect( layer, SIGNAL( editingStarted() ), llayer, SLOT( updateIcon() ) );
-    connect( layer, SIGNAL( editingStopped() ), llayer, SLOT( updateIcon() ) );
-  }
 }
 
 QgsLegendLayer* QgsLegend::currentLegendLayer()
@@ -565,6 +571,16 @@ QgsMapLayer* QgsLegend::currentLayer()
   }
 }
 
+bool QgsLegend::setCurrentLayer( QgsMapLayer *layer )
+{
+  QgsLegendLayer *ll = findLegendLayer( layer );
+  if ( !ll )
+    return false;
+
+  setCurrentItem( ll );
+  return true;
+}
+
 void QgsLegend::legendGroupRemove()
 {
   if ( !mMapCanvas || mMapCanvas->isDrawing() )
@@ -575,17 +591,27 @@ void QgsLegend::legendGroupRemove()
   QgsLegendGroup* lg = dynamic_cast<QgsLegendGroup *>( currentItem() );
   if ( lg )
   {
-    //delete the legend layers first
-    QTreeWidgetItem * child = lg->child( 0 );
-    while ( child )
-    {
-      setCurrentItem( child );
-      removeCurrentLayer();
-      child = lg->child( 0 );
-    }
-    delete lg;
-    adjustIconSize();
+    removeGroup( lg );
   }
+}
+
+void QgsLegend::removeGroup( QgsLegendGroup * lg )
+{
+  if ( !mMapCanvas || mMapCanvas->isDrawing() )
+  {
+    return;
+  }
+
+  //delete the legend layers first
+  QTreeWidgetItem * child = lg->child( 0 );
+  while ( child )
+  {
+    setCurrentItem( child );
+    removeCurrentLayer();
+    child = lg->child( 0 );
+  }
+  delete lg;
+  adjustIconSize();
 }
 
 void QgsLegend::removeCurrentLayer()
@@ -658,7 +684,15 @@ bool QgsLegend::removeLayer( QgsMapLayer* ml, bool askCancelOnEditable )
   return true;
 }
 
-
+void QgsLegend::moveLayer( QgsMapLayer * ml, int groupIndex )
+{
+  QgsLegendLayer *layer = findLegendLayer( ml->getLayerID() );
+  QgsLegendGroup *group = dynamic_cast<QgsLegendGroup*>( topLevelItem( groupIndex ) );
+  if ( layer && group )
+  {
+    insertItem( layer, group );
+  }
+}
 
 void QgsLegend::legendLayerShowProperties()
 {
@@ -752,21 +786,17 @@ void QgsLegend::legendLayerShowInOverview()
 
 void QgsLegend::expandAll()
 {
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     setExpanded( indexFromItem( theItem ), true );
-    theItem = nextItem( theItem );
   }
 }
 
 void QgsLegend::collapseAll()
 {
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     setExpanded( indexFromItem( theItem ), false );
-    theItem = nextItem( theItem );
   }
 }
 
@@ -781,108 +811,106 @@ bool QgsLegend::writeXML( QDomNode & legendnode, QDomDocument & document )
   QDomElement legendlayerfilenode;
   Qt::CheckState cstate; //check state for legend layers and legend groups
 
-  QTreeWidgetItem* currentItem = firstItem();
-  while ( currentItem )
+  for ( QTreeWidgetItem* currentItem = firstItem(); currentItem;   currentItem = nextItem( currentItem ) )
   {
     QgsLegendItem *item = dynamic_cast<QgsLegendItem *>( currentItem );
-    if ( item )
+    if ( !item )
+      continue;
+
+    switch ( item->type() )
     {
-      switch ( item->type() )
-      {
-        case QgsLegendItem::LEGEND_GROUP:
-          //make sure the legendnode is 'legend' again after a legend group
-          if ( !( item->parent() ) )
-          {
-            legendnode = tmplegendnode;
-          }
-          legendgroupnode = document.createElement( "legendgroup" );
-          legendgroupnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
-          legendgroupnode.setAttribute( "name", item->text( 0 ) );
-          cstate = item->checkState( 0 );
-          if ( cstate == Qt::Checked )
-          {
-            legendgroupnode.setAttribute( "checked", "Qt::Checked" );
-          }
-          else if ( cstate == Qt::Unchecked )
-          {
-            legendgroupnode.setAttribute( "checked", "Qt::Unchecked" );
-          }
-          else if ( cstate == Qt::PartiallyChecked )
-          {
-            legendgroupnode.setAttribute( "checked", "Qt::PartiallyChecked" );
-          }
-          legendnode.appendChild( legendgroupnode );
-          tmplegendnode =  legendnode;
-          legendnode = legendgroupnode;
-          break;
+      case QgsLegendItem::LEGEND_GROUP:
+        //make sure the legendnode is 'legend' again after a legend group
+        if ( !( item->parent() ) )
+        {
+          legendnode = tmplegendnode;
+        }
+        legendgroupnode = document.createElement( "legendgroup" );
+        legendgroupnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
+        legendgroupnode.setAttribute( "name", item->text( 0 ) );
+        cstate = item->checkState( 0 );
+        if ( cstate == Qt::Checked )
+        {
+          legendgroupnode.setAttribute( "checked", "Qt::Checked" );
+        }
+        else if ( cstate == Qt::Unchecked )
+        {
+          legendgroupnode.setAttribute( "checked", "Qt::Unchecked" );
+        }
+        else if ( cstate == Qt::PartiallyChecked )
+        {
+          legendgroupnode.setAttribute( "checked", "Qt::PartiallyChecked" );
+        }
+        legendnode.appendChild( legendgroupnode );
+        tmplegendnode =  legendnode;
+        legendnode = legendgroupnode;
+        break;
 
-        case QgsLegendItem::LEGEND_LAYER:
-          //make sure the legendnode is 'legend' again after a legend group
-          if ( !( item->parent() ) )
-          {
-            legendnode = tmplegendnode;
-          }
-          legendlayernode = document.createElement( "legendlayer" );
-          legendlayernode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
-          cstate = item->checkState( 0 );
-          if ( cstate == Qt::Checked )
-          {
-            legendlayernode.setAttribute( "checked", "Qt::Checked" );
-          }
-          else if ( cstate == Qt::Unchecked )
-          {
-            legendlayernode.setAttribute( "checked", "Qt::Unchecked" );
-          }
-          else if ( cstate == Qt::PartiallyChecked )
-          {
-            legendlayernode.setAttribute( "checked", "Qt::PartiallyChecked" );
-          }
-          legendlayernode.setAttribute( "name", item->text( 0 ) );
-          legendnode.appendChild( legendlayernode );
+      case QgsLegendItem::LEGEND_LAYER:
+        //make sure the legendnode is 'legend' again after a legend group
+        if ( !( item->parent() ) )
+        {
+          legendnode = tmplegendnode;
+        }
+        legendlayernode = document.createElement( "legendlayer" );
+        legendlayernode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
+        cstate = item->checkState( 0 );
+        if ( cstate == Qt::Checked )
+        {
+          legendlayernode.setAttribute( "checked", "Qt::Checked" );
+        }
+        else if ( cstate == Qt::Unchecked )
+        {
+          legendlayernode.setAttribute( "checked", "Qt::Unchecked" );
+        }
+        else if ( cstate == Qt::PartiallyChecked )
+        {
+          legendlayernode.setAttribute( "checked", "Qt::PartiallyChecked" );
+        }
+        legendlayernode.setAttribute( "name", item->text( 0 ) );
+        legendnode.appendChild( legendlayernode );
 
-          // save the information about layer
-          // emulate a legend layer file group and a legend layer file
-          // to keep it compatible with older projects
-          {
-            QgsLegendLayer *ll = dynamic_cast<QgsLegendLayer *>( item );
-            QgsMapLayer* layer = ll->layer();
+        // save the information about layer
+        // emulate a legend layer file group and a legend layer file
+        // to keep it compatible with older projects
+        {
+          QgsLegendLayer *ll = dynamic_cast<QgsLegendLayer *>( item );
+          QgsMapLayer* layer = ll->layer();
 
-            layerfilegroupnode = document.createElement( "filegroup" );
-            layerfilegroupnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
-            layerfilegroupnode.setAttribute( "hidden", isItemHidden( item ) ? "true" : "false" );
-            legendlayernode.appendChild( layerfilegroupnode );
+          layerfilegroupnode = document.createElement( "filegroup" );
+          layerfilegroupnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
+          layerfilegroupnode.setAttribute( "hidden", isItemHidden( item ) ? "true" : "false" );
+          legendlayernode.appendChild( layerfilegroupnode );
 
-            legendlayerfilenode = document.createElement( "legendlayerfile" );
+          legendlayerfilenode = document.createElement( "legendlayerfile" );
 
-            // layer id
-            legendlayerfilenode.setAttribute( "layerid", layer->getLayerID() );
-            layerfilegroupnode.appendChild( legendlayerfilenode );
+          // layer id
+          legendlayerfilenode.setAttribute( "layerid", layer->getLayerID() );
+          layerfilegroupnode.appendChild( legendlayerfilenode );
 
-            // visible flag
-            legendlayerfilenode.setAttribute( "visible", ll->isVisible() );
+          // visible flag
+          legendlayerfilenode.setAttribute( "visible", ll->isVisible() );
 
-            // show in overview flag
-            legendlayerfilenode.setAttribute( "isInOverview", ll->isInOverview() );
-          }
-          break;
+          // show in overview flag
+          legendlayerfilenode.setAttribute( "isInOverview", ll->isInOverview() );
+        }
+        break;
 
-        case QgsLegendItem::LEGEND_PROPERTY_GROUP:
-          legendpropertynode = document.createElement( "propertygroup" );
-          legendpropertynode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
-          legendlayernode.appendChild( legendpropertynode );
-          break;
+      case QgsLegendItem::LEGEND_PROPERTY_GROUP:
+        legendpropertynode = document.createElement( "propertygroup" );
+        legendpropertynode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
+        legendlayernode.appendChild( legendpropertynode );
+        break;
 
-        case QgsLegendItem::LEGEND_SYMBOL_GROUP:
-          legendsymbolnode = document.createElement( "symbolgroup" );
-          legendsymbolnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
-          legendlayernode.appendChild( legendsymbolnode );
-          break;
+      case QgsLegendItem::LEGEND_SYMBOL_GROUP:
+        legendsymbolnode = document.createElement( "symbolgroup" );
+        legendsymbolnode.setAttribute( "open", isItemExpanded( item ) ? "true" : "false" );
+        legendlayernode.appendChild( legendsymbolnode );
+        break;
 
-        default: //do nothing for the leaf nodes
-          break;
-      }
+      default: //do nothing for the leaf nodes
+        break;
     }
-    currentItem = nextItem( currentItem );
   }
   return true;
 }
@@ -1014,19 +1042,8 @@ QgsLegendLayer* QgsLegend::readLayerFromXML( QDomElement& childelem, bool& isOpe
   // load layer's visibility and 'show in overview' flag
   ll->setInOverview( atoi( fileElem.attribute( "isInOverview" ).toUtf8() ) );
 
-  //set the layer type icon
-  ll->updateIcon();
-
-  // setup connections that will update the layer icons
-  if ( qobject_cast<QgsVectorLayer *>( theMapLayer ) )
-  {
-    QgsDebugMsg( "Connecting signals for updating icons, layer " + theMapLayer->name() );
-    connect( theMapLayer, SIGNAL( editingStarted() ), ll, SLOT( updateIcon() ) );
-    connect( theMapLayer, SIGNAL( editingStopped() ), ll, SLOT( updateIcon() ) );
-  }
-
   // expanded or collapsed
-  isOpen = ( childelem.attribute( "open" ) == "true" );
+  isOpen = childelem.attribute( "open" ) == "true";
 
   //set the checkbox of the legend layer to the right state
   blockSignals( true );
@@ -1115,8 +1132,7 @@ void QgsLegend::resetToInitialPosition( QTreeWidgetItem* li )
 QgsLegendLayer* QgsLegend::findLegendLayer( const QString& layerKey )
 {
   QgsLegendLayer* theLegendLayer = 0;
-  QTreeWidgetItem* theItem = firstItem();
-  do
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     theLegendLayer = dynamic_cast<QgsLegendLayer *>( theItem );
     if ( theLegendLayer ) //item is a legend layer
@@ -1127,9 +1143,28 @@ QgsLegendLayer* QgsLegend::findLegendLayer( const QString& layerKey )
       }
     }
   }
-  while (( theItem = nextItem( theItem ) ) );
+
   return 0;
 }
+
+QgsLegendLayer* QgsLegend::findLegendLayer( const QgsMapLayer *layer )
+{
+  QgsLegendLayer* theLegendLayer = 0;
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
+  {
+    theLegendLayer = dynamic_cast<QgsLegendLayer *>( theItem );
+    if ( theLegendLayer ) //item is a legend layer
+    {
+      if ( theLegendLayer->layer() == layer )
+      {
+        return theLegendLayer;
+      }
+    }
+  }
+
+  return 0;
+}
+
 
 void QgsLegend::adjustIconSize()
 {
@@ -1175,6 +1210,30 @@ bool QgsLegend::yCoordAboveCenter( QgsLegendItem* it, int ycoord )
   {
     return true;
   }
+}
+
+bool QgsLegend::isLegendGroup( const QModelIndex &index )
+{
+  return dynamic_cast<QgsLegendGroup *>( itemFromIndex( index ) );
+}
+
+QStringList QgsLegend::groups()
+{
+  QStringList groupList;
+  QTreeWidgetItem *current = firstItem();
+
+  while ( current )
+  {
+    QgsLegendGroup *group = dynamic_cast<QgsLegendGroup *>( current );
+    if ( group )
+    {
+      groupList.append( group->text( 0 ) );
+    }
+
+    current = nextItem( current );
+  }
+
+  return groupList;
 }
 
 /**Returns the first item in the hierarchy*/
@@ -1335,17 +1394,15 @@ void QgsLegend::updateMapCanvasLayerSet()
   QList<QgsMapCanvasLayer> layers;
 
   // create list of the layers
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     QgsLegendItem *li = dynamic_cast<QgsLegendItem *>( theItem );
-    QgsLegendLayer* ll = qobject_cast<QgsLegendLayer *>( li );
+    QgsLegendLayer *ll = qobject_cast<QgsLegendLayer *>( li );
     if ( ll )
     {
       QgsMapCanvasLayer& lyr = ll->canvasLayer();
       layers.append( lyr );
     }
-    theItem = nextItem( theItem );
   }
 
   // set layers in canvas
@@ -1359,15 +1416,14 @@ void QgsLegend::updateOverview()
 
 void QgsLegend::enableOverviewModeAllLayers( bool isInOverview )
 {
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     QgsLegendLayer* ll = dynamic_cast<QgsLegendLayer *>( theItem );
     if ( ll )
     {
       ll->setInOverview( isInOverview );
     }
-    theItem = nextItem( theItem );
+
   }
   updateMapCanvasLayerSet();
   updateOverview();
@@ -1376,8 +1432,7 @@ void QgsLegend::enableOverviewModeAllLayers( bool isInOverview )
 std::deque<QString> QgsLegend::layerIDs()
 {
   std::deque<QString> layers;
-  QTreeWidgetItem* theItem = firstItem();
-  while ( theItem )
+  for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
     QgsLegendItem *li = dynamic_cast<QgsLegendItem *>( theItem );
     QgsLegendLayer* ll = qobject_cast<QgsLegendLayer *>( li );
@@ -1386,7 +1441,6 @@ std::deque<QString> QgsLegend::layerIDs()
       QgsMapLayer *lyr = ll->layer();
       layers.push_front( lyr->getLayerID() );
     }
-    theItem = nextItem( theItem );
   }
 
 #ifdef QGISDEBUG
@@ -1578,6 +1632,11 @@ void QgsLegend::makeToTopLevelItem()
 
 void QgsLegend::legendLayerZoom()
 {
+  if ( !mMapCanvas )
+  {
+    return;
+  }
+
   //find current Layer
   QgsLegendLayer* currentLayer = dynamic_cast<QgsLegendLayer *>( currentItem() );
   if ( !currentLayer )
@@ -1585,6 +1644,16 @@ void QgsLegend::legendLayerZoom()
 
   QgsMapLayer* theLayer = currentLayer->layer();
   QgsRectangle extent = theLayer->extent();
+
+  //transform extent if otf-projection is on
+  if ( mMapCanvas->hasCrsTransformEnabled() )
+  {
+    QgsMapRenderer* renderer = mMapCanvas->mapRenderer();
+    if ( renderer )
+    {
+      extent = renderer->layerExtentToOutputExtent( theLayer, extent );
+    }
+  }
 
   // Increase bounding box with 5%, so that layer is a bit inside the borders
   extent.scale( 1.05 );

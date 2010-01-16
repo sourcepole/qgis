@@ -1,6 +1,6 @@
 // QGIS Xcode project common build settings
 
-CURRENT_PROJECT_VERSION = 2.2.1
+CURRENT_PROJECT_VERSION = 2.4.0
 
 // SDKSYS must be set to valid value
 SDKSYS = leo // tig (Tiger), leo (Leopard), snow (Snow Leopard)
@@ -67,7 +67,7 @@ SQLITE_FORM = fw // system, fw, shared or internal
 SPATIALITE_GEOS = yes
 SPATIALITE_PROJ = yes
 
-GSL_FORM = shared // static or shared
+GSL_FORM = fw // fw, static or shared
 PGSQL_FORM = shared // static or shared
 
 // system expat only on Leopard+
@@ -81,6 +81,10 @@ GRASS_VERSION = 6.4
 PYTHON_FORM = $(PYTHON_FORM_$(SDKSYS)) // fw, system or disabled
 PYTHON_VERSION = $(PYTHON_VERSION_$(SDKSYS))
 
+// qwt can't be compiled into pyqwt as is the default with pyqwt
+QWT_FORM = shared // shared or static
+QWT_VERSION = 5.2.1-svn // default in pyqwt package
+
 //////////////////////////////////////////////////////////////////////
 // whether to bundle some external libs in the app package
 //   some checking is done, so /Library frameworks (except Qt) and
@@ -91,10 +95,12 @@ PYTHON_VERSION = $(PYTHON_VERSION_$(SDKSYS))
 // bundling GRASS doesn't make sense, as a full GRASS install is required
 // Qt always bundled - else Qt plugins will load that cause grief
 
-BUNDLE_GSL = YES
 BUNDLE_PGSQL = YES
 BUNDLE_GPSBABEL = YES
+BUNDLE_QWT = YES
+
 // frameworks not bundled
+BUNDLE_GSL = YES
 BUNDLE_GDAL = YES
 BUNDLE_GEOS = YES
 BUNDLE_PROJ = YES
@@ -111,7 +117,8 @@ GDAL_PREFIX_shared = /usr/local
 PROJ_PREFIX_shared = /usr/local
 GEOS_PREFIX_shared = /usr/local
 
-GSL_PREFIX = /usr/local
+GSL_PREFIX_shared = /usr/local
+GSL_PREFIX_static = /usr/local
 
 // This must match exactly how GRASS was built and installed.
 // If it was moved or renamed, qgis GRASS plugin will not work.
@@ -128,6 +135,9 @@ SQLITE_PREFIX_shared = /usr/local
 PGSQL_PREFIX = /usr/local/pgsql
 // used to link static libs, defaults based on kyngchaos dist
 PGSQL_LIBADD = -lintl -framework CoreFoundation -liconv -lxml2 -lssl -lcrypto -lpam -lkrb5 -lldap -lz
+
+QWT_PREFIX_shared = /usr/local/qwt-$(QWT_VERSION)
+QWT_PREFIX_static = $(QWT_PREFIX_shared)
 
 //////////////////////////////////////////////////////////////////////
 // DO NOT CHANGE THESE
@@ -197,7 +207,7 @@ DEFS_EXPORT = CORE_EXPORT= GUI_EXPORT= PYTHON_EXPORT= ANALYSIS_EXPORT=
 
 // use full flags instead of Xcode includes and defs,
 // since these are needed in scripts also
-QT_CXXFLAGS = -DQT_DLL -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_SQL_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_NO_CAST_TO_ASCII $(QTDEFS_$(CONFIGURATION)) -I/Library/Frameworks/QtCore.framework/Headers -I/Library/Frameworks/QtGui.framework/Headers -I/Library/Frameworks/QtNetwork.framework/Headers -I/Library/Frameworks/QtSql.framework/Headers -I/Library/Frameworks/QtSvg.framework/Headers -I/Library/Frameworks/QtXml.framework/Headers
+QT_CXXFLAGS = -DQT_DLL -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_SQL_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_NO_CAST_TO_ASCII $(QTDEFS_$(CONFIGURATION)) -I/Library/Frameworks/QtCore.framework/Headers -I/Library/Frameworks/QtGui.framework/Headers -I/Library/Frameworks/QtNetwork.framework/Headers -I/Library/Frameworks/QtSql.framework/Headers -I/Library/Frameworks/QtSvg.framework/Headers -I/Library/Frameworks/QtXml.framework/Headers -I/Library/Frameworks/QtWebKit.framework/Headers
 QT_INC_UITOOLS = /usr/include/QtUiTools
 QTDEFS_Debug = -DQT_DEBUG
 QTDEFS_Release = -DQT_NO_DEBUG
@@ -208,13 +218,16 @@ QT_LIB_NET = -framework QtNetwork
 QT_LIB_XML = -framework QtXml
 QT_LIB_SVG = -framework QtSvg
 QT_LIB_SQL = -framework QtSql
+QT_LIB_WEBKIT = -framework QtWebKit
+QT_LIB_DBUS = -framework QtDBus
+QT_LIB_PHONON = -framework phonon
 QT_LIB_UITOOLS = -lQtUiTools
 // convenience for all Qt:
 QT_LIB = $(QT_LIB_CORE) $(QT_LIB_GUI) $(QT_LIB_NET) $(QT_LIB_XML) $(QT_LIB_SVG) $(QT_LIB_SQL)
 // list of Qt frameworks used
-QTLISTQG = QtCore QtGui QtNetwork QtSql QtSvg QtXml QtWebKit
+QTLISTQG = QtCore QtGui QtNetwork QtSql QtSvg QtXml QtWebKit QtDBus phonon
 // list of PyQt modules used
-PYQTLIST = Qt QtCore QtGui QtNetwork QtSql QtSvg QtXml QtWebKit
+PYQTLIST = Qt QtCore QtGui QtNetwork QtSql QtSvg QtXml QtWebKit phonon
 
 // with a choice of system vs user unix libs, use full path to lib file
 // to avoid possible accidental linking to system lib (ie expat)
@@ -247,7 +260,19 @@ GEOS_LIB = $(GEOS_LIB_$(GEOS_FORM))
 
 GRASS_PREFIX = $(GRASS_PREFIX_$(GRASS_FORM))
 GRASS_INC = $(GRASS_PREFIX)/include $(GRASS_PREFIX)/include/grass
-GRASS_LIB = -L$(GRASS_PREFIX)/lib -lgrass_vect -lgrass_dig2 -lgrass_dbmiclient -lgrass_dbmibase -lgrass_shape -lgrass_dgl -lgrass_rtree -lgrass_gis -lgrass_datetime -lgrass_linkm -lgrass_form -lgrass_gproj
+GRASS_LIB_gis = -lgrass_gis
+GRASS_LIB_vect = -lgrass_vect
+GRASS_LIB_dig2 = -lgrass_dig2
+GRASS_LIB_dbmiclient = -lgrass_dbmiclient
+GRASS_LIB_dbmibase = -lgrass_dbmibase
+GRASS_LIB_shape = -lgrass_shape
+GRASS_LIB_dgl = -lgrass_dgl
+GRASS_LIB_rtree = -lgrass_rtree
+GRASS_LIB_datetime = -lgrass_datetime
+GRASS_LIB_linkm = -lgrass_linkm
+GRASS_LIB_form = -lgrass_form
+GRASS_LIB_gproj = -lgrass_gproj
+GRASS_LIB_DIR = $(GRASS_PREFIX)/lib
 GRASS_BASE = $(GRASS_PREFIX)
 HAVE_OPENPTY = 1
 
@@ -265,7 +290,13 @@ EXPAT_LIB_shared = $(EXPAT_PREFIX)/lib/libexpat.dylib
 EXPAT_LIB_static = $(EXPAT_PREFIX)/lib/libexpat.a
 EXPAT_LIB = $(EXPAT_LIB_$(EXPAT_FORM))
 
-GSL_INC = $(GSL_PREFIX)/include
+GSL_PREFIX_fw = /Library/Frameworks/GSL.framework
+GSL_PREFIX = $(GSL_PREFIX_$(GSL_FORM))
+GSL_INC_fw = $(GSL_PREFIX_fw)/Headers
+GSL_INC_shared = $(GSL_PREFIX)/include
+GSL_INC_static = $(GSL_PREFIX)/include
+GSL_INC = $(GSL_INC_$(GSL_FORM))
+GSL_LIB_fw = -framework GSL
 GSL_LIB_shared = -L$(GSL_PREFIX)/lib -lgsl -lm
 GSL_LIB_static = $(GSL_PREFIX)/lib/libgsl.a $(GSL_PREFIX)/lib/libgslcblas.a -lm
 GSL_LIB = $(GSL_LIB_$(GSL_FORM))
@@ -310,6 +341,11 @@ SPATIALITE_INC_internal = ../../src/core/spatialite/headers
 SPATIALITE_INC = $(SPATIALITE_INC_$(SQLITE_FORM))
 SPATIALITE_LIBADD_internal = -liconv -ldl
 SPATIALITE_LIBADD = $(SPATIALITE_GEOS_$(SPATIALITE_GEOS)_$(SQLITE_FORM)) $(SPATIALITE_PROJ_$(SPATIALITE_PROJ)_$(SQLITE_FORM)) $(SPATIALITE_LIBADD_$(SQLITE_FORM))
+
+QWT_PREFIX = $(QWT_PREFIX_$(QWT_FORM))
+QWT_INC = $(QWT_PREFIX)/include
+QWT_LIB = -L$(QWT_PREFIX)/lib -lqwt
+QWT_DEFS = HAVE_QWT
 
 // defaults by system
 PYTHON_VERSION_tig = 2.5

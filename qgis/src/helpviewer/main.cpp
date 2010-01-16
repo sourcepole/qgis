@@ -15,6 +15,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#include <iostream>
 #include <QLocale>
 #include <QSettings>
 #include <QTranslator>
@@ -49,6 +50,12 @@ int main( int argc, char ** argv )
   if ( myTranslationCode.isEmpty() )
   {
     myTranslationCode = QLocale::system().name();
+
+    QSettings settings;
+    if ( settings.value( "locale/overrideFlag", false ).toBool() )
+    {
+      myTranslationCode = settings.value( "locale/userLocale", "en_US" ).toString();
+    }
   }
   QgsDebugMsg( QString( "Setting translation to %1/qgis_%2" ).arg( i18nPath ).arg( myTranslationCode ) );
 
@@ -81,7 +88,7 @@ int main( int argc, char ** argv )
   // an additional viewer if one is already running.
   QgsHelpContextServer *helpServer = new QgsHelpContextServer();
   // Make port number available to client
-  QgsDebugMsg( helpServer->serverPort() );
+  std::cout << helpServer->serverPort() << std::endl;
   // Pass context request from socket to viewer widget
   QObject::connect( helpServer, SIGNAL( setContext( const QString& ) ),
                     &w, SLOT( setContext( const QString& ) ) );

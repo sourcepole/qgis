@@ -3,30 +3,32 @@
 
 #include "qgsrendererv2.h"
 
-class QgsRendererRangeV2
+class CORE_EXPORT QgsRendererRangeV2
 {
-public:
-  QgsRendererRangeV2(double lowerValue, double upperValue, QgsSymbolV2* symbol, QString label);
-  QgsRendererRangeV2(const QgsRendererRangeV2& range);
+  public:
+    QgsRendererRangeV2( double lowerValue, double upperValue, QgsSymbolV2* symbol, QString label );
+    QgsRendererRangeV2( const QgsRendererRangeV2& range );
 
-  ~QgsRendererRangeV2();
+    ~QgsRendererRangeV2();
 
-  double lowerValue() const;
-  double upperValue() const;
+    double lowerValue() const;
+    double upperValue() const;
 
-  QgsSymbolV2* symbol() const;
-  QString label() const;
+    QgsSymbolV2* symbol() const;
+    QString label() const;
 
-  void setSymbol(QgsSymbolV2* s);
-  void setLabel(QString label);
+    void setSymbol( QgsSymbolV2* s );
+    void setLabel( QString label );
+    void setLowerValue( double lowerValue );
+    void setUpperValue( double upperValue );
 
-  // debugging
-  QString dump();
+    // debugging
+    QString dump();
 
-protected:
-  double mLowerValue, mUpperValue;
-  QgsSymbolV2* mSymbol;
-  QString mLabel;
+  protected:
+    double mLowerValue, mUpperValue;
+    QgsSymbolV2* mSymbol;
+    QString mLabel;
 };
 
 typedef QList<QgsRendererRangeV2> QgsRangeList;
@@ -34,79 +36,84 @@ typedef QList<QgsRendererRangeV2> QgsRangeList;
 class QgsVectorLayer;
 class QgsVectorColorRampV2;
 
-class QgsGraduatedSymbolRendererV2 : public QgsFeatureRendererV2
+class CORE_EXPORT QgsGraduatedSymbolRendererV2 : public QgsFeatureRendererV2
 {
-public:
-  QgsGraduatedSymbolRendererV2(QString attrName = QString(), QgsRangeList ranges = QgsRangeList());
+  public:
+    QgsGraduatedSymbolRendererV2( QString attrName = QString(), QgsRangeList ranges = QgsRangeList() );
 
-  virtual ~QgsGraduatedSymbolRendererV2();
+    virtual ~QgsGraduatedSymbolRendererV2();
 
-  virtual QgsSymbolV2* symbolForFeature(QgsFeature& feature);
+    virtual QgsSymbolV2* symbolForFeature( QgsFeature& feature );
 
-  virtual void startRender(QgsRenderContext& context, const QgsFieldMap& fields);
+    virtual void startRender( QgsRenderContext& context, const QgsVectorLayer *vlayer );
 
-  virtual void stopRender(QgsRenderContext& context);
+    virtual void stopRender( QgsRenderContext& context );
 
-  virtual QList<QString> usedAttributes();
+    virtual QList<QString> usedAttributes();
 
-  virtual QString dump();
+    virtual QString dump();
 
-  virtual QgsFeatureRendererV2* clone();
+    virtual QgsFeatureRendererV2* clone();
 
-  virtual QgsSymbolV2List symbols();
+    virtual QgsSymbolV2List symbols();
 
-  QString classAttribute() const { return mAttrName; }
-  void setClassAttribute(QString attr) { mAttrName = attr; }
+    QString classAttribute() const { return mAttrName; }
+    void setClassAttribute( QString attr ) { mAttrName = attr; }
 
-  const QgsRangeList& ranges() { return mRanges; }
+    const QgsRangeList& ranges() { return mRanges; }
 
-  bool updateRangeSymbol(int rangeIndex, QgsSymbolV2* symbol);
-  bool updateRangeLabel(int rangeIndex, QString label);
+    bool updateRangeSymbol( int rangeIndex, QgsSymbolV2* symbol );
+    bool updateRangeLabel( int rangeIndex, QString label );
+    bool updateRangeUpperValue( int rangeIndex, double value );
+    bool updateRangeLowerValue( int rangeIndex, double value );
 
-  enum Mode
-  {
-    EqualInterval,
-    Quantile,
-    Custom
-  };
+    void addClass( QgsSymbolV2* symbol );
+    void deleteClass( int idx );
 
-  Mode mode() const { return mMode; }
-  void setMode(Mode mode) { mMode = mode; }
+    enum Mode
+    {
+      EqualInterval,
+      Quantile,
+      Custom
+    };
 
-  static QgsGraduatedSymbolRendererV2* createRenderer(
-                  QgsVectorLayer* vlayer,
-                  QString attrName,
-                  int classes,
-                  Mode mode,
-                  QgsSymbolV2* symbol,
-                  QgsVectorColorRampV2* ramp);
+    Mode mode() const { return mMode; }
+    void setMode( Mode mode ) { mMode = mode; }
 
-  //! create renderer from XML element
-  static QgsFeatureRendererV2* create(QDomElement& element);
+    static QgsGraduatedSymbolRendererV2* createRenderer(
+      QgsVectorLayer* vlayer,
+      QString attrName,
+      int classes,
+      Mode mode,
+      QgsSymbolV2* symbol,
+      QgsVectorColorRampV2* ramp );
 
-  //! store renderer info to XML element
-  virtual QDomElement save(QDomDocument& doc);
+    //! create renderer from XML element
+    static QgsFeatureRendererV2* create( QDomElement& element );
 
-  //! return a list of symbology items for the legend
-  virtual QgsLegendSymbologyList legendSymbologyItems(QSize iconSize);
+    //! store renderer info to XML element
+    virtual QDomElement save( QDomDocument& doc );
 
-  QgsSymbolV2* sourceSymbol();
-  void setSourceSymbol(QgsSymbolV2* sym);
+    //! return a list of symbology items for the legend
+    virtual QgsLegendSymbologyList legendSymbologyItems( QSize iconSize );
 
-  QgsVectorColorRampV2* sourceColorRamp();
-  void setSourceColorRamp(QgsVectorColorRampV2* ramp);
+    QgsSymbolV2* sourceSymbol();
+    void setSourceSymbol( QgsSymbolV2* sym );
 
-protected:
-  QgsRangeList mRanges;
-  QString mAttrName;
-  Mode mMode;
-  QgsSymbolV2* mSourceSymbol;
-  QgsVectorColorRampV2* mSourceColorRamp;
+    QgsVectorColorRampV2* sourceColorRamp();
+    void setSourceColorRamp( QgsVectorColorRampV2* ramp );
 
-  //! attribute index (derived from attribute name in startRender)
-  int mAttrNum;
+  protected:
+    QString mAttrName;
+    QgsRangeList mRanges;
+    Mode mMode;
+    QgsSymbolV2* mSourceSymbol;
+    QgsVectorColorRampV2* mSourceColorRamp;
 
-  QgsSymbolV2* symbolForValue(double value);
+    //! attribute index (derived from attribute name in startRender)
+    int mAttrNum;
+
+    QgsSymbolV2* symbolForValue( double value );
 };
 
 #endif // QGSGRADUATEDSYMBOLRENDERERV2_H

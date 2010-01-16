@@ -59,17 +59,30 @@ QWidget *QgsAttributeTableDelegate::createEditor(
   const QModelIndex &index ) const
 {
   QgsVectorLayer *vl = layer( index.model() );
-  if ( vl == NULL )
+  if ( !vl )
     return NULL;
 
-  QWidget *widget = QgsAttributeEditor::createAttributeEditor( parent, 0, vl, fieldIdx( index ), index.model()->data( index, Qt::EditRole ) );
+  QWidget *w = QgsAttributeEditor::createAttributeEditor( parent, 0, vl, fieldIdx( index ), index.model()->data( index, Qt::EditRole ) );
 
-  return widget;
+  if ( parent )
+  {
+    QgsAttributeTableView *tv = dynamic_cast<QgsAttributeTableView *>( parent->parentWidget() );
+    w->setMinimumWidth( tv->columnWidth( index.column() ) );
+
+    if ( vl->editType( fieldIdx( index ) ) == QgsVectorLayer::FileName )
+    {
+      QLineEdit *le = w->findChild<QLineEdit*>();
+      le->adjustSize();
+      w->setMinimumHeight( le->height()*2 ); // FIXME: there must be a better way to do this
+    }
+  }
+
+  return w;
 }
 
 void QgsAttributeTableDelegate::setModelData( QWidget *editor, QAbstractItemModel *model, const QModelIndex &index ) const
 {
-  QgsVectorLayer *vl = layer( index.model() );
+  QgsVectorLayer *vl = layer( model );
   if ( vl == NULL )
     return;
 

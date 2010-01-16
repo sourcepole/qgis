@@ -30,7 +30,7 @@
 static const QString TEXT_PROVIDER_KEY = "osm";
 static const QString TEXT_PROVIDER_DESCRIPTION = "Open Street Map data provider";
 static const QString DATE_TIME_FMT = "dd.MM.yyyy HH:mm:ss";
-static const QString PROVIDER_VERSION = "0.5";
+static const QString PROVIDER_VERSION = "0.5.1";
 
 // supported attributes
 const char* QgsOSMDataProvider::attr[] = { "timestamp", "user", "tags" };
@@ -96,17 +96,17 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
       // remove observer from the URI
       // (because otherwise it would be saved into project file and would cause crashes)
       QString newProps;
-      foreach ( QString p , props )
+      foreach( QString p , props )
       {
-        if (!p.startsWith("observer"))
+        if ( !p.startsWith( "observer" ) )
         {
-          if (!newProps.isEmpty())
+          if ( !newProps.isEmpty() )
             newProps += "&";
           newProps += p;
         }
       }
       QString newUri = uri.left( fileNameEnd + 1 ) + newProps;
-      setDataSourceUri(newUri);
+      setDataSourceUri( newUri );
 
       ulong observerAddr = propValue.toULong();
       mInitObserver = ( QObject* ) observerAddr;
@@ -145,23 +145,23 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
   QFile osmFile( mFileName );
   bool databaseExists = dbFile.exists();
 
-  // open database and create database schema for OSM data if neccessary
+  // open database and create database schema for OSM data if necessary
   // (find out if such database already exists; if not create it)
   if ( !openDatabase() )
   {
     QgsDebugMsg( "Opening sqlite3 database failed, OSM provider cannot be constructed." );
     closeDatabase();
     return;
-  };
+  }
 
-  // flag determining if OSM file parsing is neccessary
+  // flag determining if OSM file parsing is necessary
   bool shouldParse = true;
 
   if ( mFeatureType != PolygonType )
     shouldParse = false;
 
   // test if db file that belongs to source OSM file already exists and if it has the right version
-  if ( shouldParse && databaseExists && isDatabaseCompatibleWithInput( mFileName ) && isDatabaseCompatibleWithProvider() )
+  if ( databaseExists && isDatabaseCompatibleWithInput( mFileName ) && isDatabaseCompatibleWithProvider() )
     shouldParse = false;
 
   if ( shouldParse )
@@ -213,14 +213,19 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
         const unsigned char *boundaries_char = sqlite3_column_text( stmtSelectBoundary, 0 );
         QString boundaries(( const char * ) boundaries_char );
 
-        // boundaries should be string in following format: "xMin-yMin-xMax-yMax"
-        int separ1_pos = boundaries.indexOf( "-" );
-        int separ2_pos = boundaries.indexOf( "-", separ1_pos + 1 );
-        int separ3_pos = boundaries.indexOf( "-", separ2_pos + 1 );
-        xMin = boundaries.left( separ1_pos ).toDouble();
-        yMin = boundaries.mid( separ1_pos + 1, separ2_pos - separ1_pos - 1 ).toDouble();
-        xMax = boundaries.mid( separ2_pos + 1, separ3_pos - separ2_pos - 1 ).toDouble();
-        yMax = boundaries.right( boundaries.size() - separ3_pos - 1 ).toDouble();
+        // boundaries should be string in following format: "xMin:yMin:xMax:yMax"
+        QStringList parts = boundaries.split( QChar( ':' ) );
+        if ( parts.count() == 4 )
+        {
+          xMin = parts[0].toDouble();
+          yMin = parts[1].toDouble();
+          xMax = parts[2].toDouble();
+          yMax = parts[3].toDouble();
+        }
+        else
+        {
+          QgsDebugMsg( "Default area boundary has invalid format." );
+        }
       }
     }
 
@@ -362,7 +367,7 @@ bool QgsOSMDataProvider::isDatabaseCompatibleWithInput( QString mFileName )
       // each OSM database schema carry info on last-modified of file from which database was created;
       // if value equals to last-modified of current input file then DB file belongs to current input file
       // (in such case we say that "database is compatible with input")
-      if ( mOsmFileLastModif == oldOsmFileLastModif )
+      if ( mOsmFileLastModif.toTime_t() == oldOsmFileLastModif.toTime_t() )
       {
         sqlite3_finalize( stmtSelectLastModif );
         return true;
@@ -1402,8 +1407,8 @@ bool QgsOSMDataProvider::loadOsmFile( QString osm_filename )
   yMax = handler->yMax;
 
   // storing boundary information into database
-  QString cmd3 = QString( "INSERT INTO meta ( key, val ) VALUES ('default-area-boundaries','%1-%2-%3-%4');" )
-                 .arg( xMin, 0, 'f', 20 ).arg( yMin, 0, 'f', 20 ).arg( xMax, 0, 'f', 20 ).arg( yMax, 0, 'f', 20 );
+  QString cmd3 = QString( "INSERT INTO meta ( key, val ) VALUES ('default-area-boundaries','%1:%2:%3:%4');" )
+                 .arg( xMin, 0, 'f', 10 ).arg( yMin, 0, 'f', 10 ).arg( xMax, 0, 'f', 10 ).arg( yMax, 0, 'f', 10 );
   QByteArray cmd_bytes3  = cmd3.toAscii();
   const char *ptr3 = cmd_bytes3.data();
 
@@ -1652,11 +1657,8 @@ bool QgsOSMDataProvider::openDatabase()
 {
   QgsDebugMsg( "Opening database." );
 
-  QByteArray dbfn_bytes  = mDatabaseFileName.toAscii();
-  const char *ptr = dbfn_bytes.data();
-
   // open database
-  if ( sqlite3_open( ptr, &mDatabase ) != SQLITE_OK )
+  if ( sqlite3_open( mDatabaseFileName.toUtf8().data(), &mDatabase ) != SQLITE_OK )
   {
     mError = ( char * ) "Opening SQLite3 database failed.";
     sqlite3_close( mDatabase );

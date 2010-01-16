@@ -35,6 +35,7 @@ QgsOpenVectorLayerDialog::QgsOpenVectorLayerDialog( QWidget* parent, Qt::WFlags 
     : QDialog( parent, fl )
 {
   setupUi( this );
+
   cmbDatabaseTypes->blockSignals( true );
   cmbConnections->blockSignals( true );
   radioSrcFile->setChecked( true );
@@ -96,11 +97,11 @@ QStringList QgsOpenVectorLayerDialog::openFile()
 
   QStringList selectedFiles;
   QgsDebugMsg( "Vector file filters: " + mVectorFileFilter );
-  QString enc;
+  QString enc = encoding();
   QString title = tr( "Open an OGR Supported Vector Layer" );
-  openFilesRememberingFilter( "lastVectorFileFilter", mVectorFileFilter, selectedFiles,
-                              title );
-  mEnc = enc;
+  QgisGui::openFilesRememberingFilter( "lastVectorFileFilter", mVectorFileFilter, selectedFiles, enc,
+                                       title );
+
   return selectedFiles;
 }
 
@@ -109,8 +110,7 @@ QString QgsOpenVectorLayerDialog::openDirectory()
   QSettings settings;
 
   bool haveLastUsedDir = settings.contains( "/UI/LastUsedDirectory" );
-  QString lastUsedDir = settings.value( "/UI/LastUsedDirectory",
-                                        QVariant( QString::null ) ).toString();
+  QString lastUsedDir = settings.value( "/UI/LastUsedDirectory", QVariant() ).toString();
   if ( !haveLastUsedDir )
     lastUsedDir = "";
 
@@ -141,11 +141,6 @@ QString QgsOpenVectorLayerDialog::encoding()
   return cmbEncodings->currentText();
 }
 
-void QgsOpenVectorLayerDialog::helpInfo()
-{
-  QgsContextHelp::run( context_id );
-}
-
 QString QgsOpenVectorLayerDialog::dataSourceType()
 {
   return mDataSourceType;
@@ -154,20 +149,19 @@ QString QgsOpenVectorLayerDialog::dataSourceType()
 void QgsOpenVectorLayerDialog::addNewConnection()
 {
   QgsNewOgrConnection *nc = new QgsNewOgrConnection( this );
-  if ( nc->exec() )
-  {
-    populateConnectionList();
-  }
+  nc->exec();
+  delete nc;
+
+  populateConnectionList();
 }
 
 void QgsOpenVectorLayerDialog::editConnection()
 {
   QgsNewOgrConnection *nc = new QgsNewOgrConnection( this, cmbDatabaseTypes->currentText(), cmbConnections->currentText() );
+  nc->exec();
+  delete nc;
 
-  if ( nc->exec() )
-  {
-    nc->saveConnection();
-  }
+  populateConnectionList();
 }
 
 void QgsOpenVectorLayerDialog::deleteConnection()
@@ -272,116 +266,42 @@ void QgsOpenVectorLayerDialog::setSelectedConnection()
 
 void QgsOpenVectorLayerDialog::on_buttonSelectSrc_clicked()
 {
-  QSettings settings;
-  QString filepath;
-
-  mDataSources.clear();
-
   if ( radioSrcFile->isChecked() )
   {
-    //file
-
-    //mType="file";
-    mDataSources = openFile();
-    filepath = "";
-    for ( int i = 0; i < mDataSources.count(); i++ )
-      filepath += mDataSources.at( i ) + ";";
-    inputSrcDataset->setText( filepath );
+    inputSrcDataset->setText( openFile().join( ";" ) );
   }
   else if ( radioSrcDirectory->isChecked() )
   {
-
-    filepath = openDirectory();
-    mDataSources.append( filepath );
-    inputSrcDataset->setText( filepath );
-    //mType="directory";
+    inputSrcDataset->setText( openDirectory() );
   }
-  else if ( radioSrcDatabase->isChecked() )
-  {
-    //mType="database";
-    //src = inputSrcDataset->text();
-  }
-  else
+  else if ( !radioSrcDatabase->isChecked() )
   {
     Q_ASSERT( !"SHOULD NEVER GET HERE" );
   }
-
-
-
 }
-
-/**
-  Open files, preferring to have the default file selector be the
-  last one used, if any; also, prefer to start in the last directory
-  associated with filterName.
-
-  @param filterName the name of the filter; used for persistent store
-  key
-  @param filters    the file filters used for QFileDialog
-
-  @param selectedFiles string list of selected files; will be empty
-  if none selected
-  @param title      the title for the dialog
-  @note
-
-  Stores persistent settings under /UI/.  The sub-keys will be
-  filterName and filterName + "Dir".
-
-  Opens dialog on last directory associated with the filter name, or
-  the current working directory if this is the first time invoked
-  with the current filter name.
-
-*/
-void QgsOpenVectorLayerDialog::openFilesRememberingFilter( QString const &filterName,
-    QString const &filters, QStringList & selectedFiles, QString &title )
-{
-
-  bool haveLastUsedFilter = false; // by default, there is no last
-  // used filter
-
-  QSettings settings;         // where we keep last used filter in
-
-  // persistant state
-
-  haveLastUsedFilter = settings.contains( "/UI/" + filterName );
-  QString lastUsedFilter = settings.value( "/UI/" + filterName,
-                           QVariant( QString::null ) ).toString();
-
-  QString lastUsedDir = settings.value( "/UI/" + filterName + "Dir", "." ).toString();
-  QgsDebugMsg( "Opening file dialog with filters: " + filters );
-
-  if ( haveLastUsedFilter )
-  {
-    selectedFiles = QFileDialog::getOpenFileNames( 0, title, lastUsedDir, filters, &lastUsedFilter );
-  }
-  else
-  {
-    selectedFiles = QFileDialog::getOpenFileNames( 0, title, lastUsedDir, filters );
-  }
-
-  if ( !selectedFiles.isEmpty() )
-  {
-    QString myFirstFileName = selectedFiles.first();
-    QFileInfo myFI( myFirstFileName );
-    QString myPath = myFI.path();
-
-    QgsDebugMsg( "Writing last used dir: " + myPath );
-
-    settings.setValue( "/UI/" + filterName, lastUsedFilter );
-    settings.setValue( "/UI/" + filterName + "Dir", myPath );
-  }
-}   // openFilesRememberingFilter_
 
 
 
 //********************auto connected slots *****************/
-void QgsOpenVectorLayerDialog::on_buttonBox_accepted()
+void QgsOpenVectorLayerDialog::accept()
 {
   QSettings settings;
   QgsDebugMsg( "dialog button accepted" );
+
+  mDataSources.clear();
+
   if ( radioSrcDatabase->isChecked() )
   {
-    mDataSources.clear();
+    if ( !settings.contains( "/" + cmbDatabaseTypes->currentText()
+                             + "/connections/" + cmbConnections->currentText()
+                             + "/host" ) )
+    {
+      QMessageBox::information( this,
+                                tr( "Add vector layer" ),
+                                tr( "No database selected." ) );
+      return;
+    }
+
     QString baseKey = "/" + cmbDatabaseTypes->currentText() + "/connections/";
     baseKey += cmbConnections->currentText();
     QString host = settings.value( baseKey + "/host" ).toString();
@@ -389,38 +309,70 @@ void QgsOpenVectorLayerDialog::on_buttonBox_accepted()
     QString port = settings.value( baseKey + "/port" ).toString();
     QString user = settings.value( baseKey + "/username" ).toString();
     QString pass = settings.value( baseKey + "/password" ).toString();
+
     bool makeConnection = false;
     if ( pass.isEmpty() )
-      pass = QInputDialog::getText( this, tr( "Password for " ) + user,
+    {
+      pass = QInputDialog::getText( this,
+                                    tr( "Password for " ) + user,
                                     tr( "Please enter your password:" ),
-                                    QLineEdit::Password, QString::null, &makeConnection );
-    if ( makeConnection || ( !pass.isEmpty() ) )
-      mDataSources.append( createDatabaseURI(
-                             cmbDatabaseTypes->currentText(),
-                             host,
-                             database,
-                             port,
-                             user,
-                             pass
-                           ) );
+                                    QLineEdit::Password, QString::null,
+                                    &makeConnection );
+    }
+
+    if ( makeConnection || !pass.isEmpty() )
+    {
+      mDataSources << createDatabaseURI(
+        cmbDatabaseTypes->currentText(),
+        host,
+        database,
+        port,
+        user,
+        pass
+      );
+    }
   }
   else if ( radioSrcProtocol->isChecked() )
   {
-    mDataSources.clear();
-    mDataSources.append( createProtocolURI(
-                           cmbProtocolTypes->currentText(),
-                           protocolURI->text()
-                         ) );
+    if ( protocolURI->text().isEmpty() )
+    {
+      QMessageBox::information( this,
+                                tr( "Add vector layer" ),
+                                tr( "No protocol URI entered." ) );
+      return;
+    }
+
+    mDataSources << createProtocolURI( cmbProtocolTypes->currentText(), protocolURI->text() );
   }
+  else if ( radioSrcFile->isChecked() )
+  {
+    if ( inputSrcDataset->text().isEmpty() )
+    {
+      QMessageBox::information( this,
+                                tr( "Add vector layer" ),
+                                tr( "No layers selected." ) );
+      return;
+    }
+
+    mDataSources << inputSrcDataset->text().split( ";" );
+  }
+  else if ( radioSrcDirectory->isChecked() )
+  {
+    if ( inputSrcDataset->text().isEmpty() )
+    {
+      QMessageBox::information( this,
+                                tr( "Add vector layer" ),
+                                tr( "No directory selected." ) );
+      return;
+    }
+
+    mDataSources << inputSrcDataset->text();
+  }
+
   // Save the used encoding
   settings.setValue( "/UI/encoding", encoding() );
 
-  accept();
-}
-
-void QgsOpenVectorLayerDialog::on_btnHelp_clicked()
-{
-  helpInfo();
+  QDialog::accept();
 }
 
 void QgsOpenVectorLayerDialog::on_radioSrcFile_toggled( bool checked )

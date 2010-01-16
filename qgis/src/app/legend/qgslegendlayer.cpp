@@ -77,16 +77,17 @@ QgsLegendLayer::QgsLegendLayer( QgsMapLayer* layer )
   // not in overview by default
   mLyr.setInOverview( FALSE );
 
-  // Add check if vector layer when connecting to selectionChanged slot
-  // Ticket #811 - racicot
-  QgsMapLayer *currentLayer = mLyr.layer();
-  QgsVectorLayer *isVectLyr = qobject_cast<QgsVectorLayer *>( currentLayer );
-  if ( isVectLyr )
+  // setup connections that will update the layer icons
+  if ( qobject_cast<QgsVectorLayer *>( layer ) )
   {
-    connect( mLyr.layer(), SIGNAL( editingStarted() ), this, SLOT( updateLegendItem() ) );
-    connect( mLyr.layer(), SIGNAL( editingStopped() ), this, SLOT( updateLegendItem() ) );
+    QgsDebugMsg( "Connecting signals for updating icons, layer " + layer->name() );
+    connect( layer, SIGNAL( editingStarted() ), this, SLOT( updateIcon() ) );
+    connect( layer, SIGNAL( editingStopped() ), this, SLOT( updateIcon() ) );
   }
-  connect( mLyr.layer(), SIGNAL( layerNameChanged() ), this, SLOT( layerNameChanged() ) );
+  connect( layer, SIGNAL( layerNameChanged() ), this, SLOT( layerNameChanged() ) );
+
+  updateIcon();
+  setToolTip( 0, layer->publicSource() );
 }
 
 QgsLegendLayer::~QgsLegendLayer()
@@ -216,6 +217,26 @@ void QgsLegendLayer::vectorLayerSymbology( const QgsVectorLayer* layer, double w
   const QgsRenderer* renderer = layer->renderer();
   const QList<QgsSymbol*> sym = renderer->symbols();
 
+  //create an item for each classification field (only one for most renderers)
+  QSettings settings;
+  if ( settings.value( "/qgis/showLegendClassifiers", false ).toBool() )
+  {
+    if ( renderer->needsAttributes() )
+    {
+      QgsAttributeList classfieldlist = renderer->classificationAttributes();
+      const QgsFieldMap& fields = layer->pendingFields();
+      for ( QgsAttributeList::iterator it = classfieldlist.begin(); it != classfieldlist.end(); ++it )
+      {
+        QString classfieldname = layer->attributeAlias( *it );
+        if ( classfieldname.isEmpty() )
+        {
+          classfieldname = fields[*it].name();
+        }
+        itemList.append( qMakePair( classfieldname, QPixmap() ) );
+      }
+    }
+  }
+
   for ( QList<QgsSymbol*>::const_iterator it = sym.begin(); it != sym.end(); ++it )
   {
     QImage img;
@@ -255,27 +276,6 @@ void QgsLegendLayer::vectorLayerSymbology( const QgsVectorLayer* layer, double w
     itemList.append( qMakePair( values, pix ) );
   }
 
-
-  //create an item for each classification field (only one for most renderers)
-  QSettings settings;
-  if ( settings.value( "/qgis/showLegendClassifiers", false ).toBool() )
-  {
-    if ( renderer->needsAttributes() )
-    {
-      QgsAttributeList classfieldlist = renderer->classificationAttributes();
-      const QgsFieldMap& fields = layer->pendingFields();
-      for ( QgsAttributeList::iterator it = classfieldlist.begin(); it != classfieldlist.end(); ++it )
-      {
-        QString classfieldname = layer->attributeAlias( *it );
-        if ( classfieldname.isEmpty() )
-        {
-          classfieldname = fields[*it].name();
-        }
-        itemList.append( qMakePair( classfieldname, QPixmap() ) );
-      }
-    }
-  }
-
   changeSymbologySettings( layer, itemList );
 }
 
@@ -284,8 +284,10 @@ void QgsLegendLayer::vectorLayerSymbologyV2( QgsVectorLayer* layer )
 {
   QSize iconSize( 16, 16 );
 
+#if 0 // unused
   QSettings settings;
   bool showClassifiers = settings.value( "/qgis/showLegendClassifiers", false ).toBool();
+#endif
 
   SymbologyList itemList = layer->rendererV2()->legendSymbologyItems( iconSize );
 
@@ -531,7 +533,7 @@ void QgsLegendLayer::saveAsShapefileGeneral( bool saveOnlySelection )
     return;
 
   // add the extension if not present
-  if ( shapefileName.indexOf( ".shp" ) == -1 )
+  if ( !shapefileName.endsWith( ".shp", Qt::CaseInsensitive ) )
   {
     shapefileName += ".shp";
   }
@@ -565,13 +567,8 @@ void QgsLegendLayer::saveAsShapefileGeneral( bool saveOnlySelection )
 
   // overwrite the file - user will already have been prompted
   // to verify they want to overwrite by the file dialog above
-  if ( QFile::exists( shapefileName ) )
-  {
-    if ( !QgsVectorFileWriter::deleteShapeFile( shapefileName ) )
-    {
-      return;
-    }
-  }
+  // might not even exists in the given case.
+  QgsVectorFileWriter::deleteShapeFile( shapefileName );
 
   // ok if the file existed it should be deleted now so we can continue...
   QApplication::setOverrideCursor( Qt::WaitCursor );
@@ -608,6 +605,11 @@ void QgsLegendLayer::saveAsShapefileGeneral( bool saveOnlySelection )
     case QgsVectorFileWriter::ErrAttributeCreationFailed:
       QMessageBox::warning( 0, tr( "Error" ),
                             tr( "Creation of an attribute failed" ) );
+      break;
+
+    case QgsVectorFileWriter::ErrProjection:
+      QMessageBox::warning( 0, tr( "Error" ),
+                            tr( "Reprojection failed" ) );
       break;
   }
 }

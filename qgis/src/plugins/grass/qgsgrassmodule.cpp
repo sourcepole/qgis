@@ -43,6 +43,7 @@
 extern "C"
 {
 #include <grass/Vect.h>
+#include <grass/glocale.h>
 }
 
 #include <gdal.h>         // to collect version information
@@ -293,8 +294,8 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
   QgisInterface *iface,
   QString xname, QDomElement qDocElem,
   QWidget * parent, Qt::WFlags f )
-    : QgsGrassModuleOptions( tools, module, iface ),
-    QWidget( parent, f )
+    : QWidget( parent, f ),
+    QgsGrassModuleOptions( tools, module, iface )
 {
   QgsDebugMsg( "called." );
   QgsDebugMsg( QString( "PATH = %1" ).arg( getenv( "PATH" ) ) );
@@ -323,7 +324,7 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
   QProcess process( this );
   process.start( cmd, arguments );
 
-  // ? Does binary on Win need .exe extention ?
+  // ? Does binary on Win need .exe extension ?
   // Return code 255 (-1) was correct in GRASS < 6.1.0
   if ( !process.waitForFinished()
        || ( process.exitCode() != 0 && process.exitCode() != 255 ) )
@@ -371,7 +372,31 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
   //transfers frame ownership so no need to call delete
   mypScrollArea->setWidget( mypInnerFrame );
   mypScrollArea->setWidgetResizable( true );
-  QVBoxLayout *layout = new QVBoxLayout( mypInnerFrame );
+  QVBoxLayout *mypInnerFrameLayout = new QVBoxLayout( mypInnerFrame );
+  // Add frames for simple/advanced options
+  QFrame * mypSimpleFrame = new QFrame();
+  mypSimpleFrame->setFrameShape( QFrame::NoFrame );
+  mypSimpleFrame->setFrameShadow( QFrame::Plain );
+  mAdvancedFrame.setFrameShape( QFrame::NoFrame );
+  mAdvancedFrame.setFrameShadow( QFrame::Plain );
+
+  QFrame * mypAdvancedPushButtonFrame = new QFrame();
+  QHBoxLayout *mypAdvancedPushButtonFrameLayout = new QHBoxLayout( mypAdvancedPushButtonFrame );
+  connect( &mAdvancedPushButton, SIGNAL( clicked() ), this, SLOT( switchAdvanced() ) );
+  mypAdvancedPushButtonFrameLayout->addWidget( &mAdvancedPushButton );
+  mypAdvancedPushButtonFrameLayout->addStretch( 1 );
+
+  mypInnerFrameLayout->addWidget( mypSimpleFrame );
+  mypInnerFrameLayout->addWidget( mypAdvancedPushButtonFrame );
+  mypInnerFrameLayout->addWidget( &mAdvancedFrame );
+  mypInnerFrameLayout->addStretch( 1 );
+
+  // Hide advanced and set butto next
+  switchAdvanced();
+
+  QVBoxLayout *mypSimpleLayout = new QVBoxLayout( mypSimpleFrame );
+  QVBoxLayout *mypAdvancedLayout = new QVBoxLayout( &mAdvancedFrame );
+  QVBoxLayout *layout = 0;
   while ( !n.isNull() )
   {
     QDomElement e = n.toElement();
@@ -379,6 +404,15 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
     {
       QString optionType = e.tagName();
       QgsDebugMsg( "optionType = " + optionType );
+
+      if ( e.attribute( "advanced", "no" ) == "yes" )
+      {
+        layout = mypAdvancedLayout;
+      }
+      else
+      {
+        layout = mypSimpleLayout;
+      }
 
       QString key = e.attribute( "key" );
       QgsDebugMsg( "key = " + key );
@@ -474,6 +508,11 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
     n = n.nextSibling();
   }
 
+  if ( mypAdvancedLayout->count() == 0 )
+  {
+    mypAdvancedPushButtonFrame->hide();
+  }
+
   // Create list of flags
   n = gDocElem.firstChild();
   while ( !n.isNull() )
@@ -494,7 +533,22 @@ QgsGrassModuleStandardOptions::QgsGrassModuleStandardOptions(
     n = n.nextSibling();
   }
 
-  layout->addStretch();
+  if ( layout )
+    layout->addStretch();
+}
+
+void QgsGrassModuleStandardOptions::switchAdvanced()
+{
+  if ( mAdvancedFrame.isHidden() )
+  {
+    mAdvancedFrame.show();
+    mAdvancedPushButton.setText( tr( "<< Hide advanced options" ) );
+  }
+  else
+  {
+    mAdvancedFrame.hide();
+    mAdvancedPushButton.setText( tr( "Show advanced options >>" ) );
+  }
 }
 
 QStringList QgsGrassModuleStandardOptions::arguments()
@@ -512,6 +566,23 @@ QStringList QgsGrassModuleStandardOptions::arguments()
     }
   }
   return arg;
+}
+
+// id is not used in fact, was intended for field, but key is used instead
+QgsGrassModuleItem *QgsGrassModuleStandardOptions::itemByKey( QString key )
+{
+  QgsDebugMsg( "key = " + key );
+
+  for ( unsigned int i = 0; i < mItems.size(); i++ )
+  {
+    if ( mItems[i]->key() == key )
+    {
+      return mItems[i];
+    }
+  }
+
+  QMessageBox::warning( 0, tr( "Warning" ), tr( "Item with key %1 not found" ).arg( key ) );
+  return 0;
 }
 
 QgsGrassModuleItem *QgsGrassModuleStandardOptions::item( QString id )
@@ -941,12 +1012,12 @@ QString QgsGrassModule::label( QString path )
   qFile.close();
   QDomElement qDocElem = qDoc.documentElement();
 
-  return ( qDocElem.attribute( "label" ) );
+  return QApplication::translate( "grasslabel", qDocElem.attribute( "label" ).trimmed().toUtf8() );
 }
 
 QPixmap QgsGrassModule::pixmap( QString path, int height )
 {
-  QgsDebugMsg( "called." );
+  QgsDebugMsg( QString( "path = %1" ).arg( path ) );
 
   std::vector<QPixmap> pixmaps;
 
@@ -1204,7 +1275,7 @@ void QgsGrassModule::run()
     // Warning: it is not useful to write requested region to WIND file and
     //          reset then to original beacuse it is reset before
     //          the region is read by a module even if waitForStarted() is used
-    //          -> necessary to pass region as enviroment variable
+    //          -> necessary to pass region as environment variable
     //             but the feature is available in GRASS 6.1 only since 23.3.2006
 
     QStringList environment = QProcess::systemEnvironment();
@@ -1217,7 +1288,7 @@ void QgsGrassModule::run()
 
     // I was not able to get scripts working on Windows
     // via QProcess and sh.exe (MinGW). g.parser runs well
-    // and it sets parameters correctly as enviroment variables
+    // and it sets parameters correctly as environment variables
     // but it fails (without error) to re-run the script with
     // execlp(). And I could not figure out why it fails.
     // Because of this problem we simulate here what g.parser
@@ -1239,7 +1310,7 @@ void QgsGrassModule::run()
     {
       QStringList usedFlagNames;
 
-      // Set enviroment variables
+      // Set environment variables
       for ( int i = 0; i < arguments.size(); i++ )
       {
         QString arg = arguments.at( i );
@@ -1347,7 +1418,8 @@ void QgsGrassModule::readStdout()
   {
     //line = QString::fromLocal8Bit( mProcess.readLineStdout().ascii() );
     QByteArray ba = mProcess.readLine();
-    line = QString::fromUtf8( ba );
+    line = QString::fromUtf8( ba ).replace( '\n', "" );
+    //QgsDebugMsg(QString("line: '%1'").arg(line));
 
     // GRASS_INFO_PERCENT is catched here only because of bugs in GRASS,
     // normaly it should be printed to stderr
@@ -1358,7 +1430,7 @@ void QgsGrassModule::readStdout()
     }
     else
     {
-      mOutputTextBrowser->append( line );
+      mOutputTextBrowser->append( "<pre>" + line + "</pre>" );
     }
   }
 }
@@ -1381,7 +1453,7 @@ void QgsGrassModule::readStderr()
   {
     //line = QString::fromLocal8Bit( mProcess.readLineStderr().ascii() );
     QByteArray ba = mProcess.readLine();
-    line = QString::fromUtf8( ba );
+    line = QString::fromUtf8( ba ).replace( '\n', "" );
     //QgsDebugMsg(QString("line: '%1'").arg(line));
 
     if ( rxpercent.indexIn( line ) != -1 )
@@ -1391,7 +1463,7 @@ void QgsGrassModule::readStderr()
     }
     else if ( rxmessage.indexIn( line ) != -1 )
     {
-      mOutputTextBrowser->append( rxmessage.cap( 1 ) );
+      mOutputTextBrowser->append( "<pre>" + rxmessage.cap( 1 ) + "</pre>" );
     }
     else if ( rxwarning.indexIn( line ) != -1 )
     {
@@ -1411,7 +1483,7 @@ void QgsGrassModule::readStderr()
     }
     else
     {
-      mOutputTextBrowser->append( line + "\n" );
+      mOutputTextBrowser->append( "<pre>" + line + "</pre>" );
     }
   }
 }
@@ -1489,6 +1561,11 @@ QgsGrassModule::~QgsGrassModule()
   {
     mProcess.kill();
   }
+}
+
+QString QgsGrassModule::translate( QString msg )
+{
+  return QString::fromUtf8( G_gettext( "grassmods", msg.trimmed().toUtf8() ) );
 }
 
 QDomNode QgsGrassModule::nodeByKey( QDomElement elem, QString key )
@@ -1712,7 +1789,7 @@ QgsGrassModuleOption::QgsGrassModuleOption( QgsGrassModule *module, QString key,
         connect( b, SIGNAL( clicked() ), this, SLOT( removeLineEdit() ) );
         vl->addWidget( b, 0, Qt::AlignTop );
 
-        // Dont enable this, it makes the group box expanding
+        // Don't enable this, it makes the group box expanding
         // vl->addStretch();
       }
       else
@@ -2503,7 +2580,7 @@ QgsGrassModuleItem::QgsGrassModuleItem( QgsGrassModule *module, QString key,
   QString label, description;
   if ( !qdesc.attribute( "label" ).isEmpty() )
   {
-    label = qdesc.attribute( "label" );
+    label = QApplication::translate( "grasslabel", qdesc.attribute( "label" ).trimmed().toUtf8() );
   }
   if ( label.isEmpty() )
   {
@@ -2511,16 +2588,14 @@ QgsGrassModuleItem::QgsGrassModuleItem( QgsGrassModule *module, QString key,
     if ( !n.isNull() )
     {
       QDomElement e = n.toElement();
-      label = e.text().trimmed();
-      label.replace( 0, 1, label.left( 1 ).toUpper() );
+      label = module->translate( e.text() );
     }
   }
   QDomNode n = gnode.namedItem( "description" );
   if ( !n.isNull() )
   {
     QDomElement e = n.toElement();
-    description = e.text().trimmed();
-    description.replace( 0, 1, description.left( 1 ).toUpper() );
+    description = module->translate( e.text() );
   }
 
   if ( !label.isEmpty() )
@@ -2585,7 +2660,7 @@ QgsGrassModuleGdalInput::QgsGrassModuleGdalInput(
 {
   if ( mTitle.isEmpty() )
   {
-    mTitle = "OGR/PostGIS/GDAL Input";
+    mTitle = tr( "OGR/PostGIS/GDAL Input" );
   }
   adjustTitle();
 
@@ -2857,16 +2932,22 @@ QgsGrassModuleField::QgsGrassModuleField(
   QDomElement promptElem = promptNode.toElement();
   QString element = promptElem.attribute( "element" );
 
-  mLayerId = qdesc.attribute( "layerid" );
-
   mType = qdesc.attribute( "type" );
 
-  QgsGrassModuleItem *item = mModuleStandardOptions->item( mLayerId );
-  // TODO check type
-  if ( item )
+  mLayerKey = qdesc.attribute( "layer" );
+  if ( mLayerKey.isNull() || mLayerKey.length() == 0 )
   {
-    mLayerInput = dynamic_cast<QgsGrassModuleInput *>( item );
-    connect( mLayerInput, SIGNAL( valueChanged() ), this, SLOT( updateFields() ) );
+    QMessageBox::warning( 0, tr( "Warning" ), tr( "'layer' attribute in field tag with key= %1 is missing." ).arg( mKey ) );
+  }
+  else
+  {
+    QgsGrassModuleItem *item = mModuleStandardOptions->itemByKey( mLayerKey );
+    // TODO check type
+    if ( item )
+    {
+      mLayerInput = dynamic_cast<QgsGrassModuleInput *>( item );
+      connect( mLayerInput, SIGNAL( valueChanged() ), this, SLOT( updateFields() ) );
+    }
   }
 
   QHBoxLayout *l = new QHBoxLayout( this );

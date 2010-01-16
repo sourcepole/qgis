@@ -240,7 +240,7 @@ class CORE_EXPORT QgsGeometry
      @return 0 in case of success*/
     int transform( const QgsCoordinateTransform& ct );
 
-    /**Splits this geometry according to a given line. Note that the geometry is only splitted once. If there are several intersections
+    /**Splits this geometry according to a given line. Note that the geometry is only split once. If there are several intersections
      between geometry and splitLine, only the first one is considered.
     @param splitLine the line that splits the geometry
     @param newGeometrys OUT: list of new geometries that have been created with the split
@@ -348,6 +348,36 @@ class CORE_EXPORT QgsGeometry
       @note added in version 1.2 */
     bool deletePart( int partNum );
 
+    /**Converts single type geometry into multitype geometry
+     e.g. a polygon into a multipolygon geometry with one polygon
+    @return true in case of success and false else*/
+    bool convertToMultiType();
+
+    /** Modifies geometry to avoid intersections with the layers specified in project properties
+     *  @return 0 in case of success,
+     *          1 if geometry is not of polygon type,
+     *          2 if avoid intersection would change the geometry type,
+     *          3 other error during intersection removal
+     *  @note added in 1.5
+     */
+    int avoidIntersections();
+
+
+    class Error
+    {
+        QString message;
+        QgsPoint location;
+        bool hasLocation;
+      public:
+        Error( QString m ) : message( m ), hasLocation( false ) {}
+        Error( QString m, QgsPoint p ) : message( m ), location( p ), hasLocation( true ) {}
+
+        QString what() { return message; };
+        QgsPoint where() { return location; }
+        bool hasWhere() { return hasLocation; }
+    };
+
+    void validateGeometry( QList<Error> &errors );
 
   private:
     // Private variables
@@ -409,11 +439,6 @@ class CORE_EXPORT QgsGeometry
                        int beforeVertex,
                        const GEOSCoordSequence*  old_sequence,
                        GEOSCoordSequence** new_sequence );
-
-    /**Converts single type geometry into multitype geometry
-     e.g. a polygon into a multipolygon geometry with one polygon
-    @return true in case of success and false else*/
-    bool convertToMultiType();
 
     /**Translates a single vertex by dx and dy.
      @param ptr pointer to the wkb fragment containing the vertex
@@ -485,6 +510,13 @@ class CORE_EXPORT QgsGeometry
 
     /** return polygon from wkb */
     QgsPolygon asPolygon( unsigned char*& ptr, bool hasZValue );
+
+    void checkRingIntersections( QList<Error> &errors,
+                                 int p0, int i0, const QgsPolyline &ring0,
+                                 int p1, int i1, const QgsPolyline &ring1 );
+
+    void validatePolyline( QList<Error> &errors, int i, const QgsPolyline &polygon );
+    void validatePolygon( QList<Error> &errors, int i, const QgsPolygon &polygon );
 
     static int refcount;
 }; // class QgsGeometry

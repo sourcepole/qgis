@@ -62,7 +62,7 @@ class ANALYSIS_EXPORT DualEdgeTriangulation: public Triangulation
     int getOppositePoint( int p1, int p2 );
     /**Finds out, in which triangle the point with coordinates x and y is and assigns the numbers of the vertices to 'n1', 'n2' and 'n3' and the vertices to 'p1', 'p2' and 'p3'*/
     virtual bool getTriangle( double x, double y, Point3D* p1, int* n1, Point3D* p2, int* n2, Point3D* p3, int* n3 );
-    /**Finds out, in which triangle the point with coordinates x and y is and assigns adresses to the points at the vertices to 'p1', 'p2' and 'p3*/
+    /**Finds out, in which triangle the point with coordinates x and y is and assigns addresses to the points at the vertices to 'p1', 'p2' and 'p3*/
     virtual bool getTriangle( double x, double y, Point3D* p1, Point3D* p2, Point3D* p3 );
     /**Returns a pointer to a value list with the information of the triangles surrounding (counterclockwise) a point. Four integer values describe a triangle, the first three are the number of the half edges of the triangle and the fourth is -10, if the third (and most counterclockwise) edge is a breakline, and -20 otherwise. The value list has to be deleted by the code which called the method*/
     QList<int>* getSurroundingTriangles( int pointno );
@@ -119,7 +119,7 @@ class ANALYSIS_EXPORT DualEdgeTriangulation: public Triangulation
     /**Y-coordinate of the lower left corner of the bounding box*/
     double yMin;
     /**Default value for the number of storable points at the beginning*/
-    const static unsigned int mDefaultStorageForPoints = 50000;
+    const static unsigned int mDefaultStorageForPoints = 100000;
     /**Stores pointers to all points in the triangulations (including the points contained in the lines)*/
     QVector<Point3D*> mPointVector;
     /**Default value for the number of storable HalfEdges at the beginning*/
@@ -142,7 +142,7 @@ class ANALYSIS_EXPORT DualEdgeTriangulation: public Triangulation
     unsigned int insertEdge( int dual, int next, int point, bool mbreak, bool forced );
     /**inserts a forced segment between the points with the numbers p1 and p2 into the triangulation and returns the number of a HalfEdge belonging to this forced edge or -100 in case of failure*/
     int insertForcedSegment( int p1, int p2, bool breakline );
-    /**Treshold for the leftOfTest to handle numerical instabilities*/
+    /**Threshold for the leftOfTest to handle numerical instabilities*/
     //const static double leftOfTresh=0.00001;
     /**Security to prevent endless loops in 'baseEdgeOfTriangle'. It there are more iteration then this number, the point will not be inserted*/
     const static int nBaseOfRuns = 300000;
@@ -182,13 +182,13 @@ class ANALYSIS_EXPORT DualEdgeTriangulation: public Triangulation
     void evaluateInfluenceRegion( Point3D* point, int edge, std::set<int>* set );
 };
 
-inline DualEdgeTriangulation::DualEdgeTriangulation() : xMax( 0 ), xMin( 0 ), yMax( 0 ), yMin( 0 ), mTriangleInterpolator( 0 ), mForcedCrossBehaviour( Triangulation::INSERT_VERTICE ), mEdgeColor( 0, 255, 0 ), mForcedEdgeColor( 0, 0, 255 ), mBreakEdgeColor( 100, 100, 0 ), mDecorator( this )
+inline DualEdgeTriangulation::DualEdgeTriangulation() : xMax( 0 ), xMin( 0 ), yMax( 0 ), yMin( 0 ), mTriangleInterpolator( 0 ), mForcedCrossBehaviour( Triangulation::DELETE_FIRST ), mEdgeColor( 0, 255, 0 ), mForcedEdgeColor( 0, 0, 255 ), mBreakEdgeColor( 100, 100, 0 ), mDecorator( this )
 {
   mPointVector.reserve( mDefaultStorageForPoints );
   mHalfEdge.reserve( mDefaultStorageForHalfEdges );
 }
 
-inline DualEdgeTriangulation::DualEdgeTriangulation( int nop, Triangulation* decorator ): xMax( 0 ), xMin( 0 ), yMax( 0 ), yMin( 0 ), mTriangleInterpolator( 0 ), mForcedCrossBehaviour( Triangulation::INSERT_VERTICE ), mEdgeColor( 0, 255, 0 ), mForcedEdgeColor( 0, 0, 255 ), mBreakEdgeColor( 100, 100, 0 ), mDecorator( decorator )
+inline DualEdgeTriangulation::DualEdgeTriangulation( int nop, Triangulation* decorator ): xMax( 0 ), xMin( 0 ), yMax( 0 ), yMin( 0 ), mTriangleInterpolator( 0 ), mForcedCrossBehaviour( Triangulation::DELETE_FIRST ), mEdgeColor( 0, 255, 0 ), mForcedEdgeColor( 0, 0, 255 ), mBreakEdgeColor( 100, 100, 0 ), mDecorator( decorator )
 {
   mPointVector.reserve( nop );
   mHalfEdge.reserve( nop );

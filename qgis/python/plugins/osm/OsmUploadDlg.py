@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """@package OsmUploadDlg
 Module provides simple way of uploading current OSM data.
 
@@ -459,7 +460,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         @param nodeRecord tuple object with information on node
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = "/api/0.6/node/create"
 
         # set http request's header
@@ -519,7 +520,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         @param nodeRecord tuple object with information on node
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/node/%1").arg(nodeRecord[0])
 
         # set http request's header
@@ -566,7 +567,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
 
         # selecting tags to construct correct XML
         ct=self.dbm.getConnection().cursor()
-        ct.execute("select key, val from tag where object_id=:nodeId and object_type=\"node\"",{"nodeId":nodeRecord[0]})
+        ct.execute("select key, val from tag where object_id=:nodeId and object_type=\"node\" and u=1",{"nodeId":nodeRecord[0]})
         for tagRecord in ct:
             requestXml.append(QString("<tag k=\"%1\" v=\"%2\"/>").arg(tagRecord[0]).arg(tagRecord[1]))
         ct.close()
@@ -657,7 +658,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
 
         pseudoWayId = wayRecord[0]
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = "/api/0.6/way/create"
 
         # set http request's header
@@ -687,7 +688,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         @param wayRecord tuple object with information on way
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/way/%1").arg(wayRecord[0])
 
         # set http request's header
@@ -716,7 +717,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         @param wayRecord tuple object with information on way
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/way/%1").arg(wayRecord[0])
 
         # set http request's header
@@ -792,7 +793,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
 
         pseudoRelId = relRecord[0]
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = "/api/0.6/relation/create"
 
         # set http request's header
@@ -822,7 +823,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         @param relRecord tuple object with information on relation
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/relation/%1").arg(relRecord[0])
 
         # set http request's header
@@ -852,7 +853,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         """
 
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/relation/%1").arg(relRecord[0])
 
         # set http request's header
@@ -899,7 +900,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         Changeset closing has to be the last one.
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath="/api/0.6/changeset/create"
 
         # set http request's header
@@ -934,7 +935,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         Changeset closing has to be the last one.
         """
 
-        # create http connection with neccessary authentification
+        # create http connection with necessary authentication
         urlPath = QString("/api/0.6/changeset/%1/close").arg(self.changesetId)
 
         # set http request's header
@@ -1480,7 +1481,7 @@ class OsmUploadDlg(QDialog, Ui_OsmUploadDlg):
         We are really not interested in function parameters - we just cancel the connection.
         """
 
-        self.cancelUpload("Authentification failed. Please try again with correct login and password.")
+        self.cancelUpload("Authentication failed. Please try again with correct login and password.")
 
 
     def __setProxy(self):

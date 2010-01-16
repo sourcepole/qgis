@@ -24,6 +24,10 @@
 #include <math.h>
 #include <QMouseEvent>
 #include <QMessageBox>
+#include "qgslogger.h"
+#include "qgisapp.h"
+
+#include <QStatusBar>
 
 
 QgsRubberBand* QgsMapToolNodeTool::createRubberBandMarker( QgsPoint center, QgsVectorLayer* vlayer )
@@ -128,7 +132,7 @@ void QgsMapToolNodeTool::layerModified( bool onlyGeometry )
     catch ( ... )
     {
       //GEOS is throwing exception when polygon is not valid to be able to edit it
-      //Only possibility to fix this operation sice node tool doesn't allow to strore invalid geometry after editing
+      //Only possibility to fix this operation since node tool doesn't allow to store invalid geometry after editing
       mSelectionFeature->updateFromFeature();
       //if it does update markers just to be sure of correctness
     }
@@ -148,7 +152,7 @@ void QgsMapToolNodeTool::createMovingRubberBands()
   for ( int i = 0; i < vertexMap.size(); i++ )
   {
     //create rubber band
-    if ( vertexMap[i].selected && !( vertexMap[i].inRubberBand ) )
+    if ( vertexMap[i].selected && !vertexMap[i].inRubberBand )
     {
       geometry->adjacentVertices( i, beforeVertex, afterVertex );
       vertex = i;
@@ -505,6 +509,7 @@ void QgsMapToolNodeTool::canvasPressEvent( QMouseEvent * e )
 
     if ( snapResults.size() < 1 )
     {
+      displaySnapToleranceWarning();
       return;
     }
     mSelectionFeature = new SelectionFeature();
@@ -773,7 +778,7 @@ void QgsMapToolNodeTool::removeRubberBands()
   mTopologyMovingVertexes.clear();
   mTopologyRubberBandVertexes.clear();
 
-  //remove all data from selected feature (no change to rubber bands itself
+  //remove all data from selected feature (no change to rubber bands itself)
   if ( mSelectionFeature != NULL )
     mSelectionFeature->cleanRubberBandsData();
 }
@@ -834,6 +839,9 @@ void QgsMapToolNodeTool::canvasDoubleClickEvent( QMouseEvent * e )
 
         vlayer->endEditCommand();
 
+        // make sure that new node gets its vertex marker
+        mCanvas->refresh();
+
         mSelectionFeature->updateFromFeature();
         mChangingGeometry = false;
       }
@@ -891,6 +899,11 @@ SelectionFeature::SelectionFeature()
 SelectionFeature::~SelectionFeature()
 {
   deleteVertexMap();
+
+  while ( !mGeomErrorMarkers.isEmpty() )
+  {
+    delete mGeomErrorMarkers.takeFirst();
+  }
 }
 
 void SelectionFeature::updateFeature()
@@ -932,8 +945,46 @@ void SelectionFeature::setSelectedFeature( int featureId,  QgsVectorLayer* vlaye
   {
     mFeature = feature;
   }
+
   //createvertexmap
   createVertexMap();
+
+  validateGeometry();
+}
+
+void SelectionFeature::validateGeometry( QgsGeometry *g )
+{
+  QgsDebugMsg( "validating geometry" );
+
+  if ( g == NULL )
+    g = mFeature->geometry();
+
+  g->validateGeometry( mGeomErrors );
+
+  while ( !mGeomErrorMarkers.isEmpty() )
+  {
+    delete mGeomErrorMarkers.takeFirst();
+  }
+
+  QString tip;
+
+  for ( int i = 0; i < mGeomErrors.size(); i++ )
+  {
+    tip += mGeomErrors[i].what() + "\n";
+    if ( !mGeomErrors[i].hasWhere() )
+      continue;
+
+    QgsVertexMarker *vm = createVertexMarker( mGeomErrors[i].where(), QgsVertexMarker::ICON_X );
+    vm->setToolTip( mGeomErrors[i].what() );
+    vm->setColor( Qt::green );
+    vm->setZValue( vm->zValue() + 1 );
+    mGeomErrorMarkers << vm;
+  }
+
+  QStatusBar *sb = QgisApp::instance()->statusBar();
+  sb->showMessage( QObject::tr( "%n geometry error(s) found.", "number of geometry errors", mGeomErrors.size() ) );
+  if ( !tip.isEmpty() )
+    sb->setToolTip( tip );
 }
 
 void SelectionFeature::deleteSelectedVertexes()
@@ -979,7 +1030,10 @@ void SelectionFeature::deleteSelectedVertexes()
   }
   QgsFeature f;
   mVlayer->featureAtId( mFeatureId, f, true, false );
-  if ( !GEOSisValid( f.geometry()->asGeos() ) )
+
+  bool wasValid = false; // mGeomErrors.isEmpty();
+  bool isValid = GEOSisValid( f.geometry()->asGeos() );
+  if ( wasValid && !isValid )
   {
     QMessageBox::warning( NULL,
                           tr( "Node tool" ),
@@ -988,9 +1042,10 @@ void SelectionFeature::deleteSelectedVertexes()
                           QMessageBox::Ok );
   }
 
-  if ( count != 0 && GEOSisValid( f.geometry()->asGeos() ) )
+  if ( count != 0 && ( !wasValid || isValid ) )
   {
     mVlayer->endEditCommand();
+    validateGeometry( f.geometry() );
   }
   else
   {
@@ -1050,7 +1105,9 @@ void SelectionFeature::moveSelectedVertexes( double changeX, double changeY )
   }
   QgsFeature f;
   mVlayer->featureAtId( mFeatureId, f, true, false );
-  if ( !GEOSisValid( f.geometry()->asGeos() ) )
+  bool wasValid = false; // mGeomErrors.isEmpty();
+  bool isValid = GEOSisValid( f.geometry()->asGeos() );
+  if ( wasValid && !isValid )
   {
     QMessageBox::warning( NULL,
                           tr( "Node tool" ),
@@ -1064,17 +1121,18 @@ void SelectionFeature::moveSelectedVertexes( double changeX, double changeY )
   else
   {
     mVlayer->endEditCommand();
+    validateGeometry( f.geometry() );
   }
   updateFeature();
 }
 
-QgsVertexMarker* SelectionFeature::createVertexMarker( QgsPoint center )
+QgsVertexMarker *SelectionFeature::createVertexMarker( QgsPoint center, QgsVertexMarker::IconType type )
 {
-  QgsVertexMarker* marker = new QgsVertexMarker( mCanvas );
+  QgsVertexMarker *marker = new QgsVertexMarker( mCanvas );
   QgsPoint newCenter = mCanvas->mapRenderer()->layerToMapCoordinates( mVlayer, center );
   marker->setCenter( newCenter );
 
-  marker->setIconType( QgsVertexMarker::ICON_BOX );
+  marker->setIconType( type );
 
   marker->setColor( Qt::red );
 
@@ -1130,6 +1188,7 @@ void SelectionFeature::createVertexMapPolygon()
         entry.originalIndex = i;
         entry.inRubberBand = false;
         QgsVertexMarker* marker = createVertexMarker( poly[i] );
+        marker->setToolTip( tr( "ring %1, vertex %2" ).arg( i2 ).arg( i ) );
         entry.vertexMarker = marker;
         mVertexMap.insert( y + i, entry );
       }
@@ -1157,7 +1216,7 @@ void SelectionFeature::createVertexMapPolygon()
           entry.originalIndex = y + i - 1;
           entry.inRubberBand = false;
           QgsVertexMarker* marker = createVertexMarker( poly[i] );
-
+          marker->setToolTip( tr( "polygon %1, ring %2, vertex %3" ).arg( i2 ).arg( i3 ).arg( i ) );
           entry.vertexMarker = marker;
           mVertexMap.insert( y + i, entry );
         }
@@ -1190,6 +1249,7 @@ void SelectionFeature::createVertexMapLine()
         entry.originalIndex = i;
         entry.inRubberBand = false;
         QgsVertexMarker* marker = createVertexMarker( poly[i] );
+        marker->setToolTip( tr( "polyline %1, vertex %2" ).arg( i2 ).arg( i ) );
         entry.vertexMarker = marker;
         mVertexMap.insert( y + i, entry );
       }
@@ -1210,6 +1270,7 @@ void SelectionFeature::createVertexMapLine()
       entry.originalIndex = i;
       entry.inRubberBand = false;
       QgsVertexMarker* marker = createVertexMarker( poly[i] );
+      marker->setToolTip( tr( "vertex %1" ).arg( i ) );
       entry.vertexMarker = marker;
       mVertexMap.insert( i, entry );
     }
@@ -1232,6 +1293,7 @@ void SelectionFeature::createVertexMapPoint()
       entry.originalIndex = 1;
       entry.inRubberBand = false;
       QgsVertexMarker* marker = createVertexMarker( poly[i] );
+      marker->setToolTip( tr( "point %1" ).arg( i ) );
       entry.vertexMarker = marker;
       mVertexMap.insert( i, entry );
     }
@@ -1247,6 +1309,7 @@ void SelectionFeature::createVertexMapPoint()
     entry.originalIndex = 1;
     entry.inRubberBand = false;
     QgsVertexMarker* marker = createVertexMarker( poly );
+    marker->setToolTip( tr( "single point" ) );
     entry.vertexMarker = marker;
     mVertexMap.insert( 1, entry );
   }
@@ -1368,4 +1431,3 @@ QgsVectorLayer* SelectionFeature::vlayer()
 {
   return mVlayer;
 }
-

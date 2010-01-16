@@ -218,9 +218,9 @@ void QgsSymbol::setNamedPointSymbol( QString name )
       QgsDebugMsg( "Name: " + name );
       //see if we can resolve the problem...
       //
-      
+
       QStringList svgPaths = QgsApplication::svgPaths();
-      for( int i=0; i<svgPaths.size(); i++) 
+      for ( int i = 0; i < svgPaths.size(); i++ )
       {
         QgsDebugMsg( "SvgPath: " + svgPaths[i] );
         QFileInfo myInfo( myTempName );
@@ -296,7 +296,7 @@ double QgsSymbol::pointSize() const
 
 QImage QgsSymbol::getLineSymbolAsImage()
 {
-  //Note by Tim: dont use premultiplied - it causes
+  //Note by Tim: don't use premultiplied - it causes
   //artifacts on the output icon!
   QImage img( 15, 15, QImage::Format_ARGB32 );//QImage::Format_ARGB32_Premultiplied);
   //0 = fully transparent
@@ -316,7 +316,7 @@ QImage QgsSymbol::getLineSymbolAsImage()
 
 QImage QgsSymbol::getPolygonSymbolAsImage()
 {
-  //Note by Tim: dont use premultiplied - it causes
+  //Note by Tim: don't use premultiplied - it causes
   //artifacts on the output icon!
   QImage img( 15, 15, QImage::Format_ARGB32 ); //, QImage::Format_ARGB32_Premultiplied);
   //0 = fully transparent
@@ -327,7 +327,7 @@ QImage QgsSymbol::getPolygonSymbolAsImage()
   p.setBrush( mBrush );
   QPolygon myPolygon;
   //leave a little white space around so
-  //dont draw at 0,0,15,15
+  //don't draw at 0,0,15,15
   myPolygon << QPoint( 2, 2 )
   << QPoint( 1, 5 )
   << QPoint( 1, 10 )
@@ -411,9 +411,9 @@ QImage QgsSymbol::getPointSymbolAsImage( double widthScale, bool selected, QColo
   }
   else
   {
-    QgsDebugMsg( QString( "marker:%1 mPointSize:%2 mPointSizeUnits:%3 scale:%4 widthScale:%5 rasterScaleFactor:%6 opacity:%7" )
+    QgsDebugMsgLevel( QString( "marker:%1 mPointSize:%2 mPointSizeUnits:%3 scale:%4 widthScale:%5 rasterScaleFactor:%6 opacity:%7" )
                  .arg( mPointSymbolName ).arg( mSize ).arg( mSizeInMapUnits ? "true" : "false" )
-                 .arg( scale ).arg( widthScale ).arg( rasterScaleFactor ).arg( opacity ) );
+                 .arg( scale ).arg( widthScale ).arg( rasterScaleFactor ).arg( opacity ), 3 );
 
 
     preRotateImage = QgsMarkerCatalogue::instance()->imageMarker(
@@ -434,8 +434,8 @@ void QgsSymbol::cache( QColor selectionColor )
   QPen pen = mPen;
   pen.setColor( selectionColor );
   QBrush brush = mBrush;
-  // For symbols that have a different coloured border, the line
-  // below causes the fill colour to be wrong for the print
+  // For symbols that have a different colored border, the line
+  // below causes the fill color to be wrong for the print
   // composer. Not sure why...
   // brush.setColor ( selectionColor );
 
@@ -515,14 +515,14 @@ bool QgsSymbol::writeXML( QDomNode & item, QDomDocument & document, const QgsVec
 
       QStringList svgPaths = QgsApplication::svgPaths();
 
-      for(int i=0; i<svgPaths.size(); i++)
+      for ( int i = 0; i < svgPaths.size(); i++ )
       {
         QString dir = QFileInfo( svgPaths[i] ).canonicalFilePath();
 
         if ( !dir.isEmpty() && name.startsWith( dir ) )
         {
           name = name.mid( dir.size() );
-	  break;
+          break;
         }
       }
     }
@@ -532,6 +532,7 @@ bool QgsSymbol::writeXML( QDomNode & item, QDomDocument & document, const QgsVec
 
   appendText( symbol, document, "pointsymbol", name );
   appendText( symbol, document, "pointsize", QString::number( pointSize() ) );
+  appendText( symbol, document, "pointsizeunits", pointSizeUnits() ? "mapunits" : "pixels" );
 
   if ( vl )
   {

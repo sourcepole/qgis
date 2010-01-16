@@ -16,7 +16,9 @@ public:
     CheckBox,    /* @note added in 1.4 */
     FileName,
     Enumeration, /* @note added in 1.4 */
-    Immutable    /* @note added in 1.4 */
+    Immutable,   /* @note added in 1.4 */
+    Hidden,      /* @note added in 1.4 */
+    TextEdit     /* @note added in 1.4 */
   };
    
   struct RangeData {
@@ -271,14 +273,14 @@ public:
 		
   /**Adds a vertex to segments which intersect point p but don't 
      already have a vertex there. If a feature already has a vertex at position p, 
-     no additional vertex is inserted. This method is usefull for topological 
+     no additional vertex is inserted. This method is useful for topological 
      editing.
      @param p position of the vertex
      @return 0 in case of success*/
   int addTopologicalPoints(const QgsPoint& p);
 
  /**Inserts vertices to the snapped segments.
-   This is usefull for topological editing if snap to segment is enabled.
+   This is useful for topological editing if snap to segment is enabled.
    @param snapResults results collected from the snapping operation
    @return 0 in case of success*/
   int insertSegmentVerticesForSnap(const QList<QgsSnappingResult>& snapResults);	
@@ -423,6 +425,16 @@ public:
    */
   void setEditForm( QString ui );
 
+  /** get edit form init function
+    @note added in 1.4
+   */
+  QString editFormInit();
+
+  /** set edit form init function
+    @note added in 1.4
+   */
+  void setEditFormInit( QString function );
+
   /**access value map*/
   QMap<QString, QVariant> &valueMap(int idx);
 
@@ -467,6 +479,24 @@ public:
 
     /** Execute redo operation. To be called only from QgsVectorLayerUndoCommand. */
     // (not necessary) void redoEditCommand(QgsUndoCommand* cmd);
+
+    /** Returns the index of a field name or -1 if the field does not exist
+      @note this method was added in version 1.4
+     */
+    int fieldNameIndex( const QString& fieldName ) const;
+
+    /** Editing vertex markers
+      @note public from version 1.4 */
+    enum VertexMarkerType
+    {
+      SemiTransparentCircle,
+      Cross,
+      NoMarker  /* added in version 1.1 */
+    };
+
+    /** Draws a vertex symbol at (screen) coordinates x, y. (Useful to assist vertex editing.)
+      @note public and static from version 1.4 */
+    static void drawVertexMarker( double x, double y, QPainter& p, QgsVectorLayer::VertexMarkerType type, int vertexSize );
 
 public slots:
 

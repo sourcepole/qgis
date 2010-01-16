@@ -20,6 +20,7 @@
 %{
 #include <qglobal.h>
 #include <QList>
+#include <cstdlib>
 #include "qgssearchtreenode.h"
 
 // don't redeclare malloc/free
@@ -83,17 +84,20 @@ void addToTmpNodes(QgsSearchTreeNode* node);
 //%error-verbose
 
 // operator precedence
-// all operators have left associativity
-// (right associtativity is used for  assigment)
-%left '^'
-%left '*' '/'
-%left '+' '-'
-%left UMINUS  // fictious symbol (for unary minus)
+// all operators have left associativity, i.e. 1+2+3 translates to (1+2)+3
+// the order of operators here determines their precedence
+
+%left OR
+%left AND
+%left NOT
+
 %left COMPARISON
 
-%left AND
-%left OR
-%left NOT
+%left '+' '-'
+%left '*' '/'
+%left '^'
+%left UMINUS  // fictitious symbol (for unary minus)
+
 
 %%
 

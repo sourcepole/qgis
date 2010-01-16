@@ -68,32 +68,25 @@ class QgsPythonUtilsImpl : public QgsPythonUtils
     //! @return false if there was no python error
     bool getError( QString& errorClassName, QString& errorText );
 
-    //! get variable from main dictionary
-    QString getVariableFromMain( QString name );
-
-    /* python console related functions */
-
-    //! change displayhook and excepthook
-    //! our hooks will just save the result to special variables
-    //! and those can be used in the program
-    void installConsoleHooks();
-
-    //! get back to the original settings (i.e. write output to stdout)
-    void uninstallConsoleHooks();
-
-    //! get result from the last statement as a string
-    QString getResult();
-
     /* plugins related functions */
 
     //! return current path for python plugins
     QString pluginsPath();
+
+    //! return current path for python in home directory
+    QString homePythonPath();
 
     //! return current path for home directory python plugins
     QString homePluginsPath();
 
     //! return list of all available python plugins
     QStringList pluginList();
+
+    //! return whether the plugin is loaded (active)
+    virtual bool isPluginLoaded( QString packageName );
+
+    //! return a list of active plugins
+    virtual QStringList listActivePlugins();
 
     //! load python plugin (import)
     bool loadPlugin( QString packageName );

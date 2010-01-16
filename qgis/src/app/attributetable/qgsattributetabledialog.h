@@ -23,6 +23,7 @@
 #include <QMutex>
 
 #include "ui_qgsattributetabledialog.h"
+#include "qgscontexthelp.h"
 
 #include "qgsvectorlayer.h" //QgsFeatureIds
 
@@ -91,7 +92,7 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      */
     void updateRowPressed( int index );
     /**
-     * Updates selection of specifed rows
+     * Updates selection of specified rows
      * @param first first row
      * @param last last row
      * @param clickType 0:Single click, 1:Shift, 2:Ctrl, 3:dragged click
@@ -144,6 +145,13 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      * Opens field calculator dialog
      */
     void on_mOpenFieldCalculator_clicked();
+
+    /**
+     * deletes the selected features
+     */
+    void on_mDeleteSelectedButton_clicked();
+
+    void on_mHelpButton_clicked() { QgsContextHelp::run( metaObject()->className() ); }
 
   signals:
     /**

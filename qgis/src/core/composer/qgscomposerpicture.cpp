@@ -26,20 +26,16 @@
 #include <QPainter>
 #include <QSvgRenderer>
 
-#ifndef Q_OS_MACX
-#include <cmath>
-#else
-#include <math.h>
-#endif
 
-QgsComposerPicture::QgsComposerPicture( QgsComposition *composition ): QObject( 0 ), QgsComposerItem( composition ), mRotation( 0.0 ), mMode( Unknown ), \
-    mSvgCacheUpToDate( false ), mCachedDpi( 0 ), mRotationMap( 0 )
+QgsComposerPicture::QgsComposerPicture( QgsComposition *composition ): QgsComposerItem( composition ), mMode( Unknown ), \
+    mSvgCacheUpToDate( false ), mCachedDpi( 0 ), mCachedRotation( 0 ), mCachedViewScaleFactor( -1 ), mRotationMap( 0 )
 {
+  mPictureWidth = rect().width();
 }
 
-QgsComposerPicture::QgsComposerPicture(): QgsComposerItem( 0 ), mRotation( 0.0 ), mMode( Unknown ), mSvgCacheUpToDate( false ), mRotationMap( 0 )
+QgsComposerPicture::QgsComposerPicture(): QgsComposerItem( 0 ), mMode( Unknown ), mSvgCacheUpToDate( false ), mCachedRotation( 0 ), mCachedViewScaleFactor( -1 ), mRotationMap( 0 )
 {
-
+  mPictureHeight = rect().height();
 }
 
 QgsComposerPicture::~QgsComposerPicture()
@@ -57,15 +53,17 @@ void QgsComposerPicture::paint( QPainter* painter, const QStyleOptionGraphicsIte
   drawBackground( painter );
 
   int newDpi = ( painter->device()->logicalDpiX() + painter->device()->logicalDpiY() ) / 2;
-  if ( newDpi != mCachedDpi )
+  double viewScaleFactor = horizontalViewScaleFactor();
+
+  if ( newDpi != mCachedDpi || mCachedRotation != mRotation || mCachedViewScaleFactor != viewScaleFactor )
   {
     mSvgCacheUpToDate = false;
   }
 
   if ( mMode != Unknown )
   {
-    double rectPixelWidth = rect().width() * newDpi / 25.4;
-    double rectPixelHeight = rect().height() * newDpi / 25.4;
+    double rectPixelWidth = /*rect().width()*/mPictureWidth * newDpi / 25.4;
+    double rectPixelHeight = /*rect().height()*/ mPictureHeight * newDpi / 25.4;
     QRectF boundRect;
     if ( mMode == SVG )
     {
@@ -78,31 +76,37 @@ void QgsComposerPicture::paint( QPainter* painter, const QStyleOptionGraphicsIte
 
     double boundRectWidthMM = boundRect.width() / newDpi * 25.4;
     double boundRectHeightMM = boundRect.height() / newDpi * 25.4;
-    double rotatedBoundImageWidth = boundRect.width();
-    double rotatedBoundImageHeight = boundRect.height();
-    imageSizeConsideringRotation( rotatedBoundImageWidth, rotatedBoundImageHeight );
-    double rotatedBoundImageWidthMM = rotatedBoundImageWidth / newDpi * 25.4;
-    double rotatedBoundImageHeightMM = rotatedBoundImageHeight / newDpi * 25.4;
+    double boundImageWidth = boundRect.width();
+    double boundImageHeight = boundRect.height();
 
     if ( mMode == SVG )
     {
       if ( !mSvgCacheUpToDate )
       {
-        mImage = QImage( rotatedBoundImageWidth, rotatedBoundImageHeight, QImage::Format_ARGB32 );
+        //make nicer preview
+        if ( mComposition && mComposition->plotStyle() == QgsComposition::Preview )
+        {
+          boundImageWidth *= std::min( viewScaleFactor, 10.0 );
+          boundImageHeight *= std::min( viewScaleFactor, 10.0 );
+        }
+        mImage = QImage( boundImageWidth, boundImageHeight, QImage::Format_ARGB32 );
         updateImageFromSvg();
       }
     }
 
     painter->save();
-    painter->translate( boundRectWidthMM / 2.0, boundRectHeightMM / 2.0 );
+    painter->translate( rect().width() / 2.0, rect().height() / 2.0 );
     painter->rotate( mRotation );
-    painter->translate( -rotatedBoundImageWidthMM / 2.0, -rotatedBoundImageHeightMM / 2.0 );
-    painter->drawImage( QRectF( 0, 0, rotatedBoundImageWidthMM,  rotatedBoundImageHeightMM ), mImage, QRectF( 0, 0, mImage.width(), mImage.height() ) );
+    painter->translate( -boundRectWidthMM / 2.0, -boundRectHeightMM / 2.0 );
+
+    painter->drawImage( QRectF( 0, 0, boundRectWidthMM,  boundRectHeightMM ), mImage, QRectF( 0, 0, mImage.width(), mImage.height() ) );
 
     painter->restore();
   }
 
   mCachedDpi = newDpi;
+  mCachedRotation = mRotation;
+  mCachedViewScaleFactor = viewScaleFactor;
 
   //frame and selection boxes
   drawFrame( painter );
@@ -180,6 +184,24 @@ QRectF QgsComposerPicture::boundedImageRect( double deviceWidth, double deviceHe
 QRectF QgsComposerPicture::boundedSVGRect( double deviceWidth, double deviceHeight )
 {
   double imageToSvgRatio;
+  if ( deviceWidth / mDefaultSvgSize.width() > deviceHeight / mDefaultSvgSize.height() )
+  {
+    imageToSvgRatio = deviceHeight / mDefaultSvgSize.height();
+    double width = mDefaultSvgSize.width() * imageToSvgRatio;
+    return QRectF( 0, 0, width, deviceHeight );
+  }
+  else
+  {
+    imageToSvgRatio = deviceWidth / mDefaultSvgSize.width();
+    double height = mDefaultSvgSize.height() * imageToSvgRatio;
+    return QRectF( 0, 0, deviceWidth, height );
+  }
+}
+
+#if 0
+QRectF QgsComposerPicture::boundedSVGRect( double deviceWidth, double deviceHeight )
+{
+  double imageToSvgRatio;
   if ( deviceWidth / mDefaultSvgSize.width() < deviceHeight / mDefaultSvgSize.height() )
   {
     imageToSvgRatio = deviceWidth / mDefaultSvgSize.width();
@@ -193,6 +215,7 @@ QRectF QgsComposerPicture::boundedSVGRect( double deviceWidth, double deviceHeig
     return QRectF( 0, 0, width, deviceHeight );
   }
 }
+#endif //0
 
 void QgsComposerPicture::updateImageFromSvg()
 {
@@ -204,99 +227,36 @@ void QgsComposerPicture::updateImageFromSvg()
   mSvgCacheUpToDate = true;
 }
 
-bool QgsComposerPicture::imageSizeConsideringRotation( double& width, double& height ) const
-{
-  double x1 = 0;
-  double y1 = 0;
-  double x2 = width;
-  double y2 = 0;
-  double x3 = width;
-  double y3 = height;
-#if 0
-  double x4 = 0;
-  double y4 = height;
-#endif
 
-  if ( !cornerPointOnRotatedAndScaledRect( x1, y1, width, height ) )
-  {
-    return false;
-  }
-  if ( !cornerPointOnRotatedAndScaledRect( x2, y2, width, height ) )
-  {
-    return false;
-  }
-  if ( !cornerPointOnRotatedAndScaledRect( x3, y3, width, height ) )
-  {
-    return false;
-  }
-#if 0
-  if ( !cornerPointOnRotatedAndScaledRect( x4, y4, width, height ) )
-  {
-    return false;
-  }
-#endif
-
-  width = sqrt(( x2 - x1 ) * ( x2 - x1 ) + ( y2 - y1 ) * ( y2 - y1 ) );
-  height = sqrt(( x3 - x2 ) * ( x3 - x2 ) + ( y3 - y2 ) * ( y3 - y2 ) );
-  return true;
-}
-
-bool QgsComposerPicture::cornerPointOnRotatedAndScaledRect( double& x, double& y, double width, double height ) const
-{
-  //first rotate point clockwise
-  double rotToRad = mRotation * M_PI / 180.0;
-  QPointF midpoint( width / 2.0, height / 2.0 );
-  double xVector = x - midpoint.x();
-  double yVector = y - midpoint.y();
-  //double xRotated = cos(rotToRad) * xVector + sin(rotToRad) * yVector;
-  //double yRotated = -sin(rotToRad) * xVector + cos(rotToRad) * yVector;
-  double xRotated = cos( rotToRad ) * xVector - sin( rotToRad ) * yVector;
-  double yRotated = sin( rotToRad ) * xVector + cos( rotToRad ) * yVector;
-
-  //create line from midpoint to rotated point
-  QLineF line( midpoint.x(), midpoint.y(), midpoint.x() + xRotated, midpoint.y() + yRotated );
-
-  //intersect with all four borders and return result
-  QList<QLineF> borders;
-  borders << QLineF( 0, 0, width, 0 );
-  borders << QLineF( width, 0, width, height );
-  borders << QLineF( width, height, 0, height );
-  borders << QLineF( 0, height, 0, 0 );
-
-  QList<QLineF>::const_iterator it = borders.constBegin();
-  QPointF intersectionPoint;
-
-  for ( ; it != borders.constEnd(); ++it )
-  {
-    if ( line.intersect( *it, &intersectionPoint ) == QLineF::BoundedIntersection )
-    {
-      x = intersectionPoint.x();
-      y = intersectionPoint.y();
-      return true;
-    }
-  }
-  return false;
-}
 
 void QgsComposerPicture::setSceneRect( const QRectF& rectangle )
 {
   mSvgCacheUpToDate = false;
   QgsComposerItem::setSceneRect( rectangle );
+
+  //consider to change size of the shape if the rectangle changes width and/or height
+  double newPictureWidth = rectangle.width();
+  double newPictureHeight = rectangle.height();
+  imageSizeConsideringRotation( newPictureWidth, newPictureHeight );
+  mPictureWidth = newPictureWidth;
+  mPictureHeight = newPictureHeight;
+
   emit settingsChanged();
 }
 
-void QgsComposerPicture::setRotation( double rotation )
+void QgsComposerPicture::setRotation( double r )
 {
-  if ( rotation > 360 )
-  {
-    mRotation = (( int )rotation ) % 360;
-  }
-  else
-  {
-    mRotation = rotation;
-  }
-  emit settingsChanged();
-  update();
+  //adapt rectangle size
+  double width = mPictureWidth;
+  double height = mPictureHeight;
+  sizeChangedByRotation( width, height );
+
+  //adapt scene rect to have the same center and the new width / height
+  double x = transform().dx() + rect().width() / 2.0 - width / 2.0;
+  double y = transform().dy() + rect().height() / 2.0 - height / 2.0;
+  QgsComposerItem::setSceneRect( QRectF( x, y, width, height ) );
+
+  QgsComposerItem::setRotation( r );
 }
 
 void QgsComposerPicture::setRotationMap( int composerMapId )
@@ -324,6 +284,7 @@ void QgsComposerPicture::setRotationMap( int composerMapId )
   mRotation = map->rotation();
   QObject::connect( map, SIGNAL( rotationChanged( double ) ), this, SLOT( setRotation( double ) ) );
   mRotationMap = map;
+  setRotation( map->rotation() );
 }
 
 QString QgsComposerPicture::pictureFile() const
@@ -339,7 +300,8 @@ bool QgsComposerPicture::writeXML( QDomElement& elem, QDomDocument & doc ) const
   }
   QDomElement composerPictureElem = doc.createElement( "ComposerPicture" );
   composerPictureElem.setAttribute( "file", QgsProject::instance()->writePath( mSourceFile.fileName() ) );
-  composerPictureElem.setAttribute( "rotation", QString::number( mRotation ) );
+  composerPictureElem.setAttribute( "pictureWidth", mPictureWidth );
+  composerPictureElem.setAttribute( "pictureHeight", mPictureHeight );
   if ( !mRotationMap )
   {
     composerPictureElem.setAttribute( "mapId", -1 );
@@ -361,6 +323,9 @@ bool QgsComposerPicture::readXML( const QDomElement& itemElem, const QDomDocumen
     return false;
   }
 
+  mPictureWidth = itemElem.attribute( "pictureWidth", "10" ).toDouble();
+  mPictureHeight = itemElem.attribute( "pictureHeight", "10" ).toDouble();
+
   QDomNodeList composerItemList = itemElem.elementsByTagName( "ComposerItem" );
   if ( composerItemList.size() > 0 )
   {
@@ -374,8 +339,6 @@ bool QgsComposerPicture::readXML( const QDomElement& itemElem, const QDomDocumen
 
   QString fileName = QgsProject::instance()->readPath( itemElem.attribute( "file" ) );
   setPictureFile( fileName );
-
-  mRotation = itemElem.attribute( "rotation" ).toDouble();
 
   //rotation map
   int rotationMapId = itemElem.attribute( "mapId", "-1" ).toInt();

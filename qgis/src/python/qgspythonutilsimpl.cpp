@@ -59,7 +59,7 @@ void QgsPythonUtilsImpl::initPython( QgisInterface* interface )
 
   // expect that bindings are installed locally, so add the path to modules
   // also add path to plugins
-  runString( "sys.path = [\"" + pythonPath() + "\", \"" + homePluginsPath()  + "\", \"" + pluginsPath() + "\"] + sys.path" );
+  runString( "sys.path = [\"" + pythonPath() + "\", \"" + homePythonPath()  + "\", \"" + homePluginsPath()  + "\", \"" + pluginsPath() + "\"] + sys.path" );
 
   // import SIP
   if ( !runString( "from sip import wrapinstance, unwrapinstance",
@@ -121,15 +121,6 @@ void QgsPythonUtilsImpl::uninstallErrorHook()
   runString( "qgis.utils.uninstallErrorHook()" );
 }
 
-void QgsPythonUtilsImpl::installConsoleHooks()
-{
-  runString( "qgis.utils.installConsoleHooks()" );
-}
-
-void QgsPythonUtilsImpl::uninstallConsoleHooks()
-{
-  runString( "qgis.utils.uninstallConsoleHooks()" );
-}
 
 
 bool QgsPythonUtilsImpl::runStringUnsafe( const QString& command, bool single )
@@ -299,14 +290,6 @@ bool QgsPythonUtilsImpl::getError( QString& errorClassName, QString& errorText )
   return true;
 }
 
-QString QgsPythonUtilsImpl::getResult()
-{
-  QString res;
-  evalString( "qgis.utils.console_output", res );
-  // clear output
-  runString( "qgis.utils.console_output = None" );
-  return res;
-}
 
 QString QgsPythonUtilsImpl::PyObjectToQString( PyObject* obj )
 {
@@ -368,24 +351,6 @@ QString QgsPythonUtilsImpl::PyObjectToQString( PyObject* obj )
   return "(qgis error)";
 }
 
-QString QgsPythonUtilsImpl::getVariableFromMain( QString name )
-{
-  PyObject* obj;
-  QString output;
-
-  // get the result
-  obj = PyDict_GetItemString( mMainDict, name.toUtf8() ); // obj is borrowed reference
-
-  if ( obj != NULL && obj != Py_None )
-  {
-    output = PyObjectToQString( obj );
-  }
-
-  // erase result
-  PyDict_SetItemString( mMainDict, name.toUtf8(), Py_None );
-
-  return output;
-}
 
 bool QgsPythonUtilsImpl::evalString( const QString& command, QString& result )
 {
@@ -412,30 +377,23 @@ QString QgsPythonUtilsImpl::pluginsPath()
   return pythonPath() + "/plugins";
 }
 
+QString QgsPythonUtilsImpl::homePythonPath()
+{
+  return QgsApplication::qgisSettingsDirPath() + "/python";
+}
+
 QString QgsPythonUtilsImpl::homePluginsPath()
 {
-  return QgsApplication::qgisSettingsDirPath() + "/python/plugins";
+  return homePythonPath() + "/plugins";
 }
 
 QStringList QgsPythonUtilsImpl::pluginList()
 {
-  QDir pluginDir( QgsPythonUtilsImpl::pluginsPath(), "*",
-                  QDir::Name | QDir::IgnoreCase, QDir::Dirs | QDir::NoDotAndDotDot );
+  runString( "qgis.utils.updateAvailablePlugins()" );
 
-  QDir homePluginDir( QgsPythonUtilsImpl::homePluginsPath(), "*",
-                      QDir::Name | QDir::IgnoreCase, QDir::Dirs | QDir::NoDotAndDotDot );
-
-  QStringList pluginList = pluginDir.entryList();
-
-  for ( uint i = 0; i < homePluginDir.count(); i++ )
-  {
-    QString packageName = homePluginDir[i];
-    if ( !pluginList.contains( packageName ) )
-      pluginList.append( packageName );
-
-  }
-
-  return pluginList;
+  QString output;
+  evalString( "'\\n'.join(qgis.utils.available_plugins)", output );
+  return output.split( QChar( '\n' ) );
 }
 
 QString QgsPythonUtilsImpl::getPluginMetadata( QString pluginName, QString function )
@@ -469,4 +427,18 @@ bool QgsPythonUtilsImpl::unloadPlugin( QString packageName )
   QString output;
   evalString( "qgis.utils.unloadPlugin('" + packageName + "')", output );
   return ( output == "True" );
+}
+
+bool QgsPythonUtilsImpl::isPluginLoaded( QString packageName )
+{
+  QString output;
+  evalString( "qgis.utils.isPluginLoaded('" + packageName + "')", output );
+  return ( output == "True" );
+}
+
+QStringList QgsPythonUtilsImpl::listActivePlugins()
+{
+  QString output;
+  evalString( "'\\n'.join(qgis.utils.active_plugins)", output );
+  return output.split( QChar( '\n' ) );
 }

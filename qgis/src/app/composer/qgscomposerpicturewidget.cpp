@@ -46,6 +46,7 @@ QgsComposerPictureWidget::QgsComposerPictureWidget( QgsComposerPicture* picture 
   //add preview icons
   addStandardDirectoriesToPreview();
   connect( mPicture, SIGNAL( settingsChanged() ), this, SLOT( setGuiElementValues() ) );
+  connect( mPicture, SIGNAL( rotationChanged( double ) ), this, SLOT( setGuiElementValues() ) );
 }
 
 QgsComposerPictureWidget::~QgsComposerPictureWidget()
@@ -461,6 +462,13 @@ void QgsComposerPictureWidget::addStandardDirectoriesToPreview()
 
 bool QgsComposerPictureWidget::testSvgFile( const QString& filename ) const
 {
+  //QSvgRenderer crashes with some (non-svg) xml documents.
+  //So at least we try to sort out the ones with different suffixes
+  if ( !filename.endsWith( ".svg" ) )
+  {
+    return false;
+  }
+
   QSvgRenderer svgRenderer( filename );
   if ( svgRenderer.isValid() )
   {

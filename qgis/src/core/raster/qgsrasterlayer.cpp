@@ -294,7 +294,7 @@ void QgsRasterLayer::buildSupportedRasterFileFilter( QString & theFileFiltersStr
 
   // Grind through all the drivers and their respective metadata.
   // We'll add a file filter for those drivers that have a file
-  // extension defined for them; the others, welll, even though
+  // extension defined for them; the others, well, even though
   // theoreticaly we can open those files because there exists a
   // driver for them, the user will have to use the "All Files" to
   // open datasets with no explicitly defined file name extension.
@@ -319,7 +319,7 @@ void QgsRasterLayer::buildSupportedRasterFileFilter( QString & theFileFiltersStr
 
     myGdalDriverDescription = GDALGetDescription( myGdalDriver );
 
-// QgsDebugMsg(QString("got driver string %1").arg(myGdalDriverDescription));
+    // QgsDebugMsg(QString("got driver string %1").arg(myGdalDriverDescription));
 
     myGdalDriverMetadata = GDALGetMetadata( myGdalDriver, NULL );
 
@@ -328,7 +328,7 @@ void QgsRasterLayer::buildSupportedRasterFileFilter( QString & theFileFiltersStr
     while ( myGdalDriverMetadata && '\0' != myGdalDriverMetadata[0] )
     {
       metadataTokens = QString( *myGdalDriverMetadata ).split( "=", QString::SkipEmptyParts );
-// QgsDebugMsg(QString("\t%1").arg(*myGdalDriverMetadata));
+      // QgsDebugMsg(QString("\t%1").arg(*myGdalDriverMetadata));
 
       // XXX add check for malformed metadataTokens
 
@@ -365,13 +365,21 @@ void QgsRasterLayer::buildSupportedRasterFileFilter( QString & theFileFiltersStr
         if ( myGdalDriverDescription == "JPEG2000" ||
              myGdalDriverDescription.startsWith( "JP2" ) ) // JP2ECW, JP2KAK, JP2MrSID
         {
-          if ( !jp2Driver )
-          {
-            jp2Driver = myGdalDriver;   // first JP2 driver found
-            glob += " *.j2k";           // add alternate extension
-          }
-          else break;               // skip if already found a JP2 driver
+          if ( jp2Driver )
+            break; // skip if already found a JP2 driver
+
+          jp2Driver = myGdalDriver;   // first JP2 driver found
+          glob += " *.j2k";           // add alternate extension
         }
+        else if ( myGdalDriverDescription == "GTiff" )
+        {
+          glob += " *.tiff";
+        }
+        else if ( myGdalDriverDescription == "JPEG" )
+        {
+          glob += " *.jpeg";
+        }
+
         theFileFiltersString += myGdalDriverLongName + " (" + glob.toLower() + " " + glob.toUpper() + ");;";
 
         break;            // ... to next driver, if any.
@@ -1306,6 +1314,10 @@ void QgsRasterLayer::computeMinimumMaximumFromLastExtent( int theBand, double* t
       for ( int myColumn = 0; myColumn < mLastViewPort.drawableAreaXDim; ++myColumn )
       {
         myValue = readValue( myGdalScanData, myDataType, myRow * mLastViewPort.drawableAreaXDim + myColumn );
+        if ( mValidNoDataValue && ( fabs( myValue - mNoDataValue ) <= TINY_VALUE || myValue != myValue ) )
+        {
+          continue;
+        }
         myMin = qMin( myMin, myValue );
         myMax = qMax( myMax, myValue );
       }
@@ -1405,7 +1417,7 @@ bool QgsRasterLayer::draw( QgsRenderContext& rendererContext )
 {
   QgsDebugMsg( "entered. (renderContext)" );
 
-  //Dont waste time drawing if transparency is at 0 (completely transparent)
+  // Don't waste time drawing if transparency is at 0 (completely transparent)
   if ( mTransparencyLevel == 0 )
     return TRUE;
 
@@ -2085,7 +2097,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( bool theWithNameFlag )
               mDrawingStyle == PalettedSingleBandPseudoColor || mDrawingStyle == SingleBandPseudoColor )
     {
 
-      //set up the three class breaks for pseudocolour mapping
+      //set up the three class breaks for pseudocolor mapping
       double myRangeSize = 90;  //hard coded for now
       double myBreakSize = myRangeSize / 3;
       double myClassBreakMin1 = 0;
@@ -2302,7 +2314,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( int theLabelCount )
   //these next two vars are not used anywhere so commented out for now
   //int myLongestLabelWidth =  myQFontMetrics.width(name());
   //const int myHorizontalLabelSpacing = 5;
-  const int myColourBarWidth = 10;
+  const int myColorBarWidth = 10;
   //
   // Get the adjusted matrix stats
   //
@@ -2341,7 +2353,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( int theLabelCount )
             mDrawingStyle == PalettedSingleBandPseudoColor || mDrawingStyle == SingleBandPseudoColor )
   {
 
-    //set up the three class breaks for pseudocolour mapping
+    //set up the three class breaks for pseudocolor mapping
     double myRangeSize = 90;  //hard coded for now
     double myBreakSize = myRangeSize / 3;
     double myClassBreakMin1 = 0;
@@ -2484,11 +2496,11 @@ QPixmap QgsRasterLayer::legendAsPixmap( int theLabelCount )
   //hard coding thes values for now.
   if ( myLegendQPixmap.height() == 3 )
   {
-    myQWMatrix.scale( myColourBarWidth, 2 );
+    myQWMatrix.scale( myColorBarWidth, 2 );
   }
   else
   {
-    myQWMatrix.scale( myColourBarWidth, 2 );
+    myQWMatrix.scale( myColorBarWidth, 2 );
   }
   //apply the matrix
   QPixmap myQPixmap2 = myLegendQPixmap.transformed( myQWMatrix );
@@ -2909,7 +2921,7 @@ QPixmap QgsRasterLayer::paletteAsPixmap( int theBandNumber )
 
   // Only do this for the non-provider (hard-coded GDAL) scenario...
   // Maybe WMS can do this differently using QImage::numColors and QImage::color()
-  if ( mProviderKey.isEmpty() && hasBand( "Palette" ) && theBandNumber > 0 ) //dont tr() this its a gdal word!
+  if ( mProviderKey.isEmpty() && hasBand( "Palette" ) && theBandNumber > 0 ) //don't tr() this its a gdal word!
   {
     QgsDebugMsg( "....found paletted image" );
     QgsColorRampShader myShader;
@@ -2969,7 +2981,7 @@ void QgsRasterLayer::populateHistogram( int theBandNo, int theBinCount, bool the
   GDALRasterBandH myGdalBand = GDALGetRasterBand( mGdalDataset, theBandNo );
   QgsRasterBandStats myRasterBandStats = bandStatistics( theBandNo );
   //calculate the histogram for this band
-  //we assume that it only needs to be calculated if the lenght of the histogram
+  //we assume that it only needs to be calculated if the length of the histogram
   //vector is not equal to the number of bins
   //i.e if the histogram has never previously been generated or the user has
   //selected a new number of bins.
@@ -3778,7 +3790,7 @@ bool QgsRasterLayer::readSymbology( const QDomNode& layer_node, QString& errorMe
   {
     QgsColorRampShader* myColorRampShader = ( QgsColorRampShader* ) mRasterShader->rasterShaderFunction();
 
-    //TODO: Remove the customColorRampType check and following if() in v2.0, added for compatability with older ( bugged ) project files
+    //TODO: Remove the customColorRampType check and following if() in v2.0, added for compatibility with older ( bugged ) project files
     QDomNode customColorRampTypeNode = customColorRampNode.namedItem( "customColorRampType" );
     QDomNode colorRampTypeNode = customColorRampNode.namedItem( "colorRampType" );
     QString myRampType = "";
@@ -4761,7 +4773,7 @@ void QgsRasterLayer::drawPalettedSingleBandPseudoColor( QPainter * theQPainter, 
 }
 
 /**
- * This method is used to render a paletted raster layer as a colour image -- currently not supported
+ * This method is used to render a paletted raster layer as a color image -- currently not supported
  * @param theQPainter - pointer to the QPainter onto which the layer should be drawn.
  * @param theRasterViewPort - pointer to the ViewPort struct containing dimensions of viewable area and subset area to be extracted from data file.
  * @param theGdalBand - pointer to the GDALRasterBand which should be rendered.
@@ -5257,7 +5269,7 @@ bool QgsRasterLayer::readFile( QString const &theFilename )
   mHeight = GDALGetRasterYSize( mGdalDataset );
 
   //
-  // Determin the nodatavalue
+  // Determine the nodata value
   //
   mNoDataValue = -9999.0; //Standard default?
   mValidNoDataValue = false;
@@ -5306,7 +5318,7 @@ bool QgsRasterLayer::readFile( QString const &theFilename )
     mRasterType = Multiband;
   }
   //TODO hasBand is really obsolete and only used in the Palette instance, change to new function hasPalette(int)
-  else if ( hasBand( "Palette" ) ) //dont tr() this its a gdal word!
+  else if ( hasBand( "Palette" ) ) //don't tr() this its a gdal word!
   {
     mRasterType = Palette;
   }

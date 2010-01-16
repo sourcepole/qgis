@@ -79,7 +79,7 @@ QgsGraduatedSymbolRenderer::Mode QgsGraduatedSymbolRenderer::mode() const
 {
   //mode is only really used to be able to reinstate
   //the graduated dialog properties properly, so we
-  //dont do anything else besides accessors and mutators in
+  //don't do anything else besides accessors and mutators in
   //this class
   return mMode;
 }
@@ -88,7 +88,7 @@ void QgsGraduatedSymbolRenderer::setMode( QgsGraduatedSymbolRenderer::Mode theMo
 {
   //mode is only really used to be able to reinstate
   //the graduated dialog properties properly, so we
-  //dont do anything else besides accessors and mutators in
+  //don't do anything else besides accessors and mutators in
   //this class
   mMode = theMode;
 }
@@ -165,7 +165,22 @@ void QgsGraduatedSymbolRenderer::renderFeature( QgsRenderContext &renderContext,
       oldName = theSymbol->pointSymbolName();
       theSymbol->setNamedPointSymbol( name );
     }
-    *img = theSymbol->getPointSymbolAsImage( renderContext.scaleFactor(), selected, mSelectionColor, fieldScale,
+
+    double scale = renderContext.scaleFactor();
+
+    if ( theSymbol->pointSizeUnits() )
+    {
+      /* Calc scale (still not nice) */
+      QgsPoint point;
+      point = renderContext.mapToPixel().transform( 0, 0 );
+      double x1 = point.x();
+      point = renderContext.mapToPixel().transform( 1000, 0 );
+      double x2 = point.x();
+
+      scale *= ( x2 - x1 ) * 0.001;
+    }
+
+    *img = theSymbol->getPointSymbolAsImage( scale, selected, mSelectionColor, fieldScale,
            rotation, renderContext.rasterScaleFactor(), opacity );
 
     if ( !oldName.isNull() )
@@ -202,7 +217,7 @@ void QgsGraduatedSymbolRenderer::renderFeature( QgsRenderContext &renderContext,
         brush.setColor( mSelectionColor );
         p->setBrush( brush );
       }
-      else //dont draw outlines in selection colour for polys otherwise they appear merged
+      else //don't draw outlines in selection color for polys otherwise they appear merged
       {
         pen.setColor( mSelectionColor );
       }

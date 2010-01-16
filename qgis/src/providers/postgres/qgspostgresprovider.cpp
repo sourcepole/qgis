@@ -24,8 +24,6 @@
 #include <netinet/in.h>
 #endif
 
-#include <cassert>
-
 #include <qgis.h>
 #include <qgsapplication.h>
 #include <qgsfeature.h>
@@ -46,18 +44,22 @@
 #include "qgspostgisbox3d.h"
 #include "qgslogger.h"
 
+#include <QInputDialog>
+
 const QString POSTGRES_KEY = "postgres";
 const QString POSTGRES_DESCRIPTION = "PostgreSQL/PostGIS data provider";
 
 QMap<QString, QgsPostgresProvider::Conn *> QgsPostgresProvider::Conn::connectionsRO;
 QMap<QString, QgsPostgresProvider::Conn *> QgsPostgresProvider::Conn::connectionsRW;
+QMap<QString, QString> QgsPostgresProvider::Conn::passwordCache;
 int QgsPostgresProvider::providerIds = 0;
 
 QgsPostgresProvider::QgsPostgresProvider( QString const & uri )
     : QgsVectorDataProvider( uri ),
     mFetching( false ),
     geomType( QGis::WKBUnknown ),
-    mFeatureQueueSize( 200 )
+    mFeatureQueueSize( 200 ),
+    mPrimaryKeyDefault( QString::null )
 {
   // assume this is a valid layer until we determine otherwise
   valid = true;
@@ -159,8 +161,8 @@ QgsPostgresProvider::QgsPostgresProvider( QString const & uri )
   if ( mCurrentSchema == mSchemaName )
   {
     mUri.clearSchema();
-    setDataSourceUri( mUri.uri() );
   }
+
   if ( mSchemaName == "" )
     mSchemaName = mCurrentSchema;
 
@@ -191,11 +193,11 @@ QgsPostgresProvider::QgsPostgresProvider( QString const & uri )
   calculateExtents();
   getFeatureCount();
 
-  // load the field list
-  loadFields();
-
   // set the primary key
   getPrimaryKey();
+
+  // load the field list
+  loadFields();
 
   // Set the postgresql message level so that we don't get the
   // 'there is no transaction in progress' warning.
@@ -250,6 +252,11 @@ QgsPostgresProvider::QgsPostgresProvider( QString const & uri )
   {
     valid = false;
   }
+  else
+  {
+    mUri.setKeyColumn( primaryKey );
+    setDataSourceUri( mUri.uri() );
+  }
 
   // Close the database connection if the layer isn't going to be loaded.
   if ( !valid )
@@ -300,8 +307,45 @@ QgsPostgresProvider::Conn *QgsPostgresProvider::Conn::connectDb( const QString &
 
   PGconn *pd = PQconnectdb( conninfo.toLocal8Bit() );  // use what is set based on locale; after connecting, use Utf8
   // check the connection status
+  if ( PQstatus( pd ) != CONNECTION_OK && QString::fromUtf8( PQerrorMessage( pd ) ) == PQnoPasswordSupplied )
+  {
+    QString password = QString::null;
+
+    while ( PQstatus( pd ) != CONNECTION_OK )
+    {
+      bool ok = true;
+
+      if ( passwordCache.contains( conninfo ) )
+      {
+        password = passwordCache.take( conninfo );
+      }
+      else
+      {
+        password = QInputDialog::getText( 0,
+                                          tr( "Enter password" ),
+                                          tr( "Error: %1Enter password for %2" )
+                                          .arg( QString::fromUtf8( PQerrorMessage( pd ) ) )
+                                          .arg( conninfo ),
+                                          QLineEdit::Password,
+                                          password,
+                                          &ok );
+      }
+
+      if ( !ok )
+        break;
+
+      ::PQfinish( pd );
+
+      pd = PQconnectdb( QString( "%1 password='%2'" ).arg( conninfo ).arg( password ).toLocal8Bit() );
+    }
+
+    if ( PQstatus( pd ) == CONNECTION_OK )
+      passwordCache[ conninfo ] = password;
+  }
+
   if ( PQstatus( pd ) != CONNECTION_OK )
   {
+    ::PQfinish( pd );
     QgsDebugMsg( "Connection to database failed" );
     return NULL;
   }
@@ -865,6 +909,9 @@ void QgsPostgresProvider::loadFields()
   for ( int i = 0; i < PQnfields( result ); i++ )
   {
     QString fieldName = QString::fromUtf8( PQfname( result, i ) );
+    if ( fieldName == geometryColumn )
+      continue;
+
     int fldtyp = PQftype( result, i );
     QString typOid = QString().setNum( fldtyp );
     int fieldModifier = PQfmod( result, i );
@@ -894,79 +941,76 @@ void QgsPostgresProvider::loadFields()
     if ( PQntuples( tresult ) > 0 )
       fieldComment = QString::fromUtf8( PQgetvalue( tresult, 0, 0 ) );
 
-    if ( fieldName != geometryColumn )
+    QVariant::Type fieldType;
+
+    if ( fieldTType == "b" )
     {
-      QVariant::Type fieldType;
+      bool isArray = fieldTypeName.startsWith( "_" );
 
-      if ( fieldTType == "b" )
+      if ( isArray )
+        fieldTypeName = fieldTypeName.mid( 1 );
+
+      if ( fieldTypeName == "int8" )
       {
-        bool isArray = fieldTypeName.startsWith( "_" );
-
-        if ( isArray )
-          fieldTypeName = fieldTypeName.mid( 1 );
-
-        if ( fieldTypeName == "int8" )
-        {
-          fieldType = QVariant::LongLong;
-          fieldSize = -1;
-        }
-        else if ( fieldTypeName.startsWith( "int" ) ||
-                  fieldTypeName == "serial" )
-        {
-          fieldType = QVariant::Int;
-          fieldSize = -1;
-        }
-        else if ( fieldTypeName == "real" ||
-                  fieldTypeName == "double precision" ||
-                  fieldTypeName.startsWith( "float" ) ||
-                  fieldTypeName == "numeric" )
-        {
-          fieldType = QVariant::Double;
-          fieldSize = -1;
-        }
-        else if ( fieldTypeName == "text" ||
-                  fieldTypeName == "bpchar" ||
-                  fieldTypeName == "varchar" ||
-                  fieldTypeName == "bool" ||
-                  fieldTypeName == "geometry" ||
-                  fieldTypeName == "money" ||
-                  fieldTypeName.startsWith( "time" ) ||
-                  fieldTypeName.startsWith( "date" ) )
-        {
-          fieldType = QVariant::String;
-          fieldSize = -1;
-        }
-        else if ( fieldTypeName == "char" )
-        {
-          fieldType = QVariant::String;
-        }
-        else
-        {
-          QgsDebugMsg( "Field " + fieldName + " ignored, because of unsupported type " + fieldTypeName );
-          continue;
-        }
-
-        if ( isArray )
-        {
-          fieldTypeName = "_" + fieldTypeName;
-          fieldType = QVariant::String;
-          fieldSize = -1;
-        }
+        fieldType = QVariant::LongLong;
+        fieldSize = -1;
       }
-      else if ( fieldTType == "e" )
+      else if ( fieldTypeName.startsWith( "int" ) ||
+                fieldTypeName == "serial" )
       {
-        // enum
+        fieldType = QVariant::Int;
+        fieldSize = -1;
+      }
+      else if ( fieldTypeName == "real" ||
+                fieldTypeName == "double precision" ||
+                fieldTypeName.startsWith( "float" ) ||
+                fieldTypeName == "numeric" )
+      {
+        fieldType = QVariant::Double;
+        fieldSize = -1;
+      }
+      else if ( fieldTypeName == "text" ||
+                fieldTypeName == "bpchar" ||
+                fieldTypeName == "varchar" ||
+                fieldTypeName == "bool" ||
+                fieldTypeName == "geometry" ||
+                fieldTypeName == "money" ||
+                fieldTypeName.startsWith( "time" ) ||
+                fieldTypeName.startsWith( "date" ) )
+      {
         fieldType = QVariant::String;
         fieldSize = -1;
       }
+      else if ( fieldTypeName == "char" )
+      {
+        fieldType = QVariant::String;
+      }
       else
       {
-        QgsDebugMsg( "Field " + fieldName + " ignored, because of unsupported type type " + fieldTType );
+        QgsDebugMsg( "Field " + fieldName + " ignored, because of unsupported type " + fieldTypeName );
         continue;
       }
 
-      attributeFields.insert( i, QgsField( fieldName, fieldType, fieldTypeName, fieldSize, fieldModifier, fieldComment ) );
+      if ( isArray )
+      {
+        fieldTypeName = "_" + fieldTypeName;
+        fieldType = QVariant::String;
+        fieldSize = -1;
+      }
     }
+    else if ( fieldTType == "e" )
+    {
+      // enum
+      fieldType = QVariant::String;
+      fieldSize = -1;
+    }
+    else
+    {
+      QgsDebugMsg( "Field " + fieldName + " ignored, because of unsupported type type " + fieldTType );
+      continue;
+    }
+
+    attributeFields.insert( i, QgsField( fieldName, fieldType, fieldTypeName, fieldSize, fieldModifier, fieldComment ) );
   }
 }
 
@@ -1059,6 +1103,17 @@ QString QgsPostgresProvider::getPrimaryKey()
                             "primary key), has a PostgreSQL oid column or has a ctid\n"
                             "column with a 16bit block number.\n" ) );
       }
+      else
+      {
+        mPrimaryKeyDefault = defaultValue( primaryKey ).toString();
+        if ( mPrimaryKeyDefault.isNull() )
+        {
+          mPrimaryKeyDefault = QString( "max(%1)+1 from %2.%3" )
+                               .arg( quotedIdentifier( primaryKey ) )
+                               .arg( quotedIdentifier( mSchemaName ) )
+                               .arg( quotedIdentifier( mTableName ) );
+        }
+      }
     }
     else if ( type == "v" ) // the relation is a view
     {
@@ -1079,6 +1134,8 @@ QString QgsPostgresProvider::getPrimaryKey()
           type = PQgetvalue( result, 0, 0 );
         }
 
+        // mPrimaryKeyDefault stays null and is retrieved later on demand
+
         if (( type != "int4" && type != "oid" ) ||
             !uniqueData( mSchemaName, mTableName, primaryKey ) )
         {
@@ -1088,18 +1145,7 @@ QString QgsPostgresProvider::getPrimaryKey()
 
       if ( primaryKey.isEmpty() )
       {
-        // Have a poke around the view to see if any of the columns
-        // could be used as the primary key.
-        tableCols cols;
-        // Given a schema.view, populate the cols variable with the
-        // schema.table.column's that underly the view columns.
-        findColumns( cols );
-        // From the view columns, choose one for which the underlying
-        // column is suitable for use as a key into the view.
-        primaryKey = chooseViewColumn( cols );
-
-        mUri.setKeyColumn( primaryKey );
-        setDataSourceUri( mUri.uri() );
+        parseView();
       }
     }
     else
@@ -1199,9 +1245,20 @@ QString QgsPostgresProvider::getPrimaryKey()
       valid = false;
       showMessageBox( tr( "Unable to find a key column" ), log );
     }
+    else
+    {
+      mPrimaryKeyDefault = defaultValue( primaryKey ).toString();
+      if ( mPrimaryKeyDefault.isNull() )
+      {
+        mPrimaryKeyDefault = QString( "max(%1)+1 from %2.%3" )
+                             .arg( quotedIdentifier( primaryKey ) )
+                             .arg( quotedIdentifier( mSchemaName ) )
+                             .arg( quotedIdentifier( mTableName ) );
+      }
+    }
   }
 
-  if ( primaryKey.length() > 0 )
+  if ( !primaryKey.isNull() )
   {
     QgsDebugMsg( "Qgis row key is " + primaryKey );
   }
@@ -1213,11 +1270,58 @@ QString QgsPostgresProvider::getPrimaryKey()
   return primaryKey;
 }
 
+void QgsPostgresProvider::parseView()
+{
+  // Have a poke around the view to see if any of the columns
+  // could be used as the primary key.
+  tableCols cols;
+
+  // Given a schema.view, populate the cols variable with the
+  // schema.table.column's that underly the view columns.
+  findColumns( cols );
+
+  // pick the primary key, if we don't have one yet
+  if ( primaryKey.isEmpty() )
+  {
+    // From the view columns, choose one for which the underlying
+    // column is suitable for use as a key into the view.
+    primaryKey = chooseViewColumn( cols );
+  }
+
+  tableCols::const_iterator it = cols.find( primaryKey );
+  if ( it != cols.end() )
+  {
+    mPrimaryKeyDefault = defaultValue( it->second.column, it->second.relation, it->second.schema ).toString();
+    if ( mPrimaryKeyDefault.isNull() )
+    {
+      mPrimaryKeyDefault = QString( "max(%1)+1 from %2.%3" )
+                           .arg( quotedIdentifier( it->second.column ) )
+                           .arg( quotedIdentifier( it->second.schema ) )
+                           .arg( quotedIdentifier( it->second.relation ) );
+    }
+  }
+  else
+  {
+    mPrimaryKeyDefault = QString( "max(%1)+1 from %2.%3" )
+                         .arg( quotedIdentifier( primaryKey ) )
+                         .arg( quotedIdentifier( mSchemaName ) )
+                         .arg( quotedIdentifier( mTableName ) );
+  }
+}
+
+QString QgsPostgresProvider::primaryKeyDefault()
+{
+  if ( mPrimaryKeyDefault.isNull() )
+    parseView();
+
+  return mPrimaryKeyDefault;
+}
+
 // Given the table and column that each column in the view refers to,
 // choose one. Prefers column with an index on them, but will
 // otherwise choose something suitable.
 
-QString QgsPostgresProvider::chooseViewColumn( const tableCols& cols )
+QString QgsPostgresProvider::chooseViewColumn( const tableCols &cols )
 {
   // For each relation name and column name need to see if it
   // has unique constraints on it, or is a primary key (if not,
@@ -1608,6 +1712,12 @@ void QgsPostgresProvider::findColumns( tableCols& cols )
              "view_schema=%1 AND view_name=%2" )
     .arg( quotedValue( mSchemaName ) )
     .arg( quotedValue( mTableName ) );
+
+  if ( !primaryKey.isEmpty() )
+  {
+    viewColumnSql += QString( " AND column_name=%1" ).arg( quotedValue( primaryKey ) );
+  }
+
   Result viewColumnResult = connectionRO->PQexec( viewColumnSql );
 
   //find out view definition
@@ -1891,28 +2001,18 @@ QVariant QgsPostgresProvider::maximumValue( int index )
 }
 
 
-int QgsPostgresProvider::maxPrimaryKeyValue()
-{
-  QString sql;
-
-  sql = QString( "select max(%1) from %2" )
-        .arg( quotedIdentifier( primaryKey ) )
-        .arg( mSchemaTableName );
-
-  Result rmax = connectionRO->PQexec( sql );
-  QString maxValue = QString::fromUtf8( PQgetvalue( rmax, 0, 0 ) );
-
-  return maxValue.toInt();
-}
-
-
 bool QgsPostgresProvider::isValid()
 {
   return valid;
 }
 
-QVariant QgsPostgresProvider::defaultValue( QString fieldName )
+QVariant QgsPostgresProvider::defaultValue( QString fieldName, QString tableName, QString schemaName )
 {
+  if ( schemaName.isNull() )
+    schemaName = mSchemaName;
+  if ( tableName.isNull() )
+    tableName = mTableName;
+
   // Get the default column value from the Postgres information
   // schema. If there is no default we return an empty string.
 
@@ -1922,8 +2022,8 @@ QVariant QgsPostgresProvider::defaultValue( QString fieldName )
   QString sql( "SELECT column_default FROM"
                " information_schema.columns WHERE"
                " column_default IS NOT NULL"
-               " AND table_schema = " + quotedValue( mSchemaName ) +
-               " AND table_name = " + quotedValue( mTableName ) +
+               " AND table_schema = " + quotedValue( schemaName ) +
+               " AND table_name = " + quotedValue( tableName ) +
                " AND column_name = " + quotedValue( fieldName ) );
 
   QVariant defaultValue( QString::null );
@@ -1932,8 +2032,6 @@ QVariant QgsPostgresProvider::defaultValue( QString fieldName )
 
   if ( PQntuples( result ) == 1 && !PQgetisnull( result, 0, 0 ) )
     defaultValue = QString::fromUtf8( PQgetvalue( result, 0, 0 ) );
-
-  // QgsDebugMsg( QString("defaultValue for %1 is NULL: %2").arg(fieldId).arg( defaultValue.isNull() ) );
 
   return defaultValue;
 }
@@ -2044,7 +2142,7 @@ QByteArray QgsPostgresProvider::paramValue( QString fieldValue, const QString &d
   return fieldValue.toUtf8();
 }
 
-bool QgsPostgresProvider::addFeatures( QgsFeatureList & flist )
+bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
 {
   if ( flist.size() == 0 )
     return true;
@@ -2161,10 +2259,6 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList & flist )
       throw PGException( stmt );
     PQclear( stmt );
 
-    QString keyDefault = defaultValue( primaryKey ).toString();
-    int primaryKeyHighWater = -1;
-    if ( keyDefault.isNull() )
-      primaryKeyHighWater = maxPrimaryKeyValue();
     QList<int> newIds;
 
     for ( QgsFeatureList::iterator features = flist.begin(); features != flist.end(); features++ )
@@ -2179,18 +2273,9 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList & flist )
 
       if ( primaryKeyType != "tid" )
       {
-        if ( keyDefault.isNull() )
-        {
-          ++primaryKeyHighWater;
-          params << QString::number( primaryKeyHighWater );
-          newIds << primaryKeyHighWater;
-        }
-        else
-        {
-          QByteArray key = paramValue( keyDefault, keyDefault );
-          params << key;
-          newIds << key.toInt();
-        }
+        int id = paramValue( primaryKeyDefault(), primaryKeyDefault() ).toInt();
+        params << QString::number( id );
+        newIds << id;
       }
 
       for ( int i = 0; i < fieldId.size(); i++ )
@@ -3101,8 +3186,7 @@ void QgsPostgresProvider::showMessageBox( const QString& title, const QString& t
   message->showMessage();
 }
 
-void QgsPostgresProvider::showMessageBox( const QString& title,
-    const QStringList& text )
+void QgsPostgresProvider::showMessageBox( const QString& title, const QStringList& text )
 {
   showMessageBox( title, text.join( "\n" ) );
 }
@@ -3150,9 +3234,6 @@ QString  QgsPostgresProvider::description() const
 {
   return POSTGRES_DESCRIPTION;
 } //  QgsPostgresProvider::description()
-
-
-
 
 /**
  * Class factory to return a pointer to a newly created

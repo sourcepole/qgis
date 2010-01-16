@@ -34,6 +34,33 @@ class QgsScaleCalculator;
 class QgsCoordinateReferenceSystem;
 class QgsDistanceArea;
 class QgsOverlayObjectPositionManager;
+class QgsVectorLayer;
+class QgsFeature;
+
+/** Labeling engine interface.
+ * \note Added in QGIS v1.4
+ */
+class QgsLabelingEngineInterface
+{
+  public:
+    virtual ~QgsLabelingEngineInterface() {}
+
+    //! called when we're going to start with rendering
+    virtual void init() = 0;
+    //! called to find out whether the layer is used for labeling
+    virtual bool willUseLayer( QgsVectorLayer* layer ) = 0;
+    //! called when starting rendering of a layer
+    virtual int prepareLayer( QgsVectorLayer* layer, int& attrIndex ) = 0;
+    //! called for every feature
+    virtual void registerFeature( QgsVectorLayer* layer, QgsFeature& feat ) = 0;
+    //! called when the map is drawn and labels should be placed
+    virtual void drawLabeling( QgsRenderContext& context ) = 0;
+    //! called when we're done with rendering
+    virtual void exit() = 0;
+
+};
+
+
 
 /** \ingroup core
  * A non GUI class for rendering a map layer set onto a QPainter.
@@ -146,6 +173,15 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Accessor for render context
     QgsRenderContext* rendererContext() {return &mRenderContext;}
 
+    //! Labeling engine (NULL if there's no custom engine)
+    //! \note Added in QGIS v1.4
+    QgsLabelingEngineInterface* labelingEngine() { return mLabelingEngine; }
+
+    //! Set labeling engine. Previous engine (if any) is deleted.
+    //! Takes ownership of the engine.
+    //! Added in QGIS v1.4
+    void setLabelingEngine( QgsLabelingEngineInterface* iface );
+
   signals:
 
     void drawingProgress( int current, int total );
@@ -200,7 +236,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! current extent to be drawn
     QgsRectangle mExtent;
     //
-    /** Last extent to we drew so we know if we can 
+    /** Last extent to we drew so we know if we can
         used layer render caching or not. Note there are no
         accessors for this as it is intended to internal
         use only.
@@ -232,6 +268,9 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //!Output units
     OutputUnits mOutputUnits;
+
+    //! Labeling engine (NULL by default)
+    QgsLabelingEngineInterface* mLabelingEngine;
 };
 
 #endif

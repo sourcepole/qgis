@@ -104,7 +104,8 @@ class QgsFeature
     
     /** Set this feature's geometry (takes geometry ownership)
      */
-    void setGeometry(QgsGeometry* geom);
+    // use only the version that copies the geometry (it's safer)
+    //void setGeometry(QgsGeometry* geom /Transfer/);
     
     /** 
      * Set this feature's geometry from WKB

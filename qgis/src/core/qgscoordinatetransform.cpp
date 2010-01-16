@@ -22,7 +22,6 @@
 //qt includes
 #include <QDomNode>
 #include <QDomElement>
-#include <QTextStream>
 #include <QApplication>
 #include "qgslogger.h"
 
@@ -194,13 +193,13 @@ void QgsCoordinateTransform::initialise()
     // If the source and destination projection are the same, set the short
     // circuit flag (no transform takes place)
     mShortCircuit = true;
-    QgsDebugMsg( "Source/Dest CRS equal, shortcircuit is set." );
+    QgsDebugMsgLevel( "Source/Dest CRS equal, shortcircuit is set.", 3 );
   }
   else
   {
     // Transform must take place
     mShortCircuit = false;
-    QgsDebugMsg( "Source/Dest CRS UNequal, shortcircuit is NOt set." );
+    QgsDebugMsgLevel( "Source/Dest CRS UNequal, shortcircuit is NOt set.", 3 );
   }
 
 }
@@ -227,7 +226,7 @@ QgsPoint QgsCoordinateTransform::transform( const QgsPoint thePoint, TransformDi
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 
@@ -244,7 +243,7 @@ QgsPoint QgsCoordinateTransform::transform( const double theX, const double theY
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 }
@@ -270,7 +269,7 @@ QgsRectangle QgsCoordinateTransform::transform( const QgsRectangle theRect, Tran
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 
@@ -304,7 +303,7 @@ void QgsCoordinateTransform::transformInPlace( double& x, double& y, double& z,
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 }
@@ -330,7 +329,7 @@ void QgsCoordinateTransform::transformInPlace( std::vector<double>& x,
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 }
@@ -394,7 +393,7 @@ QgsRectangle QgsCoordinateTransform::transformBoundingBox( const QgsRectangle re
   catch ( QgsCsException &cse )
   {
     // rethrow the exception
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "rethrowing exception" );
     throw cse;
   }
 
@@ -454,42 +453,44 @@ void QgsCoordinateTransform::transformCoords( const int& numPoints, double *x, d
   if ( direction == ReverseTransform )
   {
     projResult = pj_transform( mDestinationProjection, mSourceProjection, numPoints, 0, x, y, z );
-    dir = "inverse";
+    dir = tr( "inverse transform" );
   }
   else
   {
     assert( mSourceProjection != 0 );
     assert( mDestinationProjection != 0 );
     projResult = pj_transform( mSourceProjection, mDestinationProjection, numPoints, 0, x, y, z );
-    dir = "forward";
+    dir = tr( "forward transform" );
   }
 
   if ( projResult != 0 )
   {
     //something bad happened....
-    QString msg;
-    QTextStream pjErr( &msg );
+    QString points;
 
-    pjErr << tr( "Failed" ) << " " << dir << " " << tr( "transform of" ) << '\n';
     for ( int i = 0; i < numPoints; ++i )
     {
       if ( direction == ForwardTransform )
       {
-        pjErr << "(" << x[i] << ", " << y[i] << ")\n";
+        points += QString( "(%1, %2)\n" ).arg( x[i] ).arg( y[i] );
       }
       else
       {
-        pjErr << "(" << x[i] * RAD_TO_DEG << ", " << y[i] * RAD_TO_DEG << ")\n";
+        points += QString( "(%1, %2)\n" ).arg( x[i] * RAD_TO_DEG ).arg( y[i] * RAD_TO_DEG );
       }
     }
 
-    pjErr << tr( "with error: " ) << pj_strerrno( projResult ) << '\n';
+    QString msg = tr( "%1 of\n%2\nfailed with error: %3\n" )
+                  .arg( dir )
+                  .arg( points )
+                  .arg( QString::fromUtf8( pj_strerrno( projResult ) ) );
 
-    QgsDebugMsg( "Projection failed emitting invalid transform signal: " + QString( msg.toLocal8Bit().data() ) );
+    QgsDebugMsg( "Projection failed emitting invalid transform signal: " + msg );
 
     emit invalidTransformInput();
 
-    QgsLogger::warning( "Throwing exception " + QString( __FILE__ ) + QString::number( __LINE__ ) );
+    QgsDebugMsg( "throwing exception" );
+
     throw  QgsCsException( msg );
   }
 
@@ -565,7 +566,7 @@ void QgsCoordinateTransform::setFinder()
   // (version 0.7) and the old installation was deleted
 
   // Another problem: PROJ checks if pj_finder was set before
-  // PROJ_LIB enviroment variable. pj_finder is probably set in
+  // PROJ_LIB environment variable. pj_finder is probably set in
   // GRASS gproj library when plugin is loaded, consequently
   // PROJ_LIB is ignored
 

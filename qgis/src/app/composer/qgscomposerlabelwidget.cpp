@@ -18,6 +18,7 @@
 #include "qgscomposerlabelwidget.h"
 #include "qgscomposerlabel.h"
 #include "qgscomposeritemwidget.h"
+#include <QColorDialog>
 #include <QFontDialog>
 #include <QWidget>
 
@@ -27,7 +28,7 @@ QgsComposerLabelWidget::QgsComposerLabelWidget( QgsComposerLabel* label ): QWidg
 
   //add widget for general composer item properties
   QgsComposerItemWidget* itemPropertiesWidget = new QgsComposerItemWidget( this, label );
-  toolBox->addItem( itemPropertiesWidget, tr( "Item properties" ) );
+  toolBox->addItem( itemPropertiesWidget, tr( "General options" ) );
 
   if ( mComposerLabel )
   {
@@ -71,5 +72,19 @@ void QgsComposerLabelWidget::on_mMarginDoubleSpinBox_valueChanged( double d )
     mComposerLabel->setMargin( d );
     mComposerLabel->update();
   }
+}
+
+void QgsComposerLabelWidget::on_mFontColorButton_clicked()
+{
+  if ( !mComposerLabel )
+  {
+    return;
+  }
+  QColor newColor = QColorDialog::getColor( mComposerLabel->fontColor() );
+  if ( !newColor.isValid() )
+  {
+    return;
+  }
+  mComposerLabel->setFontColor( newColor );
 }
 

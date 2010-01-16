@@ -20,15 +20,18 @@
 #include <QKeyEvent>
 
 #include "qgscomposerview.h"
+#include "qgscomposerarrow.h"
 #include "qgscomposerlabel.h"
 #include "qgscomposerlegend.h"
 #include "qgscomposermap.h"
 #include "qgscomposeritemgroup.h"
 #include "qgscomposerpicture.h"
 #include "qgscomposerscalebar.h"
+#include "qgscomposershape.h"
+#include "qgscomposertable.h"
 
 QgsComposerView::QgsComposerView( QWidget* parent, const char* name, Qt::WFlags f ) :
-    QGraphicsView( parent ), mShiftKeyPressed( false ), mRubberBandItem( 0 ), mMoveContentItem( 0 )
+    QGraphicsView( parent ), mShiftKeyPressed( false ), mRubberBandItem( 0 ), mRubberBandLineItem( 0 ), mMoveContentItem( 0 )
 {
   setResizeAnchor( QGraphicsView::AnchorViewCenter );
   setMouseTracking( true );
@@ -96,8 +99,18 @@ void QgsComposerView::mousePressEvent( QMouseEvent* e )
       break;
     }
 
-    //create rubber band
+    case AddArrow:
+    {
+      mRubberBandStartPos = QPointF( snappedScenePoint.x(), snappedScenePoint.y() );
+      mRubberBandLineItem = new QGraphicsLineItem( snappedScenePoint.x(), snappedScenePoint.y(), snappedScenePoint.x(), snappedScenePoint.y() );
+      mRubberBandLineItem->setZValue( 100 );
+      scene()->addItem( mRubberBandLineItem );
+      scene()->update();
+    }
+
+    //create rubber band for map and ellipse items
     case AddMap:
+    case AddShape:
     {
       QTransform t;
       mRubberBandItem = new QGraphicsRectItem( 0, 0, 0, 0 );
@@ -135,6 +148,7 @@ void QgsComposerView::mousePressEvent( QMouseEvent* e )
       QgsComposerLegend* newLegend = new QgsComposerLegend( composition() );
       addComposerLegend( newLegend );
       newLegend->setSceneRect( QRectF( snappedScenePoint.x(), snappedScenePoint.y(), newLegend->rect().width(), newLegend->rect().height() ) );
+      emit actionFinished();
       break;
     }
     case AddPicture:
@@ -142,6 +156,13 @@ void QgsComposerView::mousePressEvent( QMouseEvent* e )
       QgsComposerPicture* newPicture = new QgsComposerPicture( composition() );
       addComposerPicture( newPicture );
       newPicture->setSceneRect( QRectF( snappedScenePoint.x(), snappedScenePoint.y(), 30, 30 ) );
+      emit actionFinished();
+    }
+    case AddTable:
+    {
+      QgsComposerTable* newTable = new QgsComposerTable( composition() );
+      addComposerTable( newTable );
+      newTable->setSceneRect( QRectF( snappedScenePoint.x(), snappedScenePoint.y(), 50, 50 ) );
       emit actionFinished();
     }
 
@@ -185,6 +206,36 @@ void QgsComposerView::mouseReleaseEvent( QMouseEvent* e )
       }
       break;
     }
+    case AddArrow:
+    {
+      QPointF scenePoint = mapToScene( e->pos() );
+      QPointF snappedScenePoint = composition()->snapPointToGrid( scenePoint );
+      QgsComposerArrow* composerArrow = new QgsComposerArrow( mRubberBandStartPos, QPointF( snappedScenePoint.x(), snappedScenePoint.y() ), composition() );
+      addComposerArrow( composerArrow );
+      scene()->removeItem( mRubberBandLineItem );
+      delete mRubberBandLineItem;
+      mRubberBandLineItem = 0;
+      emit actionFinished();
+      break;
+    }
+
+    case AddShape:
+    {
+      if ( !mRubberBandItem || mRubberBandItem->rect().width() < 0.1 || mRubberBandItem->rect().width() < 0.1 )
+      {
+        scene()->removeItem( mRubberBandItem );
+        delete mRubberBandItem;
+        mRubberBandItem = 0;
+        return;
+      }
+
+      QgsComposerShape* composerShape = new QgsComposerShape( mRubberBandItem->transform().dx(), mRubberBandItem->transform().dy(), mRubberBandItem->rect().width(), mRubberBandItem->rect().height(), composition() );
+      addComposerShape( composerShape );
+      scene()->removeItem( mRubberBandItem );
+      delete mRubberBandItem;
+      emit actionFinished();
+      break;
+    }
 
     case AddMap:
     {
@@ -199,6 +250,7 @@ void QgsComposerView::mouseReleaseEvent( QMouseEvent* e )
       addComposerMap( composerMap );
       scene()->removeItem( mRubberBandItem );
       delete mRubberBandItem;
+      mRubberBandItem = 0;
       emit actionFinished();
     }
     break;
@@ -232,7 +284,17 @@ void QgsComposerView::mouseMoveEvent( QMouseEvent* e )
         QGraphicsView::mouseMoveEvent( e );
         break;
 
+      case AddArrow:
+      {
+        if ( mRubberBandLineItem )
+        {
+          mRubberBandLineItem->setLine( mRubberBandStartPos.x(), mRubberBandStartPos.y(),  scenePoint.x(),  scenePoint.y() );
+        }
+        break;
+      }
+
       case AddMap:
+      case AddShape:
         //adjust rubber band item
       {
         double x = 0;
@@ -265,10 +327,13 @@ void QgsComposerView::mouseMoveEvent( QMouseEvent* e )
           height = dy;
         }
 
-        mRubberBandItem->setRect( 0, 0, width, height );
-        QTransform t;
-        t.translate( x, y );
-        mRubberBandItem->setTransform( t );
+        if ( mRubberBandItem )
+        {
+          mRubberBandItem->setRect( 0, 0, width, height );
+          QTransform t;
+          t.translate( x, y );
+          mRubberBandItem->setTransform( t );
+        }
         break;
       }
 
@@ -390,6 +455,15 @@ QgsComposition* QgsComposerView::composition()
   return 0;
 }
 
+void QgsComposerView::addComposerArrow( QgsComposerArrow* arrow )
+{
+  composition()->addItem( arrow );
+  emit composerArrowAdded( arrow );
+  scene()->clearSelection();
+  arrow->setSelected( true );
+  emit selectedItemChanged( arrow );
+}
+
 void QgsComposerView::addComposerLabel( QgsComposerLabel* label )
 {
   composition()->addItem( label );
@@ -434,7 +508,6 @@ void QgsComposerView::addComposerLegend( QgsComposerLegend* legend )
   scene()->clearSelection();
   legend->setSelected( true );
   emit selectedItemChanged( legend );
-  emit actionFinished();
 }
 
 void QgsComposerView::addComposerPicture( QgsComposerPicture* picture )
@@ -444,6 +517,24 @@ void QgsComposerView::addComposerPicture( QgsComposerPicture* picture )
   scene()->clearSelection();
   picture->setSelected( true );
   emit selectedItemChanged( picture );
+}
+
+void QgsComposerView::addComposerShape( QgsComposerShape* shape )
+{
+  scene()->addItem( shape );
+  emit composerShapeAdded( shape );
+  scene()->clearSelection();
+  shape->setSelected( true );
+  emit selectedItemChanged( shape );
+}
+
+void QgsComposerView::addComposerTable( QgsComposerTable* table )
+{
+  scene()->addItem( table );
+  emit composerTableAdded( table );
+  scene()->clearSelection();
+  table->setSelected( true );
+  emit selectedItemChanged( table );
 }
 
 void QgsComposerView::groupItems()
