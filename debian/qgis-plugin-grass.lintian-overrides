@@ -1,0 +1,2 @@
+qgis-plugin-grass: binary-without-manpage
+qgis-plugin-grass: package-name-doesnt-match-sonames

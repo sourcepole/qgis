@@ -1,0 +1,10 @@
+.deps
+.libs
+Makefile
+Makefile.in
+*.la
+*.lo
+*.moc.cpp
+ui_*.h
+*.qrc.cpp
+

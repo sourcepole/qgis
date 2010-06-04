@@ -26,7 +26,7 @@
   --  General Map Layer Properties
   --  (apply to both vector and raster)
   -->
-<!ELEMENT maplayer (layername, datasource, (singlesymbol|singlemarker|graduatedsymbol|continuoussymbol|graduatedmarker|rasterproperties) >
+<!ELEMENT maplayer (layername, datasource, classificationattribute*, (singlesymbol|singlemarker|graduatedsymbol|continuoussymbol|graduatedmarker|rasterproperties) >
 <!ELEMENT layername (#PCDATA) >
 <!ELEMENT datasource (#PCDATA) >
 <!--  Attribute Lists -->
@@ -44,7 +44,11 @@
   --
   -->
 
-<!ELEMENT symbol (outlinecolor,outlinestyle,outlinewidth,fillcolor,fillpattern) >
+<!ELEMENT symbol (lowervalue, uppervalue, label,
+outlinecolor,outlinestyle,outlinewidth,fillcolor,fillpattern) >
+<!ELEMENT lowervalue (#PCDATA) >
+<!ELEMENT uppervalue (#PCDATA) >
+<!ELEMENT label (#PCDATA) >
 <!ELEMENT outlinecolor EMPTY >
 <!ELEMENT outlinestyle (#PCDATA) >
 <!ELEMENT outlinewidth (#PCDATA) >
@@ -63,41 +67,21 @@
 	blue CDATA #REQUIRED
 	>
 
-<!ELEMENT
-markersymbol(svgpath,scalefactor,outlinecolor,outlinestyle,outlinewidth,fillcolor,fillpattern)
->
-<!ELEMENT svgpath (#PCDATA) >
-<!ELEMENT scalefactor (#PCDATA) >
-
-<!--
-  --  renderitem and rangerenderitem
-  --
-  -->
-
-<!ELEMENT renderitem (value,(symbol | markersymbol),label) >
-<!ELEMENT value (#PCDATA) >
-<!ELEMENT label (#PCDATA) >
-
-<!ELEMENT rangerenderitem (lowervalue,uppervalue,(symbol | markersymbol),label) >
-<!ELEMENT lowervalue (#PCDATA) >
-<!ELEMENT uppervalue (#PCDATA) >
-
 <!--
   --  elements to store the settings of the different symbology types
   --
   -->
 
-<!ELEMENT singlesymbol (renderitem) >
+<!ELEMENT singlesymbol (symbol) >
 <!ELEMENT singlemarker (renderitem) >
-<!ELEMENT graduatedsymbol (classificationfield,rangerenderitem+) >
+<!ELEMENT graduatedsymbol (classificationfield,symbol+) >
 <!ELEMENT graduatedmarker (classificationfield,rangerenderitem+) >
 <!ELEMENT uniquevalue (classificationfield,renderitem+) >
 <!ELEMENT uniquevaluemarker (classificationfield,renderitem+) >
 <!ELEMENT classificationfield (#PCDATA) >
-<!ELEMENT continuoussymbol (classificationfield,lowestitem,highestitem) >
-<!ELEMENT lowestitem (renderitem) >
-<!ELEMENT highestitem (renderitem) >
-
+<!ELEMENT continuoussymbol (classificationfield,lowestsymbol,highestsymbol) >
+<!ELEMENT lowestsymbol (symbol) >
+<!ELEMENT highestsymbol (symbol) >
 
 <!--
   --  Raster Layer Properties
@@ -127,3 +111,24 @@ markersymbol(svgpath,scalefactor,outlinecolor,outlinestyle,outlinewidth,fillcolo
 <!ATTLIST invertHistogramFlag boolean (1|0|true|false) "false">
 <!ATTLIST stdDevsToPlotDouble value CDATA "0">
 <!ATTLIST transparencyLevelInt value CDATA "0">
+
+<!--
+  --  Legend
+  --
+  -->
+
+<!ELEMENT legend (legendgroup* | legendlayer*) >
+<!ATTLIST legend open (1|0|true|false) "false"> #open or closed
+<!ELEMENT legendgroup (legendlayer*) >
+<!ATTLIST legendgroup open (1|0|true|false) "false" name CDATA checked (Qt::Checked|Qt::Unchecked|Qt::PartiallyChecked) "Qt::Checked">
+<!ELEMENT legendlayer (legendsymbologyitem+, legendlayerfilegroup>
+<!ATTLIST legendlayer open (1|0|true|false) "false" checked (Qt::Checked|Qt::Unchecked|Qt::PartiallyChecked) "Qt::Checked"> 
+<!ELEMENT legendlayerfilegroup (legendlayerfile*) >
+<!ATTLIST legendlayerfilegroup open (1|0|true|false) "false" > #open or closed
+<!ATTLIST legendlayerfilegroup hidden(1|0|true|false) "false"> #hidden or shown
+<!ELEMENT legendlayerfile>
+<!ATTLIST legendlayerfile id CDATA> #unique layer id of the associated layer
+<!ATTLIST legendlayerfile open (1|0|true|false) "false"> #open or closed
+<!ELEMENT legendsymbologyitem>
+<!ATTLIST legendsymbologyitem open (1|0|true|false) "false"> #open or closed
+
