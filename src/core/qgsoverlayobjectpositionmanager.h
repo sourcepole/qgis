@@ -42,6 +42,18 @@ class QgsOverlayObjectPositionManager
       @param context Context of rendering operation (Painter, scale factor)
       @param unitType meters, feet, degrees*/
     virtual void findObjectPositions( const QgsRenderContext& context, QGis::UnitType unitType ) = 0;
+
+    //! add overlays assigned with the layer.
+    //! Added in QGIS 1.6
+    virtual void addOverlaysForLayer( QgsVectorLayer* vl, QgsRenderContext& context );
+
+    //! find overlay positions and draw the vector overlays.
+    //! Added in QGIS 1.6
+    virtual void drawOverlays( QgsRenderContext& context, QGis::UnitType unitType );
+
+  protected:
+    //list of all overlays, used to draw them after layers have been rendered
+    QList<QgsVectorOverlay*> allOverlayList;
 };
 
 #endif

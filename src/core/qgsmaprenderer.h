@@ -185,6 +185,14 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Added in QGIS v1.4
     void setLabelingEngine( QgsLabelingEngineInterface* iface );
 
+    //! Enable or disable rendering in multiple threads on multiprocessor computers
+    //! Added in QGIS v1.6
+    void setUsingThreadedRendering( bool use ) { mUsingThreadedRendering = use; }
+
+    //! Determine whether we are using threaded rendering
+    //! Added in QGIS v1.6
+    bool isUsingThreadedRendering() const { return mUsingThreadedRendering; }
+
   signals:
 
     void drawingProgress( int current, int total );
@@ -217,6 +225,12 @@ class CORE_EXPORT QgsMapRenderer : public QObject
      * also sets the contents of the r2 parameter
      */
     bool splitLayersExtent( QgsMapLayer* layer, QgsRectangle& extent, QgsRectangle& r2 );
+
+    //! render one layer
+    void renderLayer( QString layerId, bool mySameAsLastFlag, QgsOverlayObjectPositionManager* overlayManager );
+
+    //! render labels for vector layers (not using PAL)
+    void renderLabels();
 
     /**Creates an overlay object position manager subclass according to the current settings
     @note this method was added in version 1.1*/
@@ -274,6 +288,9 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Labeling engine (NULL by default)
     QgsLabelingEngineInterface* mLabelingEngine;
+
+    //! Multithreaded rendering
+    bool mUsingThreadedRendering;
 };
 
 #endif

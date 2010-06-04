@@ -59,6 +59,7 @@ SET(QGIS_CORE_SRCS
   qgsmessageoutput.cpp
   qgscredentials.cpp
   qgsoverlayobject.cpp
+  qgsoverlayobjectpositionmanager.cpp
   qgspalgeometry.cpp
   qgspallabeling.cpp
   qgspalobjectpositionmanager.cpp
