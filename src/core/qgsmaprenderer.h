@@ -233,8 +233,11 @@ class CORE_EXPORT QgsMapRenderer : public QObject
      */
     bool splitLayersExtent( QgsMapLayer* layer, QgsRectangle& extent, QgsRectangle& r2 );
 
+    //! render the whole layer set
+    void renderLayers( QgsOverlayObjectPositionManager* overlayManager );
+
     //! render one layer
-    void renderLayer( QString layerId, bool mySameAsLastFlag, QgsOverlayObjectPositionManager* overlayManager );
+    void renderLayer( QgsMapLayer* ml );
 
     //! render labels for vector layers (not using PAL)
     void renderLabels();

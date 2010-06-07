@@ -213,6 +213,8 @@ void QgsMapRenderer::render( QPainter* painter )
 
   QgsDebugMsg( "========== Rendering ==========" );
 
+  QgsDebugMsg( "caching enabled? " + QString::number(mCachingEnabled) );
+
   if ( mExtent.isEmpty() )
   {
     QgsDebugMsg( "empty extent... not rendering" );
@@ -295,19 +297,8 @@ void QgsMapRenderer::render( QPainter* painter )
 
   QgsOverlayObjectPositionManager* overlayManager = overlayManagerFromSettings();
 
-  // render all layers in the stack, starting at the base
-  QListIterator<QString> li( mLayerSet );
-  li.toBack();
-  while ( li.hasPrevious() )
-  {
-    if ( mRenderContext.renderingStopped() )
-    {
-      break;
-    }
-
-    QString layerId = li.previous();
-    renderLayer( layerId, mySameAsLastFlag, overlayManager );
-  }
+  // do the rendering of all layers
+  renderLayers( overlayManager );
 
   QgsDebugMsg( "Done rendering map layers" );
 
@@ -344,63 +335,117 @@ void QgsMapRenderer::render( QPainter* painter )
 
 }
 
-
-
-void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOverlayObjectPositionManager* overlayManager )
+void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManager )
 {
+  // render all layers in the stack, starting at the base
+  QListIterator<QString> li( mLayerSet );
+  li.toBack();
+  while ( li.hasPrevious() )
+  {
+    if ( mRenderContext.renderingStopped() )
+    {
+      break;
+    }
 
+    QString layerId = li.previous();
+
+    QgsDebugMsg( "Rendering at layer item " + layerId );
+
+    //emit drawingProgress(myRenderCounter++, mLayerSet.size());
+    QgsMapLayer *ml = QgsMapLayerRegistry::instance()->mapLayer( layerId );
+
+    if ( !ml )
+    {
+      QgsDebugMsg( "Layer not found in registry!" );
+      return;
+    }
+
+    //QgsDebugMsg( "  Layer minscale " + QString( "%1" ).arg( ml->minimumScale() ) );
+    //QgsDebugMsg( "  Layer maxscale " + QString( "%1" ).arg( ml->maximumScale() ) );
+    //QgsDebugMsg( "  Scale dep. visibility enabled? " + QString( "%1" ).arg( ml->hasScaleBasedVisibility() ) );
+    //QgsDebugMsg( "  Input extent: " + ml->extent().toString() );
+
+    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > mScale || ml->maximumScale() < mScale ) && ! mOverview )
+    {
+      QgsDebugMsg( "Layer not rendered because it is not within the defined "
+                   "visibility scale range" );
+      return;
+    }
+
+    QgsCoordinateTransform* ct = NULL;
+    if ( hasCrsTransformEnabled() )
+    {
+      ct = new QgsCoordinateTransform( ml->srs(), *mDestCRS );
+    }
+    mRenderContext.setCoordinateTransform( ct );
+
+    //create overlay objects for features within the view extent
+    if ( ml->type() == QgsMapLayer::VectorLayer && overlayManager )
+    {
+      QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
+      if ( vl )
+      {
+        overlayManager->addOverlaysForLayer( vl, mRenderContext );
+      }
+    }
+
+    // Force render of layers that are being edited
+    // or if there's a labeling engine that needs the layer to register features
+    if ( ml->type() == QgsMapLayer::VectorLayer )
+    {
+      QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
+      if ( vl->isEditable() ||
+           ( mRenderContext.labelingEngine() && mRenderContext.labelingEngine()->willUseLayer( vl ) ) )
+      {
+        ml->setCacheImage( 0 );
+      }
+    }
+
+    //
+    // Now do the call to the layer that actually does
+    // the rendering work!
+    //
+    connect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
+
+    renderLayer( ml );
+
+    disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
+  }
+
+}
+
+
+void QgsMapRenderer::renderLayer( QgsMapLayer* ml )
+{
   // Store the painter in case we need to swap it out for the
   // cache painter
   QPainter * mypContextPainter = mRenderContext.painter();
 
-  QgsDebugMsg( "Rendering at layer item " + layerId );
-
-  //emit drawingProgress(myRenderCounter++, mLayerSet.size());
-  QgsMapLayer *ml = QgsMapLayerRegistry::instance()->mapLayer( layerId );
-
-  if ( !ml )
+  if ( mCachingEnabled )
   {
-    QgsDebugMsg( "Layer not found in registry!" );
-    return;
+    if ( ml->cacheImage() == 0 )
+    {
+      QgsDebugMsg( "\n\n\nCaching enabled --- redraw forced by extent change or empty cache\n\n\n" );
+      QPaintDevice* device = mRenderContext.painter()->device();
+      QImage * mypImage = new QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
+      mypImage->fill( 0 );
+      ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
+      QPainter * mypPainter = new QPainter( ml->cacheImage() );
+      if ( mypContextPainter->testRenderHint( QPainter::Antialiasing ) )
+      {
+        mypPainter->setRenderHint( QPainter::Antialiasing );
+      }
+      mRenderContext.setPainter( mypPainter );
+    }
+    else
+    {
+      //draw from cached image
+      QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
+      mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
+      //short circuit as there is nothing else to do...
+      return;
+    }
   }
-
-  QgsDebugMsg( "Rendering layer " + ml->name() );
-  QgsDebugMsg( "  Layer minscale " + QString( "%1" ).arg( ml->minimumScale() ) );
-  QgsDebugMsg( "  Layer maxscale " + QString( "%1" ).arg( ml->maximumScale() ) );
-  QgsDebugMsg( "  Scale dep. visibility enabled? " + QString( "%1" ).arg( ml->hasScaleBasedVisibility() ) );
-  QgsDebugMsg( "  Input extent: " + ml->extent().toString() );
-
-  if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > mScale || ml->maximumScale() < mScale ) && ! mOverview )
-  {
-    QgsDebugMsg( "Layer not rendered because it is not within the defined "
-                 "visibility scale range" );
-    return;
-  }
-
-  connect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
-
-  //
-  // Now do the call to the layer that actually does
-  // the rendering work!
-  //
-
-  bool split = false;
-  QgsRectangle r1, r2;
-  QgsCoordinateTransform* ct;
-
-  if ( hasCrsTransformEnabled() )
-  {
-    r1 = mExtent;
-    split = splitLayersExtent( ml, r1, r2 );
-    ct = new QgsCoordinateTransform( ml->srs(), *mDestCRS );
-    mRenderContext.setExtent( r1 );
-  }
-  else
-  {
-    ct = NULL;
-  }
-
-  mRenderContext.setCoordinateTransform( ct );
 
   //decide if we have to scale the raster
   //this is necessary in case QGraphicsScene is used
@@ -414,56 +459,6 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     scaleRaster = true;
   }
 
-
-  //create overlay objects for features within the view extent
-  if ( ml->type() == QgsMapLayer::VectorLayer && overlayManager )
-  {
-    QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
-    if ( vl )
-    {
-      overlayManager->addOverlaysForLayer( vl, mRenderContext );
-    }
-  }
-
-  // Force render of layers that are being edited
-  // or if there's a labeling engine that needs the layer to register features
-  if ( ml->type() == QgsMapLayer::VectorLayer )
-  {
-    QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
-    if ( vl->isEditable() ||
-         ( mRenderContext.labelingEngine() && mRenderContext.labelingEngine()->willUseLayer( vl ) ) )
-    {
-      ml->setCacheImage( 0 );
-    }
-  }
-
-  if ( mCachingEnabled )
-  {
-    if ( !mySameAsLastFlag || ml->cacheImage() == 0 )
-    {
-      QgsDebugMsg( "\n\n\nCaching enabled but layer redraw forced by extent change or empty cache\n\n\n" );
-      QImage * mypImage = new QImage( mRenderContext.painter()->device()->width(),
-                                      mRenderContext.painter()->device()->height(), QImage::Format_ARGB32 );
-      mypImage->fill( 0 );
-      ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
-      QPainter * mypPainter = new QPainter( ml->cacheImage() );
-      if ( mypContextPainter->testRenderHint( QPainter::Antialiasing ) )
-      {
-        mypPainter->setRenderHint( QPainter::Antialiasing );
-      }
-      mRenderContext.setPainter( mypPainter );
-    }
-    else if ( mySameAsLastFlag )
-    {
-      //draw from cached image
-      QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
-      mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
-      disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
-      //short circuit as there is nothing else to do...
-      return;
-    }
-  }
-
   if ( scaleRaster )
   {
     bk_mapToPixel = mRenderContext.mapToPixel();
@@ -475,14 +470,20 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     mRenderContext.painter()->scale( 1.0 / rasterScaleFactor, 1.0 / rasterScaleFactor );
   }
 
+  // split the rendering into two parts if necessary
+  bool split = false;
+  QgsRectangle r1, r2;
+  if ( hasCrsTransformEnabled() )
+  {
+    r1 = mExtent;
+    split = splitLayersExtent( ml, r1, r2 );
+    mRenderContext.setExtent( r1 );
+  }
 
+  // draw the layer
   if ( !ml->draw( mRenderContext ) )
   {
     emit drawError( ml );
-  }
-  else
-  {
-    QgsDebugMsg( "Layer rendered without issues" );
   }
 
   if ( split )
@@ -510,7 +511,6 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     //draw from cached image that we created further up
     mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
   }
-  disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
 
 }
 
