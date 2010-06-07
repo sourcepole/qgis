@@ -48,6 +48,8 @@ QgsMapRenderer::QgsMapRenderer()
 
   mDrawing = false;
   mOverview = false;
+  mThreadingEnabled = false;
+  mCachingEnabled = false;
 
   // set default map units - we use WGS 84 thus use degrees
   setMapUnits( QGis::Degrees );
@@ -285,8 +287,7 @@ void QgsMapRenderer::render( QPainter* painter )
   if ( !mySameAsLastFlag )
   {
     //clear the cache pixmap if we changed resolution / extent
-    QSettings mySettings;
-    if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
+    if ( mCachingEnabled )
     {
       QgsMapLayerRegistry::instance()->clearAllLayerCaches();
     }
@@ -436,34 +437,30 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     }
   }
 
-  QSettings mySettings;
-  if ( ! split )//render caching does not yet cater for split extents
+  if ( mCachingEnabled )
   {
-    if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
+    if ( !mySameAsLastFlag || ml->cacheImage() == 0 )
     {
-      if ( !mySameAsLastFlag || ml->cacheImage() == 0 )
+      QgsDebugMsg( "\n\n\nCaching enabled but layer redraw forced by extent change or empty cache\n\n\n" );
+      QImage * mypImage = new QImage( mRenderContext.painter()->device()->width(),
+                                      mRenderContext.painter()->device()->height(), QImage::Format_ARGB32 );
+      mypImage->fill( 0 );
+      ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
+      QPainter * mypPainter = new QPainter( ml->cacheImage() );
+      if ( mypContextPainter->testRenderHint( QPainter::Antialiasing ) )
       {
-        QgsDebugMsg( "\n\n\nCaching enabled but layer redraw forced by extent change or empty cache\n\n\n" );
-        QImage * mypImage = new QImage( mRenderContext.painter()->device()->width(),
-                                        mRenderContext.painter()->device()->height(), QImage::Format_ARGB32 );
-        mypImage->fill( 0 );
-        ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
-        QPainter * mypPainter = new QPainter( ml->cacheImage() );
-        if ( mySettings.value( "/qgis/enable_anti_aliasing", false ).toBool() )
-        {
-          mypPainter->setRenderHint( QPainter::Antialiasing );
-        }
-        mRenderContext.setPainter( mypPainter );
+        mypPainter->setRenderHint( QPainter::Antialiasing );
       }
-      else if ( mySameAsLastFlag )
-      {
-        //draw from cached image
-        QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
-        mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
-        disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
-        //short circuit as there is nothing else to do...
-        return;
-      }
+      mRenderContext.setPainter( mypPainter );
+    }
+    else if ( mySameAsLastFlag )
+    {
+      //draw from cached image
+      QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
+      mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
+      disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
+      //short circuit as there is nothing else to do...
+      return;
     }
   }
 
@@ -495,6 +492,7 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     {
       emit drawError( ml );
     }
+    mRenderContext.setExtent( mExtent ); // return back to the original extent
   }
 
   if ( scaleRaster )
@@ -503,17 +501,14 @@ void QgsMapRenderer::renderLayer( QString layerId, bool mySameAsLastFlag, QgsOve
     mRenderContext.painter()->restore();
   }
 
-  if ( mySettings.value( "/qgis/enable_render_caching", false ).toBool() )
+  if ( mCachingEnabled )
   {
-    if ( !split )
-    {
-      // composite the cached image into our view and then clean up from caching
-      // by reinstating the painter as it was swapped out for caching renders
-      delete mRenderContext.painter();
-      mRenderContext.setPainter( mypContextPainter );
-      //draw from cached image that we created further up
-      mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
-    }
+    // composite the cached image into our view and then clean up from caching
+    // by reinstating the painter as it was swapped out for caching renders
+    delete mRenderContext.painter();
+    mRenderContext.setPainter( mypContextPainter );
+    //draw from cached image that we created further up
+    mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
   }
   disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
 
@@ -1047,3 +1042,4 @@ void QgsMapRenderer::setLabelingEngine( QgsLabelingEngineInterface* iface )
 
   mLabelingEngine = iface;
 }
+

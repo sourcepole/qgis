@@ -422,7 +422,7 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
   cachedViewHeight = pixelHeight;
 
   QSettings s;
-  bool bkLayerCaching = s.value( "/qgis/enable_render_caching", false ).toBool();
+  bool bkLayerCaching = s.value( "/qgis/enable_render_caching", false ).toBool(); // TODO: move this into render context
 
   if ( !mTiled )
   {

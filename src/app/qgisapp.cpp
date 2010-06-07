@@ -2102,6 +2102,7 @@ void QgisApp::createOverview()
   QSettings mySettings;
   mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing", false ).toBool() );
   mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render", false ).toBool() );
+  mMapCanvas->mapRenderer()->setCachingEnabled( mySettings.value( "/qgis/enable_render_caching", false ).toBool() );
 
   int action = mySettings.value( "/qgis/wheel_action", 0 ).toInt();
   double zoomFactor = mySettings.value( "/qgis/zoom_factor", 2 ).toDouble();
@@ -5083,6 +5084,7 @@ void QgisApp::options()
     QSettings mySettings;
     mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing" ).toBool() );
     mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render" ).toBool() );
+    mMapCanvas->mapRenderer()->setCachingEnabled( mySettings.value( "/qgis/enable_render_caching", false ).toBool() );
 
     int action = mySettings.value( "/qgis/wheel_action", 0 ).toInt();
     double zoomFactor = mySettings.value( "/qgis/zoom_factor", 2 ).toDouble();

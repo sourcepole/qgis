@@ -64,7 +64,6 @@ class QgsLabelingEngineInterface
 };
 
 
-
 /** \ingroup core
  * A non GUI class for rendering a map layer set onto a QPainter.
  */
@@ -187,11 +186,19 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Enable or disable rendering in multiple threads on multiprocessor computers
     //! Added in QGIS v1.6
-    void setUsingThreadedRendering( bool use ) { mUsingThreadedRendering = use; }
+    void setThreadingEnabled( bool use ) { mThreadingEnabled = use; }
 
     //! Determine whether we are using threaded rendering
     //! Added in QGIS v1.6
-    bool isUsingThreadedRendering() const { return mUsingThreadedRendering; }
+    bool isThreadingEnabled() const { return mThreadingEnabled; }
+
+    //! Enable or disable caching of rendered layers
+    //! Added in QGIS v1.6
+    void setCachingEnabled( bool enabled ) { mCachingEnabled = enabled; }
+
+    //! Determine whether the rendered layers are cached
+    //! Added in QGIS v1.6
+    bool isCachingEnabled() const { return mCachingEnabled; }
 
   signals:
 
@@ -290,7 +297,10 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     QgsLabelingEngineInterface* mLabelingEngine;
 
     //! Multithreaded rendering
-    bool mUsingThreadedRendering;
+    bool mThreadingEnabled;
+
+    //! Render caching
+    bool mCachingEnabled;
 };
 
 #endif
