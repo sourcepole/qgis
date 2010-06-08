@@ -222,6 +222,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WFlags fl ) :
   //set the state of the checkboxes
   chkAntiAliasing->setChecked( settings.value( "/qgis/enable_anti_aliasing", false ).toBool() );
   chkUseRenderCaching->setChecked( settings.value( "/qgis/enable_render_caching", false ).toBool() );
+  chkUseThreadedRendering->setChecked( settings.value( "/qgis/enable_threaded_rendering", false ).toBool() );
 
   chkUseSymbologyNG->setChecked( settings.value( "/qgis/use_symbology_ng", false ).toBool() );
 
@@ -492,6 +493,7 @@ void QgsOptions::saveOptions()
   settings.setValue( "/qgis/new_layers_visible", chkAddedVisibility->isChecked() );
   settings.setValue( "/qgis/enable_anti_aliasing", chkAntiAliasing->isChecked() );
   settings.setValue( "/qgis/enable_render_caching", chkUseRenderCaching->isChecked() );
+  settings.setValue( "/qgis/enable_threaded_rendering", chkUseThreadedRendering->isChecked() );
   settings.setValue( "/qgis/use_qimage_to_render", !( chkUseQPixmap->isChecked() ) );
   settings.setValue( "/qgis/use_symbology_ng", chkUseSymbologyNG->isChecked() );
   settings.setValue( "qgis/capitaliseLayerName", capitaliseCheckBox->isChecked() );

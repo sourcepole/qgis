@@ -509,14 +509,21 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="4" column="0">
+           <widget class="QCheckBox" name="chkUseThreadedRendering">
+            <property name="text">
+             <string>Use threading to speed up rendering on computers with multiple CPUs</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QLabel" name="textLabel3">
             <property name="text">
              <string>&lt;b&gt;Note:&lt;/b&gt; Use zero to prevent display updates until all features have been rendered</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="chkUseRenderCaching">
             <property name="text">
              <string>Use render caching where possible to speed up redraws</string>
@@ -1603,7 +1610,6 @@
   <tabstop>cbxAddPostgisDC</tabstop>
   <tabstop>chkAddedVisibility</tabstop>
   <tabstop>spinBoxUpdateThreshold</tabstop>
-  <tabstop>chkUseRenderCaching</tabstop>
   <tabstop>chkAntiAliasing</tabstop>
   <tabstop>chkUseQPixmap</tabstop>
   <tabstop>mBtnAddSVGPath</tabstop>

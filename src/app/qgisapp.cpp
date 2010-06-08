@@ -2100,9 +2100,10 @@ void QgisApp::createOverview()
 
   // moved here to set anti aliasing to both map canvas and overview
   QSettings mySettings;
-  mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing", false ).toBool() );
-  mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render", false ).toBool() );
   mMapCanvas->mapRenderer()->setCachingEnabled( mySettings.value( "/qgis/enable_render_caching", false ).toBool() );
+  mMapCanvas->mapRenderer()->setThreadingEnabled( mySettings.value( "/qgis/enable_threaded_rendering", false ).toBool() );
+  mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing", false ).toBool() );
+  mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render", false ).toBool() ); // also does a refresh
 
   int action = mySettings.value( "/qgis/wheel_action", 0 ).toInt();
   double zoomFactor = mySettings.value( "/qgis/zoom_factor", 2 ).toDouble();
@@ -5082,9 +5083,10 @@ void QgisApp::options()
     setTheme( optionsDialog->theme() );
 
     QSettings mySettings;
-    mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing" ).toBool() );
-    mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render" ).toBool() );
     mMapCanvas->mapRenderer()->setCachingEnabled( mySettings.value( "/qgis/enable_render_caching", false ).toBool() );
+    mMapCanvas->mapRenderer()->setThreadingEnabled( mySettings.value( "/qgis/enable_threaded_rendering", false ).toBool() );
+    mMapCanvas->enableAntiAliasing( mySettings.value( "/qgis/enable_anti_aliasing" ).toBool() );
+    mMapCanvas->useImageToRender( mySettings.value( "/qgis/use_qimage_to_render" ).toBool() ); // also does a refresh
 
     int action = mySettings.value( "/qgis/wheel_action", 0 ).toInt();
     double zoomFactor = mySettings.value( "/qgis/zoom_factor", 2 ).toDouble();
