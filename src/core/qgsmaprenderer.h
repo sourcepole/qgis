@@ -38,6 +38,8 @@ class QgsOverlayObjectPositionManager;
 class QgsVectorLayer;
 class QgsFeature;
 
+struct ThreadedRenderContext;
+
 /** Labeling engine interface.
  * \note Added in QGIS v1.4
  */
@@ -237,7 +239,15 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void renderLayers( QgsOverlayObjectPositionManager* overlayManager );
 
     //! render one layer
-    void renderLayer( QgsMapLayer* ml );
+    void renderLayerNoThreading( QgsMapLayer* ml );
+
+    //! schedule rendering of a layer
+    void renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRenderContext>& lst );
+
+    //! invoke rendering of the layer with given context
+    bool renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx );
+
+    friend void _renderLayerThreading( ThreadedRenderContext& tctx );
 
     //! render labels for vector layers (not using PAL)
     void renderLabels();

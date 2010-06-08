@@ -80,6 +80,9 @@ class CORE_EXPORT QgsRenderContext
     //! Added in QGIS v1.4
     void setLabelingEngine( QgsLabelingEngineInterface* iface ) { mLabelingEngine = iface; }
 
+    //! assignment operator - takes care of copying coord. transform if exists
+    QgsRenderContext& operator=( const QgsRenderContext& ctx );
+
   private:
 
     /**Painter for rendering operations*/

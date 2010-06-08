@@ -42,3 +42,29 @@ void QgsRenderContext::setCoordinateTransform( QgsCoordinateTransform* t )
   mCoordTransform = t;
 }
 
+QgsRenderContext& QgsRenderContext::operator=( const QgsRenderContext& ctx )
+{
+  if ( &ctx != this )
+  {
+    delete mCoordTransform;
+    if ( ctx.mCoordTransform )
+    {
+      mCoordTransform = new QgsCoordinateTransform();
+      *mCoordTransform = *ctx.mCoordTransform;
+    }
+    else
+      mCoordTransform = NULL;
+
+    mPainter = ctx.mPainter;
+    mDrawEditingInformation = ctx.mDrawEditingInformation;
+    mExtent = ctx.mExtent;
+    mForceVectorOutput = ctx.mForceVectorOutput;
+    mMapToPixel = ctx.mMapToPixel;
+    mRenderingStopped = ctx.mRenderingStopped;
+    mScaleFactor = ctx.mScaleFactor;
+    mRasterScaleFactor = ctx.mRasterScaleFactor;
+    mRendererScale = ctx.mRendererScale;
+    mLabelingEngine = ctx.mLabelingEngine;
+  }
+  return *this;
+}

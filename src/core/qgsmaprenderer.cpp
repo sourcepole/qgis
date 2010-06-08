@@ -38,8 +38,21 @@
 #include <QListIterator>
 #include <QSettings>
 #include <QTime>
+#include <QtConcurrentMap>
 #include "qgslogger.h"
 
+
+typedef struct ThreadedRenderContext
+{
+  QgsMapRenderer* mr; // renderer that governs the rendering
+  QgsMapLayer* ml; // source map layer
+  QImage* img; // destination image
+  QgsRenderContext ctx; // private render context
+} ThreadedRenderContext;
+
+void _renderLayerThreading( ThreadedRenderContext& tctx );
+
+/////
 
 QgsMapRenderer::QgsMapRenderer()
 {
@@ -335,8 +348,11 @@ void QgsMapRenderer::render( QPainter* painter )
 
 }
 
+
 void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManager )
 {
+  QList<ThreadedRenderContext> layers;
+
   // render all layers in the stack, starting at the base
   QListIterator<QString> li( mLayerSet );
   li.toBack();
@@ -407,50 +423,130 @@ void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManag
     //
     connect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
 
-    renderLayer( ml );
+    if ( !mThreadingEnabled )
+      renderLayerNoThreading( ml );
+    else
+      renderLayerThreading( ml, layers );
 
     disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
   }
 
+  if ( mThreadingEnabled )
+  {
+    QgsDebugMsg("STARTING THREADED RENDERING!");
+
+    QtConcurrent::blockingMap(layers, _renderLayerThreading);
+
+    QgsDebugMsg("THREADED RENDERING FINISHED!");
+
+    // draw rendered images and delete temporary painters
+    foreach (ThreadedRenderContext tctx, layers)
+    {
+      mRenderContext.painter()->drawImage( 0, 0, *tctx.img );
+      delete tctx.ctx.painter();
+      delete tctx.img;
+    }
+
+    QgsDebugMsg("THREADED RENDERING DONE!");
+  }
+
 }
 
-
-void QgsMapRenderer::renderLayer( QgsMapLayer* ml )
+void _renderLayerThreading( ThreadedRenderContext& tctx )
 {
-  // Store the painter in case we need to swap it out for the
-  // cache painter
-  QPainter * mypContextPainter = mRenderContext.painter();
+  QgsDebugMsg("threaded rendering start: "+tctx.ml->getLayerID());
+  // TODO: error handling
+  tctx.mr->renderLayer( tctx.ml, tctx.ctx );
 
+  QgsDebugMsg("threaded rendering end  : "+tctx.ml->getLayerID());
+}
+
+void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRenderContext>& lst )
+{
+  if ( mCachingEnabled && ml->cacheImage() != 0 )
+  {
+    // do nothing - cached image will be used
+    // TODO: resolve caching
+  }
+  else
+  {
+    ThreadedRenderContext tctx;
+    tctx.ml = ml;
+
+    // create image
+    QPaintDevice* device = mRenderContext.painter()->device();
+    tctx.img = new QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
+    tctx.img->fill( 0 );
+
+    // create private context
+    tctx.mr = this;
+    tctx.ctx = mRenderContext;
+
+    QPainter* painter = new QPainter(tctx.img);
+    if ( mRenderContext.painter()->testRenderHint( QPainter::Antialiasing ) )
+    {
+      painter->setRenderHint( QPainter::Antialiasing );
+    }
+    tctx.ctx.setPainter( painter );
+
+    // schedule DRAW to a list
+    lst.append(tctx);
+  }
+}
+
+void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
+{
   if ( mCachingEnabled )
   {
+    // Store the painter in case we need to swap it out for the
+    // cache painter
+    QPainter * mypContextPainter = mRenderContext.painter();
+
     if ( ml->cacheImage() == 0 )
     {
+      // create cached image
       QgsDebugMsg( "\n\n\nCaching enabled --- redraw forced by extent change or empty cache\n\n\n" );
       QPaintDevice* device = mRenderContext.painter()->device();
       QImage * mypImage = new QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
       mypImage->fill( 0 );
       ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
+
+      // alter painter
       QPainter * mypPainter = new QPainter( ml->cacheImage() );
       if ( mypContextPainter->testRenderHint( QPainter::Antialiasing ) )
       {
         mypPainter->setRenderHint( QPainter::Antialiasing );
       }
       mRenderContext.setPainter( mypPainter );
-    }
-    else
-    {
-      //draw from cached image
-      QgsDebugMsg( "\n\n\nCaching enabled --- drawing layer from cached image\n\n\n" );
-      mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
-      //short circuit as there is nothing else to do...
-      return;
-    }
-  }
 
+      // DRAW!
+      if ( ! renderLayer( ml, mRenderContext ) )
+        emit drawError( ml );
+
+      // composite the cached image into our view and then clean up from caching
+      // by reinstating the painter as it was swapped out for caching renders
+      delete mRenderContext.painter();
+      mRenderContext.setPainter( mypContextPainter );
+    }
+
+    // draw cached image
+    mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
+  }
+  else
+  {
+    // DRAW!
+    if ( ! renderLayer( ml, mRenderContext ) )
+      emit drawError( ml );
+  }
+}
+
+
+bool QgsMapRenderer::renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx )
+{
   //decide if we have to scale the raster
   //this is necessary in case QGraphicsScene is used
   bool scaleRaster = false;
-  double rasterScaleFactor = mRenderContext.rasterScaleFactor();
+  double rasterScaleFactor = ctx.rasterScaleFactor();
   QgsMapToPixel rasterMapToPixel;
   QgsMapToPixel bk_mapToPixel;
 
@@ -461,57 +557,48 @@ void QgsMapRenderer::renderLayer( QgsMapLayer* ml )
 
   if ( scaleRaster )
   {
-    bk_mapToPixel = mRenderContext.mapToPixel();
-    rasterMapToPixel = mRenderContext.mapToPixel();
-    rasterMapToPixel.setMapUnitsPerPixel( mRenderContext.mapToPixel().mapUnitsPerPixel() / rasterScaleFactor );
+    bk_mapToPixel = ctx.mapToPixel();
+    rasterMapToPixel = ctx.mapToPixel();
+    rasterMapToPixel.setMapUnitsPerPixel( ctx.mapToPixel().mapUnitsPerPixel() / rasterScaleFactor );
     rasterMapToPixel.setYMaximum( mSize.height() * rasterScaleFactor );
-    mRenderContext.setMapToPixel( rasterMapToPixel );
-    mRenderContext.painter()->save();
-    mRenderContext.painter()->scale( 1.0 / rasterScaleFactor, 1.0 / rasterScaleFactor );
+    ctx.setMapToPixel( rasterMapToPixel );
+    ctx.painter()->save();
+    ctx.painter()->scale( 1.0 / rasterScaleFactor, 1.0 / rasterScaleFactor );
   }
 
   // split the rendering into two parts if necessary
   bool split = false;
   QgsRectangle r1, r2;
-  if ( hasCrsTransformEnabled() )
+  if ( ctx.coordinateTransform() )
   {
     r1 = mExtent;
     split = splitLayersExtent( ml, r1, r2 );
-    mRenderContext.setExtent( r1 );
+    ctx.setExtent( r1 );
   }
 
   // draw the layer
-  if ( !ml->draw( mRenderContext ) )
+  if ( !ml->draw( ctx ) )
   {
-    emit drawError( ml );
+    return false;
   }
 
   if ( split )
   {
-    mRenderContext.setExtent( r2 );
-    if ( !ml->draw( mRenderContext ) )
+    ctx.setExtent( r2 );
+    if ( !ml->draw( ctx ) )
     {
-      emit drawError( ml );
+      return false;
     }
-    mRenderContext.setExtent( mExtent ); // return back to the original extent
+    ctx.setExtent( mExtent ); // return back to the original extent
   }
 
   if ( scaleRaster )
   {
-    mRenderContext.setMapToPixel( bk_mapToPixel );
-    mRenderContext.painter()->restore();
+    ctx.setMapToPixel( bk_mapToPixel );
+    ctx.painter()->restore();
   }
 
-  if ( mCachingEnabled )
-  {
-    // composite the cached image into our view and then clean up from caching
-    // by reinstating the painter as it was swapped out for caching renders
-    delete mRenderContext.painter();
-    mRenderContext.setPainter( mypContextPainter );
-    //draw from cached image that we created further up
-    mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
-  }
-
+  return true;
 }
 
 

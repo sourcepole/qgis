@@ -88,6 +88,9 @@ class CORE_EXPORT QgsCoordinateTransform: public QObject
     //! destructor
     ~QgsCoordinateTransform();
 
+    //! assignment operator
+    QgsCoordinateTransform& operator=( const QgsCoordinateTransform& ct );
+
     //! Enum used to indicate the direction (forward or inverse) of the transform
     enum TransformDirection
     {

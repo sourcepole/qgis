@@ -154,6 +154,22 @@ class QgsMapRenderer : QObject
     //! Added in QGIS v1.4
     void setLabelingEngine(QgsLabelingEngineInterface* iface /Transfer/);
 
+    //! Enable or disable rendering in multiple threads on multiprocessor computers
+    //! Added in QGIS v1.6
+    void setThreadingEnabled( bool use );
+
+    //! Determine whether we are using threaded rendering
+    //! Added in QGIS v1.6
+    bool isThreadingEnabled() const;
+
+    //! Enable or disable caching of rendered layers
+    //! Added in QGIS v1.6
+    void setCachingEnabled( bool enabled );
+
+    //! Determine whether the rendered layers are cached
+    //! Added in QGIS v1.6
+    bool isCachingEnabled() const;
+
   signals:
     
     void drawingProgress(int current, int total);

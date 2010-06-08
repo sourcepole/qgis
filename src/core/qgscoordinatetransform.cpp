@@ -98,6 +98,19 @@ QgsCoordinateTransform::~QgsCoordinateTransform()
   }
 }
 
+QgsCoordinateTransform& QgsCoordinateTransform::operator=( const QgsCoordinateTransform& ct )
+{
+  if ( &ct != this )
+  {
+    mInitialisedFlag = FALSE;
+    mSourceCRS = ct.mSourceCRS;
+    mDestCRS = ct.mDestCRS;
+    initialise();
+  }
+  return *this;
+}
+
+
 void QgsCoordinateTransform::setSourceCrs( const QgsCoordinateReferenceSystem& theCRS )
 {
   mSourceCRS = theCRS;
