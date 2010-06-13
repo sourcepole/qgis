@@ -2883,10 +2883,7 @@ void QgisApp::addWmsLayer()
 
 void QgisApp::fileExit()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
+  mMapCanvas->cancelRendering();
 
   if ( saveDirty() )
   {
@@ -3640,15 +3637,7 @@ void QgisApp::stopRendering()
 {
   if ( mMapCanvas )
   {
-    QgsMapRenderer* mypMapRenderer = mMapCanvas->mapRenderer();
-    if ( mypMapRenderer )
-    {
-      QgsRenderContext* mypRenderContext = mypMapRenderer->rendererContext();
-      if ( mypRenderContext )
-      {
-        mypRenderContext->setRenderingStopped( true );
-      }
-    }
+    mMapCanvas->cancelRendering();
   }
 }
 

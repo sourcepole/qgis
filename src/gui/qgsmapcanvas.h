@@ -30,6 +30,7 @@
 #include <QDomDocument>
 #include <QGraphicsView>
 #include <QtCore>
+#include <QTimer>
 
 class QWheelEvent;
 class QPixmap;
@@ -255,7 +256,12 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     //! returns last position of mouse cursor
     QPoint mouseLastXY();
 
+    //! force stop of the rendering process
+    void cancelRendering();
+
   public slots:
+    //! Called when asynchronous rendering is finished
+    void renderingFinished(QImage img);
 
     /**Repaints the canvas map*/
     void refresh();
@@ -400,7 +406,7 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     QgsMapOverviewCanvas* mMapOverview;
 
     //! Flag indicating a map refresh is in progress
-    bool mDrawing;
+    //bool mDrawing;
 
     //! Flag indicating if the map canvas is frozen.
     bool mFrozen;
@@ -450,6 +456,8 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
 
     //! Mouse wheel action
     WheelAction mWheelAction;
+
+    QTimer mMapUpdateTimer;
 
 }; // class QgsMapCanvas
 

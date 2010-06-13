@@ -42,6 +42,7 @@ class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
     void useImageToRender( bool flag ) { mUseQImageToRender = flag; }
 
     //! renders map using QgsMapRenderer to mPixmap
+    //! @deprecated does nothing
     void render();
 
     void setBackgroundColor( const QColor& color ) { mBgColor = color; }
@@ -60,7 +61,10 @@ class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
 
     //! Update contents - can be called while drawing to show the status.
     //! Added in version 1.2
+    //! @deprecated does nothing
     void updateContents();
+
+    void setMap(QImage img) { mPixmap = QPixmap::fromImage(img); }
 
   private:
 
@@ -71,7 +75,7 @@ class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
     bool mUseQImageToRender;
 
     QPixmap mPixmap;
-    QImage mImage;
+    //QImage mImage;
 
     //QgsMapRenderer* mRender;
     QgsMapCanvas* mCanvas;

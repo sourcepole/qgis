@@ -28,6 +28,7 @@ QgsMapCanvasMap::QgsMapCanvasMap( QgsMapCanvas* canvas )
   setPos( 0, 0 );
   resize( QSize( 1, 1 ) );
   mUseQImageToRender = false;
+
 }
 
 void QgsMapCanvasMap::paint( QPainter* p, const QStyleOptionGraphicsItem*, QWidget* )
@@ -47,7 +48,8 @@ void QgsMapCanvasMap::resize( QSize size )
   prepareGeometryChange(); // to keep QGraphicsScene indexes up to date on size change
 
   mPixmap = QPixmap( size );
-  mImage = QImage( size, QImage::Format_RGB32 ); // temporary image - build it here so it is available when switching from QPixmap to QImage rendering
+  mPixmap.fill(mBgColor.rgb());
+  //mImage = QImage( size, QImage::Format_RGB32 ); // temporary image - build it here so it is available when switching from QPixmap to QImage rendering
   mCanvas->mapRenderer()->setOutputSize( size, mPixmap.logicalDpiX() );
 }
 
@@ -59,6 +61,7 @@ void QgsMapCanvasMap::setPanningOffset( const QPoint& point )
 
 void QgsMapCanvasMap::render()
 {
+  /*
   // Rendering to a QImage gives incorrectly filled polygons in some
   // cases (as at Qt4.1.4), but it is the only renderer that supports
   // anti-aliasing, so we provide the means to swap between QImage and
@@ -101,6 +104,7 @@ void QgsMapCanvasMap::render()
     paint.end();
   }
   update();
+  */
 }
 
 QPaintDevice& QgsMapCanvasMap::paintDevice()
@@ -110,10 +114,12 @@ QPaintDevice& QgsMapCanvasMap::paintDevice()
 
 void QgsMapCanvasMap::updateContents()
 {
+  /*
   // make sure we're using current contents
   if ( mUseQImageToRender )
     mPixmap = QPixmap::fromImage( mImage );
 
   // trigger update of this item
   update();
+  */
 }

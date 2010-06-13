@@ -705,10 +705,6 @@ void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool lab
 
   mRendererV2->startRender( rendererContext, this );
 
-#ifndef Q_WS_MAC
-  int featureCount = 0;
-#endif //Q_WS_MAC
-
   QgsFeature fet;
   while ( nextFeature( fet ) )
   {
@@ -718,20 +714,6 @@ void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool lab
       {
         break;
       }
-
-#ifndef Q_WS_MAC //MH: disable this on Mac for now to avoid problems with resizing
-      if ( mUpdateThreshold > 0 && 0 == featureCount % mUpdateThreshold )
-      {
-        emit screenUpdateRequested();
-        // emit drawingProgress( featureCount, totalFeatures );
-        qApp->processEvents();
-      }
-      else if ( featureCount % 1000 == 0 )
-      {
-        // emit drawingProgress( featureCount, totalFeatures );
-        qApp->processEvents();
-      }
-#endif //Q_WS_MAC
 
       bool sel = mSelectedFeatureIds.contains( fet.id() );
       bool drawMarker = ( mEditable && ( !vertexMarkerOnlyForSelection || sel ) );
@@ -754,9 +736,6 @@ void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool lab
       QgsDebugMsg( QString( "Failed to transform a point while drawing a feature of type '%1'. Ignoring this feature. %2" )
                    .arg( fet.typeName() ).arg( cse.what() ) );
     }
-#ifndef Q_WS_MAC
-    ++featureCount;
-#endif //Q_WS_MAC
   }
 }
 
@@ -781,9 +760,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
 
   // 1. fetch features
   QgsFeature fet;
-#ifndef Q_WS_MAC
-  int featureCount = 0;
-#endif //Q_WS_MAC
   while ( nextFeature( fet ) )
   {
     if ( rendererContext.renderingStopped() )
@@ -791,12 +767,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
       stopRendererV2( rendererContext, selRenderer );
       return;
     }
-#ifndef Q_WS_MAC
-    if ( featureCount % 1000 == 0 )
-    {
-      qApp->processEvents();
-    }
-#endif //Q_WS_MAC
     QgsSymbolV2* sym = mRendererV2->symbolForFeature( fet );
     if ( !features.contains( sym ) )
     {
@@ -812,9 +782,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
       // Cache this for the use of (e.g.) modifying the feature's uncommitted geometry.
       mCachedGeometries[fet.id()] = *fet.geometry();
     }
-#ifndef Q_WS_MAC
-    ++featureCount;
-#endif //Q_WS_MAC
   }
 
   // find out the order
@@ -848,9 +815,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
       int layer = item.layer();
       QList<QgsFeature>& lst = features[item.symbol()];
       QList<QgsFeature>::iterator fit;
-#ifndef Q_WS_MAC
-      featureCount = 0;
-#endif //Q_WS_MAC
       for ( fit = lst.begin(); fit != lst.end(); ++fit )
       {
         if ( rendererContext.renderingStopped() )
@@ -858,12 +822,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
           stopRendererV2( rendererContext, selRenderer );
           return;
         }
-#ifndef Q_WS_MAC
-        if ( featureCount % 1000 == 0 )
-        {
-          qApp->processEvents();
-        }
-#endif //Q_WS_MAC
         bool sel = mSelectedFeatureIds.contains( fit->id() );
         // maybe vertex markers should be drawn only during the last pass...
         bool drawMarker = ( mEditable && ( !vertexMarkerOnlyForSelection || sel ) );
@@ -877,9 +835,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
           QgsDebugMsg( QString( "Failed to transform a point while drawing a feature of type '%1'. Ignoring this feature. %2" )
                        .arg( fet.typeName() ).arg( cse.what() ) );
         }
-#ifndef Q_WS_MAC
-        ++featureCount;
-#endif //Q_WS_MAC
       }
     }
   }
@@ -997,22 +952,6 @@ bool QgsVectorLayer::draw( QgsRenderContext& rendererContext )
         {
           break;
         }
-
-#ifndef Q_WS_MAC //MH: disable this on Mac for now to avoid problems with resizing
-        if ( mUpdateThreshold > 0 && 0 == featureCount % mUpdateThreshold )
-        {
-          emit screenUpdateRequested();
-          // emit drawingProgress( featureCount, totalFeatures );
-          qApp->processEvents();
-        }
-        else if ( featureCount % 1000 == 0 )
-        {
-          // emit drawingProgress( featureCount, totalFeatures );
-          qApp->processEvents();
-        }
-// #else
-//         Q_UNUSED( totalFeatures );
-#endif //Q_WS_MAC
 
         // check if feature is selected
         // only show selections of the current layer

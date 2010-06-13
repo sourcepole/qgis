@@ -42,14 +42,6 @@
 #include "qgslogger.h"
 
 
-typedef struct ThreadedRenderContext
-{
-  QgsMapRenderer* mr; // renderer that governs the rendering
-  QgsMapLayer* ml; // source map layer
-  QImage* img; // destination image
-  QgsRenderContext ctx; // private render context
-} ThreadedRenderContext;
-
 void _renderLayerThreading( ThreadedRenderContext& tctx );
 
 /////
@@ -75,10 +67,18 @@ QgsMapRenderer::QgsMapRenderer()
   mOutputUnits = QgsMapRenderer::Millimeters;
 
   mLabelingEngine = NULL;
+
+  //connect(&mFW, SIGNAL(finished()), SLOT(futureFinished()));
 }
 
 QgsMapRenderer::~QgsMapRenderer()
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("canceling the rendering...");
+    cancelThreadedRendering();
+  }
+
   delete mScaleCalculator;
   delete mDistArea;
   delete mDestCRS;
@@ -98,6 +98,12 @@ void QgsMapRenderer::updateScale()
 
 bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return false; // do not allow changes while rendering
+  }
+
   //remember the previous extent
   mLastExtent = mExtent;
 
@@ -140,6 +146,12 @@ bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
 
 void QgsMapRenderer::setOutputSize( QSize size, int dpi )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   mSize = size;
   mScaleCalculator->setDpi( dpi );
   adjustExtentToSize();
@@ -195,9 +207,9 @@ void QgsMapRenderer::adjustExtentToSize()
     dymax = mExtent.yMaximum() + whitespace;
   }
 
-  QgsDebugMsg( QString( "Map units per pixel (x,y) : %1, %2\n" ).arg( mapUnitsPerPixelX ).arg( mapUnitsPerPixelY ) );
-  QgsDebugMsg( QString( "Pixmap dimensions (x,y) : %1, %2\n" ).arg( myWidth ).arg( myHeight ) );
-  QgsDebugMsg( QString( "Extent dimensions (x,y) : %1, %2\n" ).arg( mExtent.width() ).arg( mExtent.height() ) );
+  QgsDebugMsg( QString( "Map units per pixel (x,y) : %1, %2" ).arg( mapUnitsPerPixelX ).arg( mapUnitsPerPixelY ) );
+  QgsDebugMsg( QString( "Pixmap dimensions (x,y) : %1, %2" ).arg( myWidth ).arg( myHeight ) );
+  QgsDebugMsg( QString( "Extent dimensions (x,y) : %1, %2" ).arg( mExtent.width() ).arg( mExtent.height() ) );
   QgsDebugMsg( mExtent.toString() );
 
   // update extent
@@ -217,8 +229,10 @@ void QgsMapRenderer::adjustExtentToSize()
 }
 
 
-void QgsMapRenderer::render( QPainter* painter )
+void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
 {
+  mDrawing = true;
+
   //flag to see if the render context has changed
   //since the last time we rendered. If it hasnt changed we can
   //take some shortcuts with rendering
@@ -228,30 +242,9 @@ void QgsMapRenderer::render( QPainter* painter )
 
   QgsDebugMsg( "caching enabled? " + QString::number(mCachingEnabled) );
 
-  if ( mExtent.isEmpty() )
-  {
-    QgsDebugMsg( "empty extent... not rendering" );
-    return;
-  }
-
-  if ( mDrawing )
-  {
-    return;
-  }
-
-  QPaintDevice* thePaintDevice = painter->device();
-  if ( !thePaintDevice )
-  {
-    return;
-  }
-
-  mDrawing = true;
-
-
 #ifdef QGISDEBUG
   QgsDebugMsg( "Starting to render layer stack." );
-  QTime renderTime;
-  renderTime.start();
+  mRenderTime.start();
 #endif
 
   mRenderContext.setDrawEditingInformation( !mOverview );
@@ -270,7 +263,7 @@ void QgsMapRenderer::render( QPainter* painter )
   {
     scaleFactor = sceneDpi / 25.4;
   }
-  double rasterScaleFactor = ( thePaintDevice->logicalDpiX() + thePaintDevice->logicalDpiY() ) / 2.0 / sceneDpi;
+  double rasterScaleFactor = deviceDpi / sceneDpi;
   if ( mRenderContext.rasterScaleFactor() != rasterScaleFactor )
   {
     mRenderContext.setRasterScaleFactor( rasterScaleFactor );
@@ -308,13 +301,11 @@ void QgsMapRenderer::render( QPainter* painter )
     }
   }
 
-  QgsOverlayObjectPositionManager* overlayManager = overlayManagerFromSettings();
+  mOverlayManager = overlayManagerFromSettings();
+}
 
-  // do the rendering of all layers
-  renderLayers( overlayManager );
-
-  QgsDebugMsg( "Done rendering map layers" );
-
+void QgsMapRenderer::finishRendering()
+{
   // render labels for vector layers (not using PAL)
   if ( !mOverview )
   {
@@ -322,11 +313,11 @@ void QgsMapRenderer::render( QPainter* painter )
   }
 
   //find overlay positions and draw the vector overlays
-  if ( overlayManager )
+  if ( mOverlayManager )
   {
-    overlayManager->drawOverlays( mRenderContext, mScaleCalculator->mapUnits() );
-    delete overlayManager;
-    overlayManager = NULL;
+    mOverlayManager->drawOverlays( mRenderContext, mScaleCalculator->mapUnits() );
+    delete mOverlayManager;
+    mOverlayManager = NULL;
   }
 
   // make sure progress bar arrives at 100%!
@@ -342,16 +333,47 @@ void QgsMapRenderer::render( QPainter* painter )
     mLabelingEngine->exit();
   }
 
-  QgsDebugMsg( "Rendering completed in (seconds): " + QString( "%1" ).arg( renderTime.elapsed() / 1000.0 ) );
+  QgsDebugMsg( "Rendering completed in (seconds): " + QString( "%1" ).arg( mRenderTime.elapsed() / 1000.0 ) );
 
   mDrawing = false;
+}
 
+void QgsMapRenderer::render( QPainter* painter )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return;
+  }
+
+  if ( mExtent.isEmpty() )
+  {
+    QgsDebugMsg( "empty extent... not rendering" );
+    return;
+  }
+
+  QPaintDevice* thePaintDevice = painter->device();
+  if ( !thePaintDevice )
+  {
+    return;
+  }
+
+  double deviceDpi = ( thePaintDevice->logicalDpiX() + thePaintDevice->logicalDpiY() ) / 2.0;
+
+  mThreadingEnabled = false;
+
+  initRendering( painter, deviceDpi );
+
+  // do the rendering of all layers
+  renderLayers();
+
+  finishRendering();
 }
 
 
-void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManager )
+void QgsMapRenderer::renderLayers()
 {
-  QList<ThreadedRenderContext> layers;
+  mThreadedJobs.clear();
 
   // render all layers in the stack, starting at the base
   QListIterator<QString> li( mLayerSet );
@@ -396,12 +418,12 @@ void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManag
     mRenderContext.setCoordinateTransform( ct );
 
     //create overlay objects for features within the view extent
-    if ( ml->type() == QgsMapLayer::VectorLayer && overlayManager )
+    if ( ml->type() == QgsMapLayer::VectorLayer && mOverlayManager )
     {
       QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
       if ( vl )
       {
-        overlayManager->addOverlaysForLayer( vl, mRenderContext );
+        mOverlayManager->addOverlaysForLayer( vl, mRenderContext );
       }
     }
 
@@ -426,7 +448,7 @@ void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManag
     if ( !mThreadingEnabled )
       renderLayerNoThreading( ml );
     else
-      renderLayerThreading( ml, layers );
+      renderLayerThreading( ml );
 
     disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
   }
@@ -435,22 +457,110 @@ void QgsMapRenderer::renderLayers( QgsOverlayObjectPositionManager* overlayManag
   {
     QgsDebugMsg("STARTING THREADED RENDERING!");
 
-    QtConcurrent::blockingMap(layers, _renderLayerThreading);
+    //QtConcurrent::blockingMap(layers, _renderLayerThreading);
 
-    QgsDebugMsg("THREADED RENDERING FINISHED!");
+    connect(&mFW, SIGNAL(finished()), SLOT(futureFinished()));
 
-    // draw rendered images and delete temporary painters
-    foreach (ThreadedRenderContext tctx, layers)
-    {
-      mRenderContext.painter()->drawImage( 0, 0, *tctx.img );
-      delete tctx.ctx.painter();
-      delete tctx.img;
-    }
-
-    QgsDebugMsg("THREADED RENDERING DONE!");
+    mFuture = QtConcurrent::map(mThreadedJobs, _renderLayerThreading);
+    mFW.setFuture(mFuture);
   }
 
 }
+
+QImage QgsMapRenderer::threadedRenderingOutput()
+{
+  QImage i( mSize, QImage::Format_ARGB32_Premultiplied );
+  i.fill(0);
+  QPainter p;
+  p.begin(&i);
+  foreach (const ThreadedRenderContext& tctx, mThreadedJobs)
+  {
+    if (tctx.img == 0)
+      return QImage(); // destroyed already
+    p.drawImage( 0, 0, *tctx.img );
+  }
+  p.end();
+  return i;
+}
+
+void QgsMapRenderer::futureFinished()
+{
+  QgsDebugMsg("THREADED RENDERING FINISHED!");
+
+  QImage i = threadedRenderingOutput();
+
+  // delete temporary painters
+  foreach (ThreadedRenderContext tctx, mThreadedJobs)
+  {
+    delete tctx.ctx.painter();
+    delete tctx.img;
+    tctx.img = 0;
+  }
+  mThreadedJobs.clear();
+
+  QgsDebugMsg("THREADED RENDERING DONE!");
+
+  disconnect(&mFW, SIGNAL(finished()), this, SLOT(futureFinished()));
+
+  QPainter painter;
+  painter.begin(&i);
+  mRenderContext.setPainter(&painter);
+
+  // postprocessing
+  finishRendering();
+
+  painter.end();
+
+  emit finishedThreadedRendering(i);
+}
+
+void QgsMapRenderer::startThreadedRendering()
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  if ( mExtent.isEmpty() )
+  {
+    QgsDebugMsg( "empty extent... not rendering" );
+    return;
+  }
+
+  mThreadingEnabled = true;
+  initRendering(NULL, 96); // TODO: what dpi to use?
+
+  renderLayers();
+}
+
+
+void QgsMapRenderer::cancelThreadedRendering()
+{
+  if (!mDrawing)
+  {
+    QgsDebugMsg("nothing to cancel.");
+    return;
+  }
+
+  QgsDebugMsg("canceling render");
+  for (int i = 0; i < mThreadedJobs.count(); i++)
+  {
+    mThreadedJobs[i].ctx.setRenderingStopped(true);
+  }
+
+  disconnect(&mFW, SIGNAL(finished()), this, SLOT(futureFinished()));
+
+  mFuture.cancel();
+  QTime t;
+  t.start();
+  mFW.waitForFinished();
+
+  QgsDebugMsg(QString("waited %1 ms").arg(t.elapsed() / 1000.0));
+
+  futureFinished(); // manually trigger the routines for finalization
+}
+
 
 void _renderLayerThreading( ThreadedRenderContext& tctx )
 {
@@ -461,7 +571,7 @@ void _renderLayerThreading( ThreadedRenderContext& tctx )
   QgsDebugMsg("threaded rendering end  : "+tctx.ml->getLayerID());
 }
 
-void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRenderContext>& lst )
+void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml )
 {
   if ( mCachingEnabled && ml->cacheImage() != 0 )
   {
@@ -474,8 +584,7 @@ void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRender
     tctx.ml = ml;
 
     // create image
-    QPaintDevice* device = mRenderContext.painter()->device();
-    tctx.img = new QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
+    tctx.img = new QImage( mSize, QImage::Format_ARGB32_Premultiplied );
     tctx.img->fill( 0 );
 
     // create private context
@@ -483,14 +592,11 @@ void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRender
     tctx.ctx = mRenderContext;
 
     QPainter* painter = new QPainter(tctx.img);
-    if ( mRenderContext.painter()->testRenderHint( QPainter::Antialiasing ) )
-    {
-      painter->setRenderHint( QPainter::Antialiasing );
-    }
+    painter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
     tctx.ctx.setPainter( painter );
 
     // schedule DRAW to a list
-    lst.append(tctx);
+    mThreadedJobs.append(tctx);
   }
 }
 
@@ -513,10 +619,7 @@ void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
 
       // alter painter
       QPainter * mypPainter = new QPainter( ml->cacheImage() );
-      if ( mypContextPainter->testRenderHint( QPainter::Antialiasing ) )
-      {
-        mypPainter->setRenderHint( QPainter::Antialiasing );
-      }
+      mypPainter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
       mRenderContext.setPainter( mypPainter );
 
       // DRAW!
@@ -660,6 +763,12 @@ void QgsMapRenderer::renderLabels()
 
 void QgsMapRenderer::setMapUnits( QGis::UnitType u )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   mScaleCalculator->setMapUnits( u );
 
   // Since the map units have changed, force a recalculation of the scale.
@@ -684,6 +793,12 @@ void QgsMapRenderer::onDrawingProgress( int current, int total )
 
 void QgsMapRenderer::setProjectionsEnabled( bool enabled )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   if ( mProjectionsEnabled != enabled )
   {
     mProjectionsEnabled = enabled;
@@ -701,6 +816,12 @@ bool QgsMapRenderer::hasCrsTransformEnabled()
 
 void QgsMapRenderer::setDestinationSrs( const QgsCoordinateReferenceSystem& srs )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   QgsDebugMsg( "* Setting destCRS : = " + srs.toProj4() );
   QgsDebugMsg( "* DestCRS.srsid() = " + QString::number( srs.srsid() ) );
   if ( *mDestCRS != srs )
@@ -936,6 +1057,12 @@ QgsRectangle QgsMapRenderer::fullExtent()
 
 void QgsMapRenderer::setLayerSet( const QStringList& layers )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   mLayerSet = layers;
   updateFullExtent();
 }
@@ -1124,9 +1251,81 @@ bool QgsMapRenderer::writeXML( QDomNode & theNode, QDomDocument & theDoc )
 
 void QgsMapRenderer::setLabelingEngine( QgsLabelingEngineInterface* iface )
 {
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
   if ( mLabelingEngine )
     delete mLabelingEngine;
 
   mLabelingEngine = iface;
 }
 
+
+void QgsMapRenderer::setScale( double scale )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mScale = scale;
+}
+
+void QgsMapRenderer::enableOverviewMode( bool isOverview )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mOverview = isOverview;
+}
+
+void QgsMapRenderer::setOutputUnits( OutputUnits u )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mOutputUnits = u;
+}
+
+void QgsMapRenderer::setThreadingEnabled( bool use )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mThreadingEnabled = use;
+}
+
+void QgsMapRenderer::setCachingEnabled( bool enabled )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mCachingEnabled = enabled;
+}
+
+void QgsMapRenderer::setAntialiasingEnabled( bool enabled )
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  mAntialiasingEnabled = enabled;
+}

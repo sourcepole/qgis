@@ -251,8 +251,7 @@ void QgsMapOverviewCanvas::refresh()
   painter.begin( &mPixmap );
 
   // antialiasing
-  if ( mAntiAliasing )
-    painter.setRenderHint( QPainter::Antialiasing );
+  mMapRenderer->setAntialiasingEnabled( mAntiAliasing );
 
   // render image
   mMapRenderer->render( &painter );

@@ -19,6 +19,10 @@
 
 #include <QSize>
 #include <QStringList>
+#include <QFuture>
+#include <QFutureWatcher>
+#include <QTime>
+#include <QImage>
 
 #include "qgis.h"
 #include "qgsrectangle.h"
@@ -38,7 +42,15 @@ class QgsOverlayObjectPositionManager;
 class QgsVectorLayer;
 class QgsFeature;
 
-struct ThreadedRenderContext;
+
+typedef struct ThreadedRenderContext
+{
+  QgsMapRenderer* mr; // renderer that governs the rendering
+  QgsMapLayer* ml; // source map layer
+  QImage* img; // destination image
+  QgsRenderContext ctx; // private render context
+} ThreadedRenderContext;
+
 
 /** Labeling engine interface.
  * \note Added in QGIS v1.4
@@ -104,7 +116,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     double scale() const { return mScale; }
     /**Sets scale for scale based visibility. Normally, the scale is calculated automatically. This
      function is only used to force a preview scale (e.g. for print composer)*/
-    void setScale( double scale ) {mScale = scale;}
+    void setScale( double scale );
     double mapUnitsPerPixel() const { return mMapUnitsPerPixel; }
 
     int width() const { return mSize.width(); };
@@ -119,7 +131,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void setMapUnits( QGis::UnitType u );
 
     //! sets whether map image will be for overview
-    void enableOverviewMode( bool isOverview = true ) { mOverview = isOverview; }
+    void enableOverviewMode( bool isOverview = true );
 
     void setOutputSize( QSize size, int dpi );
 
@@ -152,7 +164,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! returns CRS ID of destination spatial reference system
     const QgsCoordinateReferenceSystem& destinationSrs();
 
-    void setOutputUnits( OutputUnits u ) {mOutputUnits = u;}
+    void setOutputUnits( OutputUnits u );
 
     OutputUnits outputUnits() const {return mOutputUnits;}
 
@@ -188,7 +200,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Enable or disable rendering in multiple threads on multiprocessor computers
     //! Added in QGIS v1.6
-    void setThreadingEnabled( bool use ) { mThreadingEnabled = use; }
+    void setThreadingEnabled( bool use );
 
     //! Determine whether we are using threaded rendering
     //! Added in QGIS v1.6
@@ -196,13 +208,45 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Enable or disable caching of rendered layers
     //! Added in QGIS v1.6
-    void setCachingEnabled( bool enabled ) { mCachingEnabled = enabled; }
+    void setCachingEnabled( bool enabled );
 
     //! Determine whether the rendered layers are cached
     //! Added in QGIS v1.6
     bool isCachingEnabled() const { return mCachingEnabled; }
 
+    //! Added in QGIS v1.6
+    void setAntialiasingEnabled( bool enabled );
+
+    //! Added in QGIS v1.6
+    bool isAntialiasingEnabled() const { return mAntialiasingEnabled; }
+
+    //! Schedule a redraw of the layers.
+    //! This function returns immediately after starting the asynchronous rendering process.
+    //! Any previous rendering operations must be finished/canceled first.
+    //! Added in QGIS v1.6
+    void startThreadedRendering();
+
+    //! Cancel pending asynchronous rendering. Waits until the rendering is canceled.
+    //! Does nothing if no asynchronous rendering is running.
+    //! Added in QGIS v1.6
+    void cancelThreadedRendering();
+
+    //! Return the intermediate output of the asynchronous rendering.
+    //! An invalid image is returned when the rendering has finished.
+    //! (to obtain the final output image, use finishedThreadedRendering signal)
+    //! Added in QGIS v1.6
+    QImage threadedRenderingOutput();
+
+    //! Tell whether the rendering takes place
+    //! Added in QGIS v1.6
+    bool isDrawing() const { return mDrawing; }
+
   signals:
+
+    //! emitted when asynchronous rendering is finished (or canceled).
+    //! The passed image is the result of the rendering process.
+    //! Added in QGIS v1.6
+    void finishedThreadedRendering(QImage i);
 
     void drawingProgress( int current, int total );
 
@@ -222,6 +266,8 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! called by signal from layer current being drawn
     void onDrawingProgress( int current, int total );
 
+    void futureFinished();
+
   protected:
 
     //! adjust extent to fit the pixmap size
@@ -235,14 +281,20 @@ class CORE_EXPORT QgsMapRenderer : public QObject
      */
     bool splitLayersExtent( QgsMapLayer* layer, QgsRectangle& extent, QgsRectangle& r2 );
 
+    //! initialize the rendering process
+    void initRendering( QPainter* painter, double deviceDpi );
+
+    //! finalize the rendering process (labeling, overlays)
+    void finishRendering();
+
     //! render the whole layer set
-    void renderLayers( QgsOverlayObjectPositionManager* overlayManager );
+    void renderLayers();
 
     //! render one layer
     void renderLayerNoThreading( QgsMapLayer* ml );
 
     //! schedule rendering of a layer
-    void renderLayerThreading( QgsMapLayer* ml, QList<ThreadedRenderContext>& lst );
+    void renderLayerThreading( QgsMapLayer* ml );
 
     //! invoke rendering of the layer with given context
     bool renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx );
@@ -300,9 +352,6 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! tool for measuring
     QgsDistanceArea* mDistArea;
 
-    //!Encapsulates context of rendering
-    QgsRenderContext mRenderContext;
-
     //!Output units
     OutputUnits mOutputUnits;
 
@@ -314,6 +363,18 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Render caching
     bool mCachingEnabled;
+
+    bool mAntialiasingEnabled;
+
+    QFuture<void> mFuture;
+    QFutureWatcher<void> mFW;
+
+    // variables valid only while rendering:
+    QTime mRenderTime;
+    QgsOverlayObjectPositionManager* mOverlayManager;
+    //!Encapsulates context of rendering
+    QgsRenderContext mRenderContext;
+    QList<ThreadedRenderContext> mThreadedJobs;
 };
 
 #endif
