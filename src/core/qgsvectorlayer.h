@@ -674,11 +674,6 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
 
   private:                       // Private attributes
 
-    /** Update threshold for drawing features as they are read. A value of zero indicates
-     *  that no features will be drawn until all have been read
-     */
-    int mUpdateThreshold;
-
     /** Pointer to data provider derived from the abastract base class QgsDataProvider */
     QgsVectorDataProvider *mDataProvider;
 

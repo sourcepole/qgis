@@ -95,7 +95,6 @@ QgsVectorLayer::QgsVectorLayer( QString vectorLayerPath,
                                 QString providerKey,
                                 bool loadDefaultStyleFlag )
     : QgsMapLayer( VectorLayer, baseName, vectorLayerPath ),
-    mUpdateThreshold( 0 ),     // XXX better default value?
     mDataProvider( NULL ),
     mProviderKey( providerKey ),
     mEditable( false ),
@@ -152,14 +151,6 @@ QgsVectorLayer::QgsVectorLayer( QString vectorLayerPath,
       }
     }
 
-    // Get the update threshold from user settings. We
-    // do this only on construction to avoid the penality of
-    // fetching this each time the layer is drawn. If the user
-    // changes the threshold from the preferences dialog, it will
-    // have no effect on existing layers
-    // TODO: load this setting somewhere else [MD]
-    //QSettings settings;
-    //mUpdateThreshold = settings.readNumEntry("Map/updateThreshold", 1000);
   }
 } // QgsVectorLayer ctor
 
@@ -844,10 +835,6 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
 
 bool QgsVectorLayer::draw( QgsRenderContext& rendererContext )
 {
-  //set update threshold before each draw to make sure the current setting is picked up
-  QSettings settings;
-  mUpdateThreshold = settings.value( "Map/updateThreshold", 0 ).toInt();
-
   if ( mUsingRendererV2 )
   {
     if ( mRendererV2 == NULL )
@@ -921,6 +908,7 @@ bool QgsVectorLayer::draw( QgsRenderContext& rendererContext )
       mCachedGeometriesRect = rendererContext.extent();
       vertexMarker = currentVertexMarkerType();
       vertexMarkerSize = currentVertexMarkerSize();
+      QSettings settings;
       mVertexMarkerOnlyForSelection = settings.value( "/qgis/digitizing/marker_only_for_selected", false ).toBool();
     }
 

@@ -537,6 +537,12 @@ void QgsMapRenderer::cancelThreadedRendering()
 void _renderLayerThreading( ThreadedRenderContext& tctx )
 {
   QString layerId = tctx.ml->getLayerID();
+  if (tctx.ctx.renderingStopped())
+  {
+    QgsDebugMsg("rendering has been stopped => ignoring "+layerId);
+    return;
+  }
+
   if (tctx.cached)
   {
     QgsDebugMsg("threaded cached (doing nothing): "+layerId);
