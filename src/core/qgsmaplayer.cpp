@@ -842,12 +842,7 @@ void QgsMapLayer::writeCustomProperties( QDomNode & layerNode, QDomDocument & do
 
 void QgsMapLayer::setCacheImage( QImage * thepImage )
 {
-  QgsDebugMsg( "cache Image set!" );
-  if ( mpCacheImage )
-  {
-    delete mpCacheImage;
-  }
-  mpCacheImage = thepImage;
+  QgsDebugMsg( "warning: deprecated, does nothing." );
 }
 
 bool QgsMapLayer::isEditable() const
@@ -860,7 +855,8 @@ void QgsMapLayer::setValid( bool valid )
   mValid = valid;
 }
 
+
 void QgsMapLayer::clearCacheImage()
 {
-  setCacheImage( 0 );
+  QgsDebugMsg( "warning: deprecated, does nothing." );
 }

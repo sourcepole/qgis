@@ -1046,9 +1046,6 @@ void QgsVectorLayer::select( int number, bool emitSignal )
 
   if ( emitSignal )
   {
-    // invalidate cache
-    setCacheImage( 0 );
-
     emit selectionChanged();
   }
 }
@@ -1059,9 +1056,6 @@ void QgsVectorLayer::deselect( int number, bool emitSignal )
 
   if ( emitSignal )
   {
-    // invalidate cache
-    setCacheImage( 0 );
-
     emit selectionChanged();
   }
 }
@@ -1084,9 +1078,6 @@ void QgsVectorLayer::select( QgsRectangle & rect, bool lock )
   {
     select( f.id(), false ); // don't emit signal (not to redraw it everytime)
   }
-
-  // invalidate cache
-  setCacheImage( 0 );
 
   emit selectionChanged(); // now emit signal to redraw layer
 }
@@ -1111,9 +1102,6 @@ void QgsVectorLayer::invertSelection()
     mSelectedFeatureIds.remove( *iter );
   }
 
-  // invalidate cache
-  setCacheImage( 0 );
-
   emit selectionChanged();
 }
 
@@ -1137,9 +1125,6 @@ void QgsVectorLayer::invertSelectionInRectangle( QgsRectangle & rect )
     }
   }
 
-  // invalidate cache
-  setCacheImage( 0 );
-
   emit selectionChanged();
 }
 
@@ -1152,15 +1137,13 @@ void QgsVectorLayer::removeSelection( bool emitSignal )
 
   if ( emitSignal )
   {
-    // invalidate cache
-    setCacheImage( 0 );
-
     emit selectionChanged();
   }
 }
 
 void QgsVectorLayer::triggerRepaint()
 {
+  emit dataChanged(); // invalidates caches of map renderers
   emit repaintRequested();
 }
 
@@ -1384,7 +1367,7 @@ bool QgsVectorLayer::setSubsetString( QString subset )
   updateExtents();
 
   if ( res )
-    setCacheImage( 0 );
+    emit dataChanged();
 
   return res;
 }
@@ -1838,9 +1821,6 @@ bool QgsVectorLayer::deleteSelectedFeatures()
     int fid = *mSelectedFeatureIds.begin();
     deleteFeature( fid );  // removes from selection
   }
-
-  // invalidate cache
-  setCacheImage( 0 );
 
   emit selectionChanged();
 
@@ -2448,6 +2428,8 @@ bool QgsVectorLayer::setDataProvider( QString const & provider )
 
       // TODO: Check if the provider has the capability to send fullExtentCalculated
       connect( mDataProvider, SIGNAL( fullExtentCalculated() ), this, SLOT( updateExtents() ) );
+
+      connect( mDataProvider, SIGNAL(dataChanged()), this, SIGNAL(dataChanged()) );
 
       // get the extent
       QgsRectangle mbr = mDataProvider->extent();
@@ -3113,9 +3095,6 @@ bool QgsVectorLayer::commitChanges()
 {
   bool success = true;
 
-  //clear the cache image so markers don't appear anymore on next draw
-  setCacheImage( 0 );
-
   mCommitErrors.clear();
 
   if ( !mDataProvider )
@@ -3443,9 +3422,6 @@ bool QgsVectorLayer::rollBack()
   emit editingStopped();
 
   setModified( false );
-  // invalidate the cache so the layer updates properly to show its original
-  // after the rollback
-  setCacheImage( 0 );
   triggerRepaint();
 
   return true;
@@ -3455,9 +3431,6 @@ void QgsVectorLayer::setSelectedFeatures( const QgsFeatureIds& ids )
 {
   // TODO: check whether features with these ID exist
   mSelectedFeatureIds = ids;
-
-  // invalidate cache
-  setCacheImage( 0 );
 
   emit selectionChanged();
 }
@@ -3552,9 +3525,6 @@ bool QgsVectorLayer::addFeatures( QgsFeatureList features, bool makeSelected )
 
   if ( makeSelected )
   {
-    // invalidate cache
-    setCacheImage( 0 );
-
     emit selectionChanged();
   }
 

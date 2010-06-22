@@ -54,7 +54,7 @@ QgsMapRenderer::QgsMapRenderer()
   mDrawing = false;
   mOverview = false;
   mThreadingEnabled = false;
-  mCachingEnabled = false;
+  mCache = NULL;
 
   // set default map units - we use WGS 84 thus use degrees
   setMapUnits( QGis::Degrees );
@@ -83,6 +83,7 @@ QgsMapRenderer::~QgsMapRenderer()
   delete mDistArea;
   delete mDestCRS;
   delete mLabelingEngine;
+  delete mCache;
 }
 
 
@@ -103,9 +104,6 @@ bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
     QgsDebugMsg("Ignored --- drawing now!");
     return false; // do not allow changes while rendering
   }
-
-  //remember the previous extent
-  mLastExtent = mExtent;
 
   // Don't allow zooms where the current extent is so small that it
   // can't be accurately represented using a double (which is what
@@ -233,14 +231,8 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
 {
   mDrawing = true;
 
-  //flag to see if the render context has changed
-  //since the last time we rendered. If it hasnt changed we can
-  //take some shortcuts with rendering
-  bool mySameAsLastFlag = true;
-
   QgsDebugMsg( "========== Rendering ==========" );
-
-  QgsDebugMsg( "caching enabled? " + QString::number(mCachingEnabled) );
+  QgsDebugMsg( "caching enabled? " + QString::number(mCache != NULL) );
 
 #ifdef QGISDEBUG
   QgsDebugMsg( "Starting to render layer stack." );
@@ -264,41 +256,21 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
     scaleFactor = sceneDpi / 25.4;
   }
   double rasterScaleFactor = deviceDpi / sceneDpi;
-  if ( mRenderContext.rasterScaleFactor() != rasterScaleFactor )
-  {
-    mRenderContext.setRasterScaleFactor( rasterScaleFactor );
-    mySameAsLastFlag = false;
-  }
-  if ( mRenderContext.scaleFactor() != scaleFactor )
-  {
-    mRenderContext.setScaleFactor( scaleFactor );
-    mySameAsLastFlag = false;
-  }
-  if ( mRenderContext.rendererScale() != mScale )
-  {
-    //add map scale to render context
-    mRenderContext.setRendererScale( mScale );
-    mySameAsLastFlag = false;
-  }
-  if ( mLastExtent != mExtent )
-  {
-    mLastExtent = mExtent;
-    mySameAsLastFlag = false;
-  }
+
+  // initialize render context scaling
+  mRenderContext.setRasterScaleFactor( rasterScaleFactor );
+  mRenderContext.setScaleFactor( scaleFactor );
+  mRenderContext.setRendererScale( mScale );
 
   mRenderContext.setLabelingEngine( mLabelingEngine );
   if ( mLabelingEngine )
     mLabelingEngine->init( this );
 
-  // know we know if this render is just a repeat of the last time, we
-  // can clear caches if it has changed
-  if ( !mySameAsLastFlag )
+  if (mCache)
   {
-    //clear the cache pixmap if we changed resolution / extent
-    if ( mCachingEnabled )
-    {
-      QgsMapLayerRegistry::instance()->clearAllLayerCaches();
-    }
+    // initialize cache: if the parameters are not the same as the last time,
+    // the cached images are removed
+    mCache->init(mExtent, mScale, scaleFactor, rasterScaleFactor);
   }
 
   mOverlayManager = overlayManagerFromSettings();
@@ -429,13 +401,13 @@ void QgsMapRenderer::renderLayers()
 
     // Force render of layers that are being edited
     // or if there's a labeling engine that needs the layer to register features
-    if ( ml->type() == QgsMapLayer::VectorLayer )
+    if ( mCache && ml->type() == QgsMapLayer::VectorLayer )
     {
       QgsVectorLayer* vl = qobject_cast<QgsVectorLayer *>( ml );
       if ( vl->isEditable() ||
            ( mRenderContext.labelingEngine() && mRenderContext.labelingEngine()->willUseLayer( vl ) ) )
       {
-        ml->setCacheImage( 0 );
+        mCache->setCacheImage(ml->getLayerID(), QImage());
       }
     }
 
@@ -564,61 +536,79 @@ void QgsMapRenderer::cancelThreadedRendering()
 
 void _renderLayerThreading( ThreadedRenderContext& tctx )
 {
-  QgsDebugMsg("threaded rendering start: "+tctx.ml->getLayerID());
-  // TODO: error handling
-  tctx.mr->renderLayer( tctx.ml, tctx.ctx );
+  QString layerId = tctx.ml->getLayerID();
+  if (tctx.cached)
+  {
+    QgsDebugMsg("threaded cached (doing nothing): "+layerId);
+  }
+  else
+  {
+    QgsDebugMsg("threaded rendering start: "+layerId);
+    // TODO: error handling
+    tctx.mr->renderLayer( tctx.ml, tctx.ctx );
 
-  QgsDebugMsg("threaded rendering end  : "+tctx.ml->getLayerID());
+    if (tctx.mr->mCache)
+    {
+      // save cache image
+      tctx.mr->mCache->setCacheImage( layerId, *tctx.img );
+    }
+
+    QgsDebugMsg("threaded rendering end  : "+layerId);
+  }
 }
 
 void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml )
 {
-  if ( mCachingEnabled && ml->cacheImage() != 0 )
+  ThreadedRenderContext tctx;
+  tctx.ml = ml;
+
+  if ( mCache && ! mCache->cacheImage(ml->getLayerID()).isNull() )
   {
-    // do nothing - cached image will be used
-    // TODO: resolve caching
+    // cached image will be used
+    tctx.img = new QImage( mCache->cacheImage(ml->getLayerID()));
+    tctx.cached = true;
   }
   else
   {
-    ThreadedRenderContext tctx;
-    tctx.ml = ml;
-
     // create image
     tctx.img = new QImage( mSize, QImage::Format_ARGB32_Premultiplied );
     tctx.img->fill( 0 );
-
-    // create private context
-    tctx.mr = this;
-    tctx.ctx = mRenderContext;
-
-    QPainter* painter = new QPainter(tctx.img);
-    painter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
-    tctx.ctx.setPainter( painter );
-
-    // schedule DRAW to a list
-    mThreadedJobs.append(tctx);
+    tctx.cached = false;
   }
+
+  // create private context
+  tctx.mr = this;
+  tctx.ctx = mRenderContext;
+
+  QPainter* painter = new QPainter(tctx.img);
+  painter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
+  tctx.ctx.setPainter( painter );
+
+  // schedule DRAW to a list
+  mThreadedJobs.append(tctx);
 }
 
 void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
 {
-  if ( mCachingEnabled )
+  if ( mCache )
   {
     // Store the painter in case we need to swap it out for the
     // cache painter
     QPainter * mypContextPainter = mRenderContext.painter();
 
-    if ( ml->cacheImage() == 0 )
+    // retrieve cached image for the layer (will be null if not valid)
+    QImage cacheImage = mCache->cacheImage(ml->getLayerID());
+
+    if ( cacheImage.isNull() )
     {
       // create cached image
       QgsDebugMsg( "\n\n\nCaching enabled --- redraw forced by extent change or empty cache\n\n\n" );
       QPaintDevice* device = mRenderContext.painter()->device();
-      QImage * mypImage = new QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
-      mypImage->fill( 0 );
-      ml->setCacheImage( mypImage ); //no need to delete the old one, maplayer does it for you
+      cacheImage = QImage( device->width(), device->height(), QImage::Format_ARGB32_Premultiplied );
+      cacheImage.fill( 0 );
 
       // alter painter
-      QPainter * mypPainter = new QPainter( ml->cacheImage() );
+      QPainter * mypPainter = new QPainter( &cacheImage );
       mypPainter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
       mRenderContext.setPainter( mypPainter );
 
@@ -630,10 +620,13 @@ void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
       // by reinstating the painter as it was swapped out for caching renders
       delete mRenderContext.painter();
       mRenderContext.setPainter( mypContextPainter );
+
+      // set cache image to the newly rendered image
+      mCache->setCacheImage( ml->getLayerID(), cacheImage );
     }
 
     // draw cached image
-    mypContextPainter->drawImage( 0, 0, *( ml->cacheImage() ) );
+    mypContextPainter->drawImage( 0, 0, cacheImage );
   }
   else
   {
@@ -1063,13 +1056,57 @@ void QgsMapRenderer::setLayerSet( const QStringList& layers )
     return; // do not allow changes while rendering
   }
 
+  foreach (QString layerId, mLayerSet)
+  {
+    QgsMapLayer* ml = QgsMapLayerRegistry::instance()->mapLayer(layerId);
+    if (ml)
+    {
+      disconnect(ml, SIGNAL(selectionChanged()), this, SLOT(clearLayerCache()));
+      disconnect(ml, SIGNAL(editingStopped()), this, SLOT(clearLayerCache()));
+      disconnect(ml, SIGNAL(dataChanged()), this, SLOT(clearLayerCache()));
+    }
+  }
+
   mLayerSet = layers;
+
+  foreach (QString layerId, mLayerSet)
+  {
+    QgsMapLayer* ml = QgsMapLayerRegistry::instance()->mapLayer(layerId);
+    if (ml)
+    {
+      connect(ml, SIGNAL(selectionChanged()), this, SLOT(clearLayerCache()));
+      connect(ml, SIGNAL(editingStopped()), this, SLOT(clearLayerCache()));
+      connect(ml, SIGNAL(dataChanged()), this, SLOT(clearLayerCache()));
+    }
+  }
+
   updateFullExtent();
 }
 
 QStringList& QgsMapRenderer::layerSet()
 {
   return mLayerSet;
+}
+
+void QgsMapRenderer::clearLayerCache()
+{
+  QgsMapLayer* ml = qobject_cast<QgsMapLayer*>(sender());
+  if (mCache)
+  {
+    if (ml)
+    {
+      QgsDebugMsg("clearing cache for: "+ml->getLayerID());
+      mCache->setCacheImage(ml->getLayerID(), QImage());
+    }
+    else
+    {
+      QgsDebugMsg("clearing cache - FOR WHOM ?????\n\n\n\n\n\n");
+    }
+  }
+  else
+  {
+    QgsDebugMsg("not caching -> not clearing cache");
+  }
 }
 
 QgsOverlayObjectPositionManager* QgsMapRenderer::overlayManagerFromSettings()
@@ -1316,7 +1353,16 @@ void QgsMapRenderer::setCachingEnabled( bool enabled )
     return; // do not allow changes while rendering
   }
 
-  mCachingEnabled = enabled;
+  if ( mCache && !enabled )
+  {
+    delete mCache;
+    mCache = NULL;
+  }
+  else if ( !mCache && enabled )
+  {
+    mCache = new QgsMapRendererCache();
+  }
+
 }
 
 void QgsMapRenderer::setAntialiasingEnabled( bool enabled )
@@ -1328,4 +1374,65 @@ void QgsMapRenderer::setAntialiasingEnabled( bool enabled )
   }
 
   mAntialiasingEnabled = enabled;
+}
+
+void QgsMapRenderer::clearCache()
+{
+  if ( mDrawing )
+  {
+    QgsDebugMsg("Ignored --- drawing now!");
+    return; // do not allow changes while rendering
+  }
+
+  if (mCache)
+  {
+    mCache->clear();
+  }
+}
+
+// ------------------------
+
+QgsMapRendererCache::QgsMapRendererCache()
+{
+  clear();
+}
+
+void QgsMapRendererCache::clear()
+{
+  mExtent.setMinimal();
+  mScale = 0;
+  mScaleFactor = 0;
+  mRasterScaleFactor = 0;
+  mCachedImages.clear();
+}
+
+bool QgsMapRendererCache::init(QgsRectangle extent, double scale, double scaleFactor, double rasterScaleFactor)
+{
+  // check whether the params are the same
+  if (extent == mExtent &&
+      scale == mScale &&
+      scaleFactor == mScaleFactor &&
+      rasterScaleFactor == mRasterScaleFactor )
+    return true;
+
+  // set new params
+  mExtent = extent;
+  mScale = scale;
+  mScaleFactor = scaleFactor;
+  mRasterScaleFactor = rasterScaleFactor;
+
+  // invalidate cache
+  mCachedImages.clear();
+
+  return false;
+}
+
+void QgsMapRendererCache::setCacheImage(QString layerId, const QImage& img)
+{
+  mCachedImages[layerId] = img;
+}
+
+QImage QgsMapRendererCache::cacheImage(QString layerId)
+{
+  return mCachedImages.value(layerId);
 }

@@ -290,10 +290,10 @@ class CORE_EXPORT QgsMapLayer : public QObject
     /** Return pointer to layer's undo stack */
     QUndoStack* undoStack();
 
-    /** Get the QImage used for caching render operations
+    /** @deprecated Caching is done now in QgsMapRendererCache. Returns always 0.
      * @note This method was added in QGIS 1.4 **/
-    QImage * cacheImage() { return mpCacheImage; }
-    /** Set the QImage used for caching render operations
+    QImage * cacheImage() { return 0; }
+    /** @deprecated Caching is done now in QgsMapRendererCache. Does nothing.
      * @note This method was added in QGIS 1.4 **/
     void setCacheImage( QImage * thepImage );
 
@@ -314,7 +314,7 @@ class CORE_EXPORT QgsMapLayer : public QObject
     void toggleScaleBasedVisibility( bool theVisibilityFlag );
     bool hasScaleBasedVisibility();
 
-    /** Clear cached image
+    /** @deprecated Caching is done now in QgsMapRendererCache. Clear cache by emitting dataChanged() signal.
      * added in 1.5 */
     void clearCacheImage();
 

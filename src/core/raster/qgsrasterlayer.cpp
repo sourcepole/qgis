@@ -228,6 +228,7 @@ QgsRasterLayer::QgsRasterLayer( int dummy,
     mDataProvider, SIGNAL( statusChanged( QString ) ),
     this,           SLOT( showStatusMessage( QString ) )
   );
+  connect( mDataProvider, SIGNAL(dataChanged()), this, SIGNAL(dataChanged()) );
   QgsDebugMsg( "(8 arguments) exiting." );
 
   emit statusChanged( tr( "QgsRasterLayer created" ) );
@@ -3612,6 +3613,7 @@ void QgsRasterLayer::thumbnailAsPixmap( QPixmap * theQPixmap )
 
 void QgsRasterLayer::triggerRepaint()
 {
+  emit dataChanged(); // invalidates caches of map renderers
   emit repaintRequested();
 }
 

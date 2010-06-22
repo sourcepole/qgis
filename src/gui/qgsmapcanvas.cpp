@@ -229,6 +229,7 @@ void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
 {
   if ( isDrawing() )
   {
+    QgsDebugMsg("ignored - drawing!" );
     return;
   }
 
@@ -246,6 +247,7 @@ void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
 
     if ( lyr.isVisible() )
     {
+      QgsDebugMsg("pushing layer "+ lyr.layer()->getLayerID() );
       layerSet.push_back( lyr.layer()->getLayerID() );
     }
     if ( lyr.isInOverview() )

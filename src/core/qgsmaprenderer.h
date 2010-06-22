@@ -49,6 +49,7 @@ typedef struct ThreadedRenderContext
   QgsMapLayer* ml; // source map layer
   QImage* img; // destination image
   QgsRenderContext ctx; // private render context
+  bool cached; // whether the image is retrieved from cache (= rendering not necessary)
 } ThreadedRenderContext;
 
 
@@ -76,6 +77,35 @@ class QgsLabelingEngineInterface
     //! called when passing engine among map renderers
     virtual QgsLabelingEngineInterface* clone() = 0;
 };
+
+
+
+class CORE_EXPORT QgsMapRendererCache
+{
+  public:
+
+    QgsMapRendererCache();
+
+    //! invalidate the cache contents
+    void clear();
+
+    //! initialize cache: set new parameters and erase cache if parameters have changed
+    //! @return flag whether the extent and other factors are the same as last time
+    bool init(QgsRectangle extent, double scale, double scaleFactor, double rasterScaleFactor);
+
+    //! set cached image for the specified layer ID
+    void setCacheImage(QString layerId, const QImage& img);
+
+    //! get cached image for the specified layer ID. Returns null image if it is not cached.
+    QImage cacheImage(QString layerId);
+
+  protected:
+    QgsRectangle mExtent;
+    double mScale;
+    double mScaleFactor, mRasterScaleFactor;
+    QMap<QString, QImage> mCachedImages;
+};
+
 
 
 /** \ingroup core
@@ -212,7 +242,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Determine whether the rendered layers are cached
     //! Added in QGIS v1.6
-    bool isCachingEnabled() const { return mCachingEnabled; }
+    bool isCachingEnabled() const { return mCache != NULL; }
 
     //! Added in QGIS v1.6
     void setAntialiasingEnabled( bool enabled );
@@ -241,6 +271,10 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Added in QGIS v1.6
     bool isDrawing() const { return mDrawing; }
 
+    //! if caching is enabled, invalidate the renderer cache
+    //! Added in QGIS v1.6
+    void clearCache();
+
   signals:
 
     //! emitted when asynchronous rendering is finished (or canceled).
@@ -267,6 +301,8 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void onDrawingProgress( int current, int total );
 
     void futureFinished();
+
+    void clearLayerCache();
 
   protected:
 
@@ -324,13 +360,6 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! current extent to be drawn
     QgsRectangle mExtent;
-    //
-    /** Last extent to we drew so we know if we can
-        used layer render caching or not. Note there are no
-        accessors for this as it is intended to internal
-        use only.
-        @note added in QGIS 1.4 */
-    QgsRectangle mLastExtent;
 
     //! indicates whether it's map image for overview
     bool mOverview;
@@ -362,7 +391,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     bool mThreadingEnabled;
 
     //! Render caching
-    bool mCachingEnabled;
+    QgsMapRendererCache* mCache;
 
     bool mAntialiasingEnabled;
 
