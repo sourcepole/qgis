@@ -288,6 +288,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     void destinationSrsChanged();
 
+    //! @note not used anymore
     void updateMap();
 
     void mapUnitsChanged();
@@ -298,11 +299,17 @@ class CORE_EXPORT QgsMapRenderer : public QObject
   public slots:
 
     //! called by signal from layer current being drawn
+    //! @note currently does nothing
     void onDrawingProgress( int current, int total );
 
     void futureFinished();
 
+    void futureProgress(int value);
+
     void clearLayerCache();
+
+    //! called to map layer registry
+    void handleLayerRemoval(QString layerId);
 
   protected:
 

@@ -68,6 +68,8 @@ QgsMapRenderer::QgsMapRenderer()
 
   mLabelingEngine = NULL;
 
+  connect(QgsMapLayerRegistry::instance(), SIGNAL(layerWillBeRemoved(QString)), this, SLOT(handleLayerRemoval(QString)));
+
   //connect(&mFW, SIGNAL(finished()), SLOT(futureFinished()));
 }
 
@@ -415,23 +417,26 @@ void QgsMapRenderer::renderLayers()
     // Now do the call to the layer that actually does
     // the rendering work!
     //
-    connect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
+
+    // onDrawingProgress() does nothing
+    //connect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
 
     if ( !mThreadingEnabled )
       renderLayerNoThreading( ml );
     else
       renderLayerThreading( ml );
 
-    disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
+    //disconnect( ml, SIGNAL( drawingProgress( int, int ) ), this, SLOT( onDrawingProgress( int, int ) ) );
   }
 
   if ( mThreadingEnabled )
   {
     QgsDebugMsg("STARTING THREADED RENDERING!");
 
-    //QtConcurrent::blockingMap(layers, _renderLayerThreading);
-
     connect(&mFW, SIGNAL(finished()), SLOT(futureFinished()));
+    connect(&mFW, SIGNAL(progressValueChanged(int)), this, SLOT(futureProgress(int)));
+
+    emit drawingProgress(0, mThreadedJobs.count());
 
     mFuture = QtConcurrent::map(mThreadedJobs, _renderLayerThreading);
     mFW.setFuture(mFuture);
@@ -455,6 +460,12 @@ QImage QgsMapRenderer::threadedRenderingOutput()
   return i;
 }
 
+void QgsMapRenderer::futureProgress(int value)
+{
+  QgsDebugMsg(QString("future progress: %1/%2").arg(value).arg(mFW.progressMaximum()));
+  emit drawingProgress(value, mThreadedJobs.count());
+}
+
 void QgsMapRenderer::futureFinished()
 {
   QgsDebugMsg("THREADED RENDERING FINISHED!");
@@ -473,6 +484,9 @@ void QgsMapRenderer::futureFinished()
   QgsDebugMsg("THREADED RENDERING DONE!");
 
   disconnect(&mFW, SIGNAL(finished()), this, SLOT(futureFinished()));
+  disconnect(&mFW, SIGNAL(progressValueChanged(int)), this, SLOT(futureProgress(int)));
+
+  emit drawingProgress(1,1);
 
   QPainter painter;
   painter.begin(&i);
@@ -785,7 +799,7 @@ void QgsMapRenderer::onDrawingProgress( int current, int total )
 {
   // TODO: emit signal with progress
 // QgsDebugMsg(QString("onDrawingProgress: %1 / %2").arg(current).arg(total));
-  emit updateMap();
+  //emit updateMap();
 }
 
 
@@ -1393,6 +1407,18 @@ void QgsMapRenderer::clearCache()
   if (mCache)
   {
     mCache->clear();
+  }
+}
+
+
+void QgsMapRenderer::handleLayerRemoval(QString layerId)
+{
+  if (mLayerSet.contains(layerId))
+  {
+    // make sure that the layer won't be used in further rendering
+    if (isDrawing())
+      cancelThreadedRendering();
+    mLayerSet.removeAll(layerId);
   }
 }
 

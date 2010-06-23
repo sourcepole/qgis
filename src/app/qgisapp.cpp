@@ -528,6 +528,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
   mLastComposerId = 0;
   mLBL = new QgsPalLabeling();
   mMapCanvas->mapRenderer()->setLabelingEngine( mLBL );
+  QgsDebugMsg("\nInit done\n");
 } // QgisApp ctor
 
 
@@ -1703,6 +1704,17 @@ void QgisApp::createStatusBar()
   mProgressBar->setWhatsThis( tr( "Progress bar that displays the status "
                                   "of rendering layers and other time-intensive operations" ) );
   statusBar()->addPermanentWidget( mProgressBar, 1 );
+
+  //stop rendering status bar widget
+  mStopRenderButton = new QToolButton( statusBar() );
+  mStopRenderButton->setMaximumWidth( 20 );
+  mStopRenderButton->setMaximumHeight( 20 );
+  mStopRenderButton->setIcon( getThemeIcon( "mIconDelete.png" ) );
+  mStopRenderButton->setToolTip( tr( "Stop map rendering" ) );
+  mStopRenderButton->hide();
+  statusBar()->addPermanentWidget( mStopRenderButton, 0 );
+
+
   // Bumped the font up one point size since 8 was too
   // small on some platforms. A point size of 9 still provides
   // plenty of display space on 1024x768 resolutions
@@ -1777,13 +1789,7 @@ void QgisApp::createStatusBar()
   statusBar()->addPermanentWidget( mScaleEdit, 0 );
   connect( mScaleEdit, SIGNAL( editingFinished() ), this, SLOT( userScale() ) );
 
-  //stop rendering status bar widget
-  mStopRenderButton = new QToolButton( statusBar() );
-  mStopRenderButton->setMaximumWidth( 20 );
-  mStopRenderButton->setMaximumHeight( 20 );
-  mStopRenderButton->setIcon( getThemeIcon( "mIconDelete.png" ) );
-  mStopRenderButton->setToolTip( tr( "Stop map rendering" ) );
-  statusBar()->addPermanentWidget( mStopRenderButton, 0 );
+  /* Not necessary anymore! rendering doesn't block GUI.
   // render suppression status bar widget
   mRenderSuppressionCBox = new QCheckBox( tr( "Render" ), statusBar() );
   mRenderSuppressionCBox->setChecked( true );
@@ -1794,6 +1800,8 @@ void QgisApp::createStatusBar()
                                         "to add a large number of layers and symbolize them before rendering." ) );
   mRenderSuppressionCBox->setToolTip( tr( "Toggle map rendering" ) );
   statusBar()->addPermanentWidget( mRenderSuppressionCBox, 0 );
+  */
+
   // On the fly projection status bar icon
   // Changed this to a tool button since a QPushButton is
   // sculpted on OS X and the icon is never displayed [gsherman]
@@ -1962,8 +1970,8 @@ void QgisApp::setupConnections()
            mActionZoomLast, SLOT( setEnabled( bool ) ) );
   connect( mMapCanvas, SIGNAL( zoomNextStatusChanged( bool ) ),
            mActionZoomNext, SLOT( setEnabled( bool ) ) );
-  connect( mRenderSuppressionCBox, SIGNAL( toggled( bool ) ),
-           mMapCanvas, SLOT( setRenderFlag( bool ) ) );
+  //connect( mRenderSuppressionCBox, SIGNAL( toggled( bool ) ),
+  //         mMapCanvas, SLOT( setRenderFlag( bool ) ) );
 
   // connect renderer
   connect( mMapCanvas->mapRenderer(), SIGNAL( drawingProgress( int, int ) ),
@@ -2526,10 +2534,6 @@ static QString createFileFilter_( QString const &longName, QString const &glob )
   */
 void QgisApp::addVectorLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->freeze();
   QgsOpenVectorLayerDialog *ovl = new QgsOpenVectorLayerDialog( this );
 
@@ -2546,8 +2550,7 @@ void QgisApp::addVectorLayer()
   mMapCanvas->freeze( false );
 
   delete ovl;
-  // update UI
-  qApp->processEvents();
+
 }
 
 
@@ -2633,9 +2636,6 @@ bool QgisApp::addVectorLayers( QStringList const & theLayerQStringList, const QS
 
   }
 
-  // update UI
-  qApp->processEvents();
-
   // draw the map
   mMapCanvas->freeze( false );
   mMapCanvas->refresh();
@@ -2718,10 +2718,6 @@ void QgisApp::addDatabaseLayer() {}
 #else
 void QgisApp::addDatabaseLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
 
   // only supports postgis layers at present
   // show the postgis dialog
@@ -2776,9 +2772,6 @@ void QgisApp::addDatabaseLayer()
 
   delete dbs;
 
-  // update UI
-  qApp->processEvents();
-
   // draw the map
   mMapCanvas->freeze( false );
   mMapCanvas->refresh();
@@ -2795,11 +2788,6 @@ void QgisApp::addSpatiaLiteLayer() {}
 #else
 void QgisApp::addSpatiaLiteLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   // show the SpatiaLite dialog
 
   QgsSpatiaLiteSourceSelect *dbs = new QgsSpatiaLiteSourceSelect( this );
@@ -2854,9 +2842,6 @@ void QgisApp::addSpatiaLiteLayer()
   }
   delete dbs;
 
-  // update UI
-  qApp->processEvents();
-
   // draw the map
   mMapCanvas->freeze( false );
   mMapCanvas->refresh();
@@ -2869,10 +2854,6 @@ void QgisApp::addSpatiaLiteLayer()
 
 void QgisApp::addWmsLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   // Fudge for now
   QgsDebugMsg( "about to addRasterLayer" );
 
@@ -2906,10 +2887,8 @@ void QgisApp::fileNew()
 //as file new but accepts flags to indicate whether we should prompt to save
 void QgisApp::fileNew( bool thePromptToSaveFlag )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
+  // make sure no rendering is going on
+  mMapCanvas->cancelRendering();
 
   if ( thePromptToSaveFlag )
   {
@@ -2924,7 +2903,6 @@ void QgisApp::fileNew( bool thePromptToSaveFlag )
 
   mMapCanvas->freeze( true );
   removeAllLayers();
-  mMapCanvas->clear();
 
   QgsProject* prj = QgsProject::instance();
   prj->title( QString::null );
@@ -2978,11 +2956,6 @@ void QgisApp::fileNew( bool thePromptToSaveFlag )
 
 void QgisApp::newVectorLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsNewVectorLayerDialog geomDialog( this );
   if ( geomDialog.exec() == QDialog::Rejected )
   {
@@ -3078,10 +3051,6 @@ void QgisApp::newVectorLayer()
 #ifdef HAVE_SPATIALITE
 void QgisApp::newSpatialiteLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   QgsNewSpatialiteLayerDialog spatialiteDialog( this );
   spatialiteDialog.exec();
 }
@@ -3089,10 +3058,8 @@ void QgisApp::newSpatialiteLayer()
 
 void QgisApp::fileOpen()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
+  // make sure no rendering is going on
+  mMapCanvas->cancelRendering();
 
   // possibly save any pending work before opening a new project
   if ( saveDirty() )
@@ -3206,11 +3173,6 @@ bool QgisApp::addProject( QString projectFile )
 
 bool QgisApp::fileSave()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return false;
-  }
-
   // if we don't have a file name, then obviously we need to get one; note
   // that the project file name is reset to null in fileNew()
   QFileInfo fullPath;
@@ -3284,11 +3246,6 @@ bool QgisApp::fileSave()
 
 void QgisApp::fileSaveAs()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   // Retrieve last used project dir from persistent settings
   QSettings settings;
   QString lastUsedDir = settings.value( "/UI/lastProjectDir", "." ).toString();
@@ -3400,11 +3357,6 @@ bool QgisApp::openLayer( const QString & fileName )
 
 void QgisApp::newPrintComposer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   createNewComposer();
 }
 
@@ -4321,15 +4273,6 @@ void QgisApp::select()
 
 void QgisApp::deselectAll()
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
-  // Turn off rendering to improve speed.
-  bool renderFlagState = mMapCanvas->renderFlag();
-  mMapCanvas->setRenderFlag( false );
-
   QMap<QString, QgsMapLayer*> layers = QgsMapLayerRegistry::instance()->mapLayers();
   for ( QMap<QString, QgsMapLayer*>::iterator it = layers.begin(); it != layers.end(); it++ )
   {
@@ -4340,8 +4283,7 @@ void QgisApp::deselectAll()
     vl->removeSelection();
   }
 
-  // Turn on rendering (if it was on previously)
-  mMapCanvas->setRenderFlag( renderFlagState );
+  mMapCanvas->refresh();
 }
 
 void QgisApp::addVertex()
@@ -4543,9 +4485,6 @@ void QgisApp::saveEdits()
 
 void QgisApp::layerSubsetString()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-    return;
-
   QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( activeLayer() );
   if ( !vlayer )
     return;
@@ -4768,11 +4707,6 @@ void QgisApp::removeAllLayers()
 
 void QgisApp::removeLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsMapLayer *layer = activeLayer();
 
   if ( !layer )
@@ -5148,11 +5082,6 @@ bool QgisApp::setActiveLayer( QgsMapLayer *layer )
   */
 QgsVectorLayer* QgisApp::addVectorLayer( QString vectorLayerPath, QString baseName, QString providerKey )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return NULL;
-  }
-
   mMapCanvas->freeze();
 
 // Let render() do its own cursor management
@@ -5185,9 +5114,6 @@ QgsVectorLayer* QgisApp::addVectorLayer( QString vectorLayerPath, QString baseNa
     mMapCanvas->freeze( false );
     return NULL;
   }
-
-  // update UI
-  qApp->processEvents();
 
   // draw the map
   mMapCanvas->freeze( false );
@@ -5223,9 +5149,6 @@ void QgisApp::addMapLayer( QgsMapLayer *theMapLayer )
     QMessageBox::critical( this, tr( "Layer is not valid" ),
                            tr( "The layer is not a valid layer and can not be added to the map" ) );
   }
-
-  // update UI
-  qApp->processEvents();
 
   // draw the map
   mMapCanvas->freeze( false );
@@ -5444,6 +5367,7 @@ void QgisApp::showProgress( int theProgress, int theTotalSteps )
   {
     mProgressBar->reset();
     mProgressBar->hide();
+    mStopRenderButton->hide();
   }
   else
   {
@@ -5451,6 +5375,8 @@ void QgisApp::showProgress( int theProgress, int theTotalSteps )
     if ( !mProgressBar->isVisible() )
     {
       mProgressBar->show();
+      if (mMapCanvas->mapRenderer()->isDrawing())
+        mStopRenderButton->show();
     }
     mProgressBar->setMaximum( theTotalSteps );
     mProgressBar->setValue( theProgress );
@@ -6035,11 +5961,6 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
 // this is a slot for action from GUI to add raster layer
 void QgisApp::addRasterLayer()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QString fileFilters;
 
   QStringList selectedFiles;
@@ -6066,11 +5987,6 @@ void QgisApp::addRasterLayer()
 //
 bool QgisApp::addRasterLayer( QgsRasterLayer *theRasterLayer )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return false;
-  }
-
   Q_CHECK_PTR( theRasterLayer );
 
   if ( ! theRasterLayer )
@@ -6105,11 +6021,6 @@ bool QgisApp::addRasterLayer( QgsRasterLayer *theRasterLayer )
 
 QgsRasterLayer* QgisApp::addRasterLayer( QString const & rasterFile, QString const & baseName, bool guiWarning )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return NULL;
-  }
-
   // let the user know we're going to possibly be taking a while
   QApplication::setOverrideCursor( Qt::WaitCursor );
 
@@ -6175,11 +6086,6 @@ QgsRasterLayer* QgisApp::addRasterLayer(
 {
   QgsDebugMsg( "about to get library for " + providerKey );
 
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return 0;
-  }
-
   mMapCanvas->freeze();
 
 // Let render() do its own cursor management
@@ -6217,8 +6123,6 @@ QgsRasterLayer* QgisApp::addRasterLayer(
                            tr( "The layer is not a valid layer and can not be added to the map" ) );
   }
 
-  // update UI
-  qApp->processEvents();
   // draw the map
   mMapCanvas->freeze( false );
   mMapCanvas->refresh();
@@ -6234,11 +6138,6 @@ QgsRasterLayer* QgisApp::addRasterLayer(
 //create a raster layer object and delegate to addRasterLayer(QgsRasterLayer *)
 bool QgisApp::addRasterLayers( QStringList const &theFileNameQStringList, bool guiWarning )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return false;
-  }
-
   if ( theFileNameQStringList.empty() )
   {
     // no files selected so bail out, but
@@ -6363,11 +6262,6 @@ QgsDebugMsg(mMapCanvas->extent());
 */
 void QgisApp::customProjection()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   // Create an instance of the Custom Projection Designer modeless dialog.
   // Autodelete the dialog when closing since a pointer is not retained.
   QgsCustomProjectionDialog * myDialog = new QgsCustomProjectionDialog( this );
