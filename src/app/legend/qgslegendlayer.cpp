@@ -22,6 +22,7 @@
 #include "qgisapp.h"
 #include "qgslegend.h"
 #include "qgslegendlayer.h"
+#include "qgslegendgroup.h"
 #include "qgslegendsymbologyitem.h"
 #include "qgslogger.h"
 
@@ -498,4 +499,22 @@ void QgsLegendLayer::layerNameChanged()
 {
   QString name = mLyr.layer()->name();
   setText( 0, name );
+}
+
+void QgsLegendLayer::handleCheckStateChange( Qt::CheckState state, bool updateParentGroup )
+{
+  treeWidget()->blockSignals( true );
+  setCheckState( 0, state );
+  treeWidget()->blockSignals( false );
+
+  setData( 0, Qt::UserRole, state );
+  if ( layer() )
+  {
+    setVisible( state == Qt::Checked );
+  }
+
+  if ( updateParentGroup && parent() )
+  {
+    static_cast<QgsLegendGroup*>( parent() )->updateCheckState();
+  }
 }

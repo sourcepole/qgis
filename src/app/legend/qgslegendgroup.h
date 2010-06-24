@@ -45,6 +45,9 @@ class QgsLegendGroup : public QgsLegendItem
     std::list<QgsLegendLayer*> legendLayers();
     /**Goes through all the legendlayers and sets check state to checked/partially checked/unchecked*/
     void updateCheckState();
+
+    /** called when the legend group gets checked/unchecked to check/uncheck also its children */
+    void handleCheckStateChange( Qt::CheckState state );
 };
 
 #endif

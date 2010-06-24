@@ -147,29 +147,18 @@ void QgsLegend::removeAll()
 
 void QgsLegend::selectAll( bool select )
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
-  // Turn off rendering to improve speed.
-  bool renderFlagState = mMapCanvas->renderFlag();
-  mMapCanvas->setRenderFlag( false );
-
   for ( QTreeWidgetItem* theItem = firstItem(); theItem; theItem = nextItem( theItem ) )
   {
-    QgsLegendItem* litem = dynamic_cast<QgsLegendItem *>( theItem );
-    if ( litem && litem->type() == QgsLegendItem::LEGEND_LAYER )
+    QgsLegendLayer* ll = dynamic_cast<QgsLegendLayer *>( theItem );
+    if ( ll )
     {
-      theItem->setCheckState( 0, ( select ? Qt::Checked : Qt::Unchecked ) );
-      handleItemChange( theItem, 0 );
+      ll->handleCheckStateChange( select ? Qt::Checked : Qt::Unchecked, true );
     }
   }
 
-  // Turn on rendering (if it was on previously)
-  mMapCanvas->setRenderFlag( renderFlagState );
-
   QgsProject::instance()->dirty( true );
+
+  updateMapCanvasLayerSet();
 }
 
 void QgsLegend::removeGroup( int groupIndex )
@@ -1457,17 +1446,16 @@ void QgsLegend::removePixmapHeightValue( int height )
 }
 
 
-void QgsLegend::handleItemChange( QTreeWidgetItem* item, int row )
+void QgsLegend::handleItemChange( QTreeWidgetItem* item, int column )
 {
   if ( !item )
   {
     return;
   }
 
-  //if the text of a QgsLegendLayer has changed, change the display names of all its maplayers
-  // TODO: is this still necessary?
+  // if the text of a QgsLegendLayer has changed, change the display names of its maplayer
   QgsLegendLayer* theLegendLayer = dynamic_cast<QgsLegendLayer *>( item ); //item is a legend layer
-  if ( theLegendLayer )
+  if ( theLegendLayer && theLegendLayer->layer()->name() != theLegendLayer->text( 0 ) )
   {
     theLegendLayer->layer()->setLayerName( theLegendLayer->text( 0 ) );
   }
@@ -1476,65 +1464,21 @@ void QgsLegend::handleItemChange( QTreeWidgetItem* item, int row )
   if ( item->data( 0, Qt::UserRole ).toInt() == item->checkState( 0 ) )
     return;
 
-  mMapCanvas->freeze( true );
+  mMapCanvas->cancelRendering();
 
   QgsLegendGroup* lg = dynamic_cast<QgsLegendGroup *>( item ); //item is a legend group
   if ( lg )
   {
-    //set all the child layer files to the new check state
-    std::list<QgsLegendLayer*> subfiles = lg->legendLayers();
-    for ( std::list<QgsLegendLayer*>::iterator iter = subfiles.begin(); iter != subfiles.end(); ++iter )
-    {
-#ifdef QGISDEBUG
-      if ( item->checkState( 0 ) == Qt::Checked )
-      {
-        QgsDebugMsg( "item checked" );
-      }
-      else if ( item->checkState( 0 ) == Qt::Unchecked )
-      {
-        QgsDebugMsg( "item unchecked" );
-      }
-      else if ( item->checkState( 0 ) == Qt::PartiallyChecked )
-      {
-        QgsDebugMsg( "item partially checked" );
-      }
-#endif
-      blockSignals( true );
-      ( *iter )->setCheckState( 0, item->checkState( 0 ) );
-      blockSignals( false );
-      item->setData( 0, Qt::UserRole, item->checkState( 0 ) );
-      if (( *iter )->layer() )
-      {
-        ( *iter )->setVisible( item->checkState( 0 ) == Qt::Checked );
-      }
-    }
-
-    item->setData( 0, Qt::UserRole, item->checkState( 0 ) );
+    // update the group + all its children layers
+    lg->handleCheckStateChange( item->checkState( 0 ) );
   }
 
   QgsLegendLayer* ll = dynamic_cast<QgsLegendLayer *>( item ); //item is a legend layer
   if ( ll )
   {
-    blockSignals( true );
-    ll->setCheckState( 0, item->checkState( 0 ) );
-    blockSignals( false );
-    ll->setData( 0, Qt::UserRole, ll->checkState( 0 ) );
-    if ( ll->layer() )
-    {
-      ll->setVisible( item->checkState( 0 ) == Qt::Checked );
-    }
-
-    if ( ll->parent() )
-    {
-      static_cast<QgsLegendGroup*>( ll->parent() )->updateCheckState();
-      ll->parent()->setData( 0, Qt::UserRole, ll->parent()->checkState( 0 ) );
-    }
-
-    //update check state of the legend group
-    item->setData( 0, Qt::UserRole, item->checkState( 0 ) );
+    // update the visibility + update parent's check state
+    ll->handleCheckStateChange( item->checkState( 0 ), true );
   }
-
-  mMapCanvas->freeze( false );
 
   // update layer set
   updateMapCanvasLayerSet();

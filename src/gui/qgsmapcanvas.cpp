@@ -227,11 +227,8 @@ const QgsMapToPixel * QgsMapCanvas::getCoordinateTransform()
 
 void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
 {
-  if ( isDrawing() )
-  {
-    QgsDebugMsg("ignored - drawing!" );
-    return;
-  }
+  // make sure we're not rendering
+  cancelRendering();
 
   // create layer set
   QStringList layerSet, layerSetOverview;
@@ -363,7 +360,10 @@ QgsMapLayer* QgsMapCanvas::currentLayer()
 void QgsMapCanvas::refresh()
 {
   if ( !mRenderFlag || mFrozen )
+  {
+    QgsDebugMsg("REFRESH ignored: canvas frozen");
     return;
+  }
 
   cancelRendering();
 

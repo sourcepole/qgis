@@ -364,7 +364,7 @@ class QgsLegend : public QTreeWidget
     /**Sets all listview items to closed*/
     void collapseAll();
     /**Just for a test*/
-    void handleItemChange( QTreeWidgetItem* item, int row );
+    void handleItemChange( QTreeWidgetItem* item, int column );
     /** delegates current layer to map canvas */
     void handleCurrentItemChanged( QTreeWidgetItem* current, QTreeWidgetItem* previous );
     /**Calls openPersistentEditor for the current item*/

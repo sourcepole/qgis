@@ -54,8 +54,6 @@ class QgsLegendLayer : public QgsLegendItem
     /**Returns the map layer associated the item*/
     QgsMapLayer* layer();
     QgsMapCanvasLayer& canvasLayer();
-    /**Goes through all the legendlayerfiles and sets check state to checked/partially checked/unchecked*/
-    //void updateCheckState();
 
     /**Updates symbology of the layer and copies symbology to other layer files in the group*/
     void refreshSymbology( const QString& key, double widthScale = 1.0 );
@@ -71,6 +69,9 @@ class QgsLegendLayer : public QgsLegendItem
     void setInOverview( bool isInOverview = true );
     /**Determines whether there are layers in overview*/
     bool isInOverview();
+
+    /** called when the legend layer gets checked/unchecked */
+    void handleCheckStateChange( Qt::CheckState state, bool updateParentGroup );
 
     /**Returns a label for a layer. Is static such that
      the name can be passed to the constructor of QgsLegendLayer*/

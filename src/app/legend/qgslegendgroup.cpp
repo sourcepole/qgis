@@ -145,5 +145,20 @@ void QgsLegendGroup::updateCheckState()
     treeWidget()->blockSignals( true );
     setCheckState( 0, theState );
     treeWidget()->blockSignals( false );
+
+    setData( 0, Qt::UserRole, theState );
   }
+}
+
+void QgsLegendGroup::handleCheckStateChange( Qt::CheckState state )
+{
+  //set all the child layer files to the new check state
+  std::list<QgsLegendLayer*> subfiles = legendLayers();
+  for ( std::list<QgsLegendLayer*>::iterator iter = subfiles.begin(); iter != subfiles.end(); ++iter )
+  {
+    // update the children (but don't let them update the parent)
+    ( *iter )->handleCheckStateChange( state, false );
+  }
+
+  setData( 0, Qt::UserRole, state );
 }

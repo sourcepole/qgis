@@ -3507,11 +3507,11 @@ void QgisApp::toggleFullScreen()
       // showMaxmized() is a work-around. Turn off rendering for this as it
       // would otherwise cause two re-renders of the map, which can take a
       // long time.
-      bool renderFlag = mapCanvas()->renderFlag();
-      mapCanvas()->setRenderFlag( false );
+      mapCanvas()->freeze();
       showNormal();
       showMaximized();
-      mapCanvas()->setRenderFlag( renderFlag );
+      mapCanvas()->freeze(false);
+      mapCanvas()->refresh();
       mPrevScreenModeMaximized = false;
     }
     else
