@@ -48,13 +48,14 @@ void _renderLayerThreading( ThreadedRenderContext& tctx );
 
 QgsMapRenderer::QgsMapRenderer()
 {
-  mScaleCalculator = new QgsScaleCalculator;
   mDistArea = new QgsDistanceArea;
 
   mDrawing = false;
   mOverview = false;
   mThreadingEnabled = false;
   mCache = NULL;
+
+  mDpi = 96;
 
   // set default map units - we use WGS 84 thus use degrees
   setMapUnits( QGis::Degrees );
@@ -81,7 +82,6 @@ QgsMapRenderer::~QgsMapRenderer()
     cancelThreadedRendering();
   }
 
-  delete mScaleCalculator;
   delete mDistArea;
   delete mDestCRS;
   delete mLabelingEngine;
@@ -96,7 +96,8 @@ QgsRectangle QgsMapRenderer::extent() const
 
 void QgsMapRenderer::updateScale()
 {
-  mScale = mScaleCalculator->calculate( mExtent, mSize.width() );
+  QgsScaleCalculator calc(mDpi, mMapUnits);
+  mScale = calc.calculate( mExtent, mSize.width() );
 }
 
 bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
@@ -153,12 +154,12 @@ void QgsMapRenderer::setOutputSize( QSize size, int dpi )
   }
 
   mSize = size;
-  mScaleCalculator->setDpi( dpi );
+  mDpi = dpi;
   adjustExtentToSize();
 }
 int QgsMapRenderer::outputDpi()
 {
-  return mScaleCalculator->dpi();
+  return mDpi;
 }
 QSize QgsMapRenderer::outputSize()
 {
@@ -251,7 +252,7 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   //calculate scale factor
   //use the specified dpi and not those from the paint device
   //because sometimes QPainter units are in a local coord sys (e.g. in case of QGraphicsScene)
-  double sceneDpi = mScaleCalculator->dpi();
+  double sceneDpi = mDpi;
   double scaleFactor = 1.0;
   if ( mOutputUnits == QgsMapRenderer::Millimeters )
   {
@@ -289,7 +290,7 @@ void QgsMapRenderer::finishRendering()
   //find overlay positions and draw the vector overlays
   if ( mOverlayManager )
   {
-    mOverlayManager->drawOverlays( mRenderContext, mScaleCalculator->mapUnits() );
+    mOverlayManager->drawOverlays( mRenderContext, mMapUnits );
     delete mOverlayManager;
     mOverlayManager = NULL;
   }
@@ -782,7 +783,7 @@ void QgsMapRenderer::setMapUnits( QGis::UnitType u )
     return; // do not allow changes while rendering
   }
 
-  mScaleCalculator->setMapUnits( u );
+  mMapUnits = u;
 
   // Since the map units have changed, force a recalculation of the scale.
   updateScale();
@@ -792,7 +793,7 @@ void QgsMapRenderer::setMapUnits( QGis::UnitType u )
 
 QGis::UnitType QgsMapRenderer::mapUnits() const
 {
-  return mScaleCalculator->mapUnits();
+  return mMapUnits;
 }
 
 void QgsMapRenderer::onDrawingProgress( int current, int total )

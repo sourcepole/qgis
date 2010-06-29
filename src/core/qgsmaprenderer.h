@@ -35,7 +35,6 @@ class QPainter;
 class QgsMapToPixel;
 class QgsMapLayer;
 class QgsMapRenderer;
-class QgsScaleCalculator;
 class QgsCoordinateReferenceSystem;
 class QgsDistanceArea;
 class QgsOverlayObjectPositionManager;
@@ -362,8 +361,11 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Map scale at its current zool level
     double mScale;
 
-    //! scale calculator
-    QgsScaleCalculator * mScaleCalculator;
+    //! Scene DPI
+    double mDpi;
+
+    //! map unit type
+    QGis::UnitType mMapUnits;
 
     //! current extent to be drawn
     QgsRectangle mExtent;
@@ -412,6 +414,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     QgsRenderContext mRenderContext;
     QList<ThreadedRenderContext> mThreadedJobs;
 };
+
 
 #endif
 
