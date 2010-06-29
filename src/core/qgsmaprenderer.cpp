@@ -567,7 +567,7 @@ void _renderLayerThreading( ThreadedRenderContext& tctx )
     // TODO: error handling
     tctx.mr->renderLayer( tctx.ml, tctx.ctx );
 
-    if (tctx.mr->mCache)
+    if (tctx.mr->mCache && !tctx.ctx.renderingStopped())
     {
       // save cache image
       tctx.mr->mCache->setCacheImage( layerId, *tctx.img );
@@ -1418,7 +1418,6 @@ void QgsMapRenderer::handleLayerRemoval(QString layerId)
     // make sure that the layer won't be used in further rendering
     if (isDrawing())
       cancelThreadedRendering();
-    mLayerSet.removeAll(layerId);
   }
 }
 
