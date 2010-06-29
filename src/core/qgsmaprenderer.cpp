@@ -51,27 +51,21 @@ QgsMapRenderer::QgsMapRenderer()
   mDistArea = new QgsDistanceArea;
 
   mDrawing = false;
-  mOverview = false;
   mThreadingEnabled = false;
   mCache = NULL;
 
-  mDpi = 96;
+  next.overview = false;
+  next.dpi = 96;
+  next.size = QSize( 0, 0 );
+  next.projectionsEnabled = false;
+  next.destCRS = QgsCoordinateReferenceSystem( GEOCRS_ID, QgsCoordinateReferenceSystem::InternalCrsId ); //WGS 84
+  next.outputUnits = QgsMapRenderer::Millimeters;
+  next.labelingEngine = NULL;
 
   // set default map units - we use WGS 84 thus use degrees
   setMapUnits( QGis::Degrees );
 
-  mSize = QSize( 0, 0 );
-
-  mProjectionsEnabled = false;
-  mDestCRS = new QgsCoordinateReferenceSystem( GEOCRS_ID, QgsCoordinateReferenceSystem::InternalCrsId ); //WGS 84
-
-  mOutputUnits = QgsMapRenderer::Millimeters;
-
-  mLabelingEngine = NULL;
-
   connect(QgsMapLayerRegistry::instance(), SIGNAL(layerWillBeRemoved(QString)), this, SLOT(handleLayerRemoval(QString)));
-
-  //connect(&mFW, SIGNAL(finished()), SLOT(futureFinished()));
 }
 
 QgsMapRenderer::~QgsMapRenderer()
@@ -83,31 +77,24 @@ QgsMapRenderer::~QgsMapRenderer()
   }
 
   delete mDistArea;
-  delete mDestCRS;
-  delete mLabelingEngine;
+  delete next.labelingEngine;
   delete mCache;
 }
 
 
 QgsRectangle QgsMapRenderer::extent() const
 {
-  return mExtent;
+  return next.extent;
 }
 
 void QgsMapRenderer::updateScale()
 {
-  QgsScaleCalculator calc(mDpi, mMapUnits);
-  mScale = calc.calculate( mExtent, mSize.width() );
+  QgsScaleCalculator calc(next.dpi, next.mapUnits);
+  next.scale = calc.calculate( next.extent, next.size.width() );
 }
 
 bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return false; // do not allow changes while rendering
-  }
-
   // Don't allow zooms where the current extent is so small that it
   // can't be accurately represented using a double (which is what
   // currentExtent uses). Excluding 0 avoids a divide by zero and an
@@ -137,7 +124,7 @@ bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
       return false;
   }
 
-  mExtent = extent;
+  next.extent = extent;
   if ( !extent.isEmpty() )
     adjustExtentToSize();
   return true;
@@ -147,92 +134,89 @@ bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
 
 void QgsMapRenderer::setOutputSize( QSize size, int dpi )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mSize = size;
-  mDpi = dpi;
+  next.size = size;
+  next.dpi = dpi;
   adjustExtentToSize();
 }
 int QgsMapRenderer::outputDpi()
 {
-  return mDpi;
+  return next.dpi;
 }
 QSize QgsMapRenderer::outputSize()
 {
-  return mSize;
+  return next.size;
 }
 
 void QgsMapRenderer::adjustExtentToSize()
 {
-  int myHeight = mSize.height();
-  int myWidth = mSize.width();
+  int myHeight = next.size.height();
+  int myWidth = next.size.width();
 
   QgsMapToPixel newCoordXForm;
 
   if ( !myWidth || !myHeight )
   {
-    mScale = 1;
+    next.scale = 1;
     newCoordXForm.setParameters( 0, 0, 0, 0 );
     return;
   }
 
   // calculate the translation and scaling parameters
   // mapUnitsPerPixel = map units per pixel
-  double mapUnitsPerPixelY = static_cast<double>( mExtent.height() )
+  double mapUnitsPerPixelY = static_cast<double>( next.extent.height() )
                              / static_cast<double>( myHeight );
-  double mapUnitsPerPixelX = static_cast<double>( mExtent.width() )
+  double mapUnitsPerPixelX = static_cast<double>( next.extent.width() )
                              / static_cast<double>( myWidth );
-  mMapUnitsPerPixel = mapUnitsPerPixelY > mapUnitsPerPixelX ? mapUnitsPerPixelY : mapUnitsPerPixelX;
+  next.mapUnitsPerPixel = mapUnitsPerPixelY > mapUnitsPerPixelX ? mapUnitsPerPixelY : mapUnitsPerPixelX;
 
   // calculate the actual extent of the mapCanvas
   double dxmin, dxmax, dymin, dymax, whitespace;
 
   if ( mapUnitsPerPixelY > mapUnitsPerPixelX )
   {
-    dymin = mExtent.yMinimum();
-    dymax = mExtent.yMaximum();
-    whitespace = (( myWidth * mMapUnitsPerPixel ) - mExtent.width() ) * 0.5;
-    dxmin = mExtent.xMinimum() - whitespace;
-    dxmax = mExtent.xMaximum() + whitespace;
+    dymin = next.extent.yMinimum();
+    dymax = next.extent.yMaximum();
+    whitespace = (( myWidth * next.mapUnitsPerPixel ) - next.extent.width() ) * 0.5;
+    dxmin = next.extent.xMinimum() - whitespace;
+    dxmax = next.extent.xMaximum() + whitespace;
   }
   else
   {
-    dxmin = mExtent.xMinimum();
-    dxmax = mExtent.xMaximum();
-    whitespace = (( myHeight * mMapUnitsPerPixel ) - mExtent.height() ) * 0.5;
-    dymin = mExtent.yMinimum() - whitespace;
-    dymax = mExtent.yMaximum() + whitespace;
+    dxmin = next.extent.xMinimum();
+    dxmax = next.extent.xMaximum();
+    whitespace = (( myHeight * next.mapUnitsPerPixel ) - next.extent.height() ) * 0.5;
+    dymin = next.extent.yMinimum() - whitespace;
+    dymax = next.extent.yMaximum() + whitespace;
   }
 
   QgsDebugMsg( QString( "Map units per pixel (x,y) : %1, %2" ).arg( mapUnitsPerPixelX ).arg( mapUnitsPerPixelY ) );
   QgsDebugMsg( QString( "Pixmap dimensions (x,y) : %1, %2" ).arg( myWidth ).arg( myHeight ) );
-  QgsDebugMsg( QString( "Extent dimensions (x,y) : %1, %2" ).arg( mExtent.width() ).arg( mExtent.height() ) );
-  QgsDebugMsg( mExtent.toString() );
+  QgsDebugMsg( QString( "Extent dimensions (x,y) : %1, %2" ).arg( next.extent.width() ).arg( next.extent.height() ) );
+  QgsDebugMsg( next.extent.toString() );
 
   // update extent
-  mExtent.setXMinimum( dxmin );
-  mExtent.setXMaximum( dxmax );
-  mExtent.setYMinimum( dymin );
-  mExtent.setYMaximum( dymax );
+  next.extent.setXMinimum( dxmin );
+  next.extent.setXMaximum( dxmax );
+  next.extent.setYMinimum( dymin );
+  next.extent.setYMaximum( dymax );
 
   // update the scale
   updateScale();
 
-  QgsDebugMsg( QString( "Scale (assuming meters as map units) = 1:%1" ).arg( mScale ) );
+  QgsDebugMsg( QString( "Scale (assuming meters as map units) = 1:%1" ).arg( next.scale ) );
 
-  newCoordXForm.setParameters( mMapUnitsPerPixel, dxmin, dymin, myHeight );
+  newCoordXForm.setParameters( next.mapUnitsPerPixel, dxmin, dymin, myHeight );
   mRenderContext.setMapToPixel( newCoordXForm );
-  mRenderContext.setExtent( mExtent );
+  mRenderContext.setExtent( next.extent );
 }
 
 
 void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
 {
   mDrawing = true;
+
+  // copy the parameters for the current rendering
+  curr = next;
 
   QgsDebugMsg( "========== Rendering ==========" );
   QgsDebugMsg( "caching enabled? " + QString::number(mCache != NULL) );
@@ -242,7 +226,7 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   mRenderTime.start();
 #endif
 
-  mRenderContext.setDrawEditingInformation( !mOverview );
+  mRenderContext.setDrawEditingInformation( !curr.overview );
   mRenderContext.setPainter( painter );
   mRenderContext.setCoordinateTransform( 0 );
   //this flag is only for stopping during the current rendering progress,
@@ -252,9 +236,9 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   //calculate scale factor
   //use the specified dpi and not those from the paint device
   //because sometimes QPainter units are in a local coord sys (e.g. in case of QGraphicsScene)
-  double sceneDpi = mDpi;
+  double sceneDpi = curr.dpi;
   double scaleFactor = 1.0;
-  if ( mOutputUnits == QgsMapRenderer::Millimeters )
+  if ( curr.outputUnits == QgsMapRenderer::Millimeters )
   {
     scaleFactor = sceneDpi / 25.4;
   }
@@ -263,17 +247,17 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   // initialize render context scaling
   mRenderContext.setRasterScaleFactor( rasterScaleFactor );
   mRenderContext.setScaleFactor( scaleFactor );
-  mRenderContext.setRendererScale( mScale );
+  mRenderContext.setRendererScale( curr.scale );
 
-  mRenderContext.setLabelingEngine( mLabelingEngine );
-  if ( mLabelingEngine )
-    mLabelingEngine->init( this );
+  mRenderContext.setLabelingEngine( curr.labelingEngine );
+  if ( curr.labelingEngine )
+    curr.labelingEngine->init( this );
 
   if (mCache)
   {
     // initialize cache: if the parameters are not the same as the last time,
     // the cached images are removed
-    mCache->init(mExtent, mScale, scaleFactor, rasterScaleFactor);
+    mCache->init(curr.extent, curr.scale, scaleFactor, rasterScaleFactor);
   }
 
   mOverlayManager = overlayManagerFromSettings();
@@ -282,7 +266,7 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
 void QgsMapRenderer::finishRendering()
 {
   // render labels for vector layers (not using PAL)
-  if ( !mOverview )
+  if ( !curr.overview )
   {
     renderLabels();
   }
@@ -290,7 +274,7 @@ void QgsMapRenderer::finishRendering()
   //find overlay positions and draw the vector overlays
   if ( mOverlayManager )
   {
-    mOverlayManager->drawOverlays( mRenderContext, mMapUnits );
+    mOverlayManager->drawOverlays( mRenderContext, curr.mapUnits );
     delete mOverlayManager;
     mOverlayManager = NULL;
   }
@@ -298,14 +282,14 @@ void QgsMapRenderer::finishRendering()
   // make sure progress bar arrives at 100%!
   emit drawingProgress( 1, 1 );
 
-  if ( mLabelingEngine )
+  if ( curr.labelingEngine )
   {
     // set correct extent
-    mRenderContext.setExtent( mExtent );
+    mRenderContext.setExtent( curr.extent );
     mRenderContext.setCoordinateTransform( NULL );
 
-    mLabelingEngine->drawLabeling( mRenderContext );
-    mLabelingEngine->exit();
+    curr.labelingEngine->drawLabeling( mRenderContext );
+    curr.labelingEngine->exit();
   }
 
   QgsDebugMsg( "Rendering completed in (seconds): " + QString( "%1" ).arg( mRenderTime.elapsed() / 1000.0 ) );
@@ -321,7 +305,7 @@ void QgsMapRenderer::render( QPainter* painter )
     return;
   }
 
-  if ( mExtent.isEmpty() )
+  if ( next.extent.isEmpty() )
   {
     QgsDebugMsg( "empty extent... not rendering" );
     return;
@@ -351,7 +335,7 @@ void QgsMapRenderer::renderLayers()
   mThreadedJobs.clear();
 
   // render all layers in the stack, starting at the base
-  QListIterator<QString> li( mLayerSet );
+  QListIterator<QString> li( curr.layerSet );
   li.toBack();
   while ( li.hasPrevious() )
   {
@@ -378,7 +362,7 @@ void QgsMapRenderer::renderLayers()
     //QgsDebugMsg( "  Scale dep. visibility enabled? " + QString( "%1" ).arg( ml->hasScaleBasedVisibility() ) );
     //QgsDebugMsg( "  Input extent: " + ml->extent().toString() );
 
-    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > mScale || ml->maximumScale() < mScale ) && ! mOverview )
+    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > curr.scale || ml->maximumScale() < curr.scale ) && ! curr.overview )
     {
       QgsDebugMsg( "Layer not rendered because it is not within the defined "
                    "visibility scale range" );
@@ -388,7 +372,7 @@ void QgsMapRenderer::renderLayers()
     QgsCoordinateTransform* ct = NULL;
     if ( hasCrsTransformEnabled() )
     {
-      ct = new QgsCoordinateTransform( ml->srs(), *mDestCRS );
+      ct = new QgsCoordinateTransform( ml->srs(), curr.destCRS );
     }
     mRenderContext.setCoordinateTransform( ct );
 
@@ -447,7 +431,7 @@ void QgsMapRenderer::renderLayers()
 
 QImage QgsMapRenderer::threadedRenderingOutput()
 {
-  QImage i( mSize, QImage::Format_ARGB32_Premultiplied );
+  QImage i( curr.size, QImage::Format_ARGB32_Premultiplied );
   i.fill(0);
   QPainter p;
   p.begin(&i);
@@ -509,7 +493,7 @@ void QgsMapRenderer::startThreadedRendering()
     return; // do not allow changes while rendering
   }
 
-  if ( mExtent.isEmpty() )
+  if ( next.extent.isEmpty() )
   {
     QgsDebugMsg( "empty extent... not rendering" );
     return;
@@ -592,7 +576,7 @@ void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml )
   else
   {
     // create image
-    tctx.img = new QImage( mSize, QImage::Format_ARGB32_Premultiplied );
+    tctx.img = new QImage( curr.size, QImage::Format_ARGB32_Premultiplied );
     tctx.img->fill( 0 );
     tctx.cached = false;
   }
@@ -602,7 +586,7 @@ void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml )
   tctx.ctx = mRenderContext;
 
   QPainter* painter = new QPainter(tctx.img);
-  painter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
+  painter->setRenderHint( QPainter::Antialiasing, curr.antialiasingEnabled );
   tctx.ctx.setPainter( painter );
 
   // schedule DRAW to a list
@@ -630,7 +614,7 @@ void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
 
       // alter painter
       QPainter * mypPainter = new QPainter( &cacheImage );
-      mypPainter->setRenderHint( QPainter::Antialiasing, mAntialiasingEnabled );
+      mypPainter->setRenderHint( QPainter::Antialiasing, curr.antialiasingEnabled );
       mRenderContext.setPainter( mypPainter );
 
       // DRAW!
@@ -677,7 +661,7 @@ bool QgsMapRenderer::renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx )
     bk_mapToPixel = ctx.mapToPixel();
     rasterMapToPixel = ctx.mapToPixel();
     rasterMapToPixel.setMapUnitsPerPixel( ctx.mapToPixel().mapUnitsPerPixel() / rasterScaleFactor );
-    rasterMapToPixel.setYMaximum( mSize.height() * rasterScaleFactor );
+    rasterMapToPixel.setYMaximum( curr.size.height() * rasterScaleFactor );
     ctx.setMapToPixel( rasterMapToPixel );
     ctx.painter()->save();
     ctx.painter()->scale( 1.0 / rasterScaleFactor, 1.0 / rasterScaleFactor );
@@ -688,7 +672,7 @@ bool QgsMapRenderer::renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx )
   QgsRectangle r1, r2;
   if ( ctx.coordinateTransform() )
   {
-    r1 = mExtent;
+    r1 = curr.extent;
     split = splitLayersExtent( ml, r1, r2 );
     ctx.setExtent( r1 );
   }
@@ -706,7 +690,7 @@ bool QgsMapRenderer::renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx )
     {
       return false;
     }
-    ctx.setExtent( mExtent ); // return back to the original extent
+    ctx.setExtent( curr.extent ); // return back to the original extent
   }
 
   if ( scaleRaster )
@@ -721,7 +705,7 @@ bool QgsMapRenderer::renderLayer( QgsMapLayer* ml, QgsRenderContext& ctx )
 
 void QgsMapRenderer::renderLabels()
 {
-  QListIterator<QString> li( mLayerSet );
+  QListIterator<QString> li( curr.layerSet );
   QgsCoordinateTransform* ct;
   QgsRectangle r1, r2;
 
@@ -744,16 +728,16 @@ void QgsMapRenderer::renderLabels()
 
     // only make labels if the layer is visible
     // after scale dep viewing settings are checked
-    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > mScale || mScale > ml->maximumScale() ) )
+    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > curr.scale || curr.scale > ml->maximumScale() ) )
       continue;
 
     bool split = false;
 
     if ( hasCrsTransformEnabled() )
     {
-      r1 = mExtent;
+      r1 = curr.extent;
       split = splitLayersExtent( ml, r1, r2 );
-      ct = new QgsCoordinateTransform( ml->srs(), *mDestCRS );
+      ct = new QgsCoordinateTransform( ml->srs(), curr.destCRS );
       mRenderContext.setExtent( r1 );
     }
     else
@@ -777,13 +761,7 @@ void QgsMapRenderer::renderLabels()
 
 void QgsMapRenderer::setMapUnits( QGis::UnitType u )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mMapUnits = u;
+  next.mapUnits = u;
 
   // Since the map units have changed, force a recalculation of the scale.
   updateScale();
@@ -793,7 +771,7 @@ void QgsMapRenderer::setMapUnits( QGis::UnitType u )
 
 QGis::UnitType QgsMapRenderer::mapUnits() const
 {
-  return mMapUnits;
+  return next.mapUnits;
 }
 
 void QgsMapRenderer::onDrawingProgress( int current, int total )
@@ -807,43 +785,29 @@ void QgsMapRenderer::onDrawingProgress( int current, int total )
 
 void QgsMapRenderer::setProjectionsEnabled( bool enabled )
 {
-  if ( mDrawing )
+  if ( next.projectionsEnabled != enabled )
   {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  if ( mProjectionsEnabled != enabled )
-  {
-    mProjectionsEnabled = enabled;
+    next.projectionsEnabled = enabled;
     QgsDebugMsg( "Adjusting DistArea projection on/off" );
     mDistArea->setProjectionsEnabled( enabled );
-    updateFullExtent();
     emit hasCrsTransformEnabled( enabled );
   }
 }
 
 bool QgsMapRenderer::hasCrsTransformEnabled()
 {
-  return mProjectionsEnabled;
+  return next.projectionsEnabled;
 }
 
 void QgsMapRenderer::setDestinationSrs( const QgsCoordinateReferenceSystem& srs )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
   QgsDebugMsg( "* Setting destCRS : = " + srs.toProj4() );
   QgsDebugMsg( "* DestCRS.srsid() = " + QString::number( srs.srsid() ) );
-  if ( *mDestCRS != srs )
+  if ( next.destCRS != srs )
   {
     QgsDebugMsg( "Setting DistArea CRS to " + QString::number( srs.srsid() ) );
     mDistArea->setSourceCrs( srs.srsid() );
-    *mDestCRS = srs;
-    updateFullExtent();
+    next.destCRS = srs;
     emit destinationSrsChanged();
   }
 }
@@ -851,21 +815,23 @@ void QgsMapRenderer::setDestinationSrs( const QgsCoordinateReferenceSystem& srs 
 const QgsCoordinateReferenceSystem& QgsMapRenderer::destinationSrs()
 {
   QgsDebugMsgLevel( "* Returning destCRS", 3 );
-  QgsDebugMsgLevel( "* DestCRS.srsid() = " + QString::number( mDestCRS->srsid() ), 3 );
-  QgsDebugMsgLevel( "* DestCRS.proj4() = " + mDestCRS->toProj4(), 3 );
-  return *mDestCRS;
+  QgsDebugMsgLevel( "* DestCRS.srsid() = " + QString::number( next.destCRS.srsid() ), 3 );
+  QgsDebugMsgLevel( "* DestCRS.proj4() = " + next.destCRS.toProj4(), 3 );
+  return next.destCRS;
 }
 
 
 bool QgsMapRenderer::splitLayersExtent( QgsMapLayer* layer, QgsRectangle& extent, QgsRectangle& r2 )
 {
+  // this method operates on "current" parameters - called only from rendering routines
+
   bool split = false;
 
   if ( hasCrsTransformEnabled() )
   {
     try
     {
-      QgsCoordinateTransform tr( layer->srs(), *mDestCRS );
+      QgsCoordinateTransform tr( layer->srs(), curr.destCRS );
 
 #ifdef QGISDEBUG
       // QgsLogger::debug<QgsRectangle>("Getting extent of canvas in layers CS. Canvas is ", extent, __FILE__, __FUNCTION__, __LINE__);
@@ -921,7 +887,7 @@ QgsRectangle QgsMapRenderer::layerExtentToOutputExtent( QgsMapLayer* theLayer, Q
   {
     try
     {
-      QgsCoordinateTransform tr( theLayer->srs(), *mDestCRS );
+      QgsCoordinateTransform tr( theLayer->srs(), next.destCRS );
       extent = tr.transformBoundingBox( extent );
     }
     catch ( QgsCsException &cse )
@@ -944,7 +910,7 @@ QgsPoint QgsMapRenderer::layerToMapCoordinates( QgsMapLayer* theLayer, QgsPoint 
   {
     try
     {
-      QgsCoordinateTransform tr( theLayer->srs(), *mDestCRS );
+      QgsCoordinateTransform tr( theLayer->srs(), next.destCRS );
       point = tr.transform( point, QgsCoordinateTransform::ForwardTransform );
     }
     catch ( QgsCsException &cse )
@@ -966,7 +932,7 @@ QgsPoint QgsMapRenderer::mapToLayerCoordinates( QgsMapLayer* theLayer, QgsPoint 
   {
     try
     {
-      QgsCoordinateTransform tr( theLayer->srs(), *mDestCRS );
+      QgsCoordinateTransform tr( theLayer->srs(), next.destCRS );
       point = tr.transform( point, QgsCoordinateTransform::ReverseTransform );
     }
     catch ( QgsCsException &cse )
@@ -988,7 +954,7 @@ QgsRectangle QgsMapRenderer::mapToLayerCoordinates( QgsMapLayer* theLayer, QgsRe
   {
     try
     {
-      QgsCoordinateTransform tr( theLayer->srs(), *mDestCRS );
+      QgsCoordinateTransform tr( theLayer->srs(), next.destCRS );
       rect = tr.transform( rect, QgsCoordinateTransform::ReverseTransform );
     }
     catch ( QgsCsException &cse )
@@ -1003,17 +969,24 @@ QgsRectangle QgsMapRenderer::mapToLayerCoordinates( QgsMapLayer* theLayer, QgsRe
 
 void QgsMapRenderer::updateFullExtent()
 {
+  // legacy
+}
+
+QgsRectangle QgsMapRenderer::fullExtent()
+{
   QgsDebugMsg( "called." );
   QgsMapLayerRegistry* registry = QgsMapLayerRegistry::instance();
 
+  QgsRectangle fullExtent;
+
   // reset the map canvas extent since the extent may now be smaller
   // We can't use a constructor since QgsRectangle normalizes the rectangle upon construction
-  mFullExtent.setMinimal();
+  fullExtent.setMinimal();
 
   // iterate through the map layers and test each layers extent
   // against the current min and max values
-  QStringList::iterator it = mLayerSet.begin();
-  while ( it != mLayerSet.end() )
+  QStringList::iterator it = next.layerSet.begin();
+  while ( it != next.layerSet.end() )
   {
     QgsMapLayer * lyr = registry->mapLayer( *it );
     if ( lyr == NULL )
@@ -1030,54 +1003,43 @@ void QgsMapRenderer::updateFullExtent()
       QgsRectangle extent = layerExtentToOutputExtent( lyr, lyr->extent() );
 
       QgsDebugMsg( "Output extent: " + extent.toString() );
-      mFullExtent.unionRect( extent );
+      fullExtent.unionRect( extent );
 
     }
     it++;
   }
 
-  if ( mFullExtent.width() == 0.0 || mFullExtent.height() == 0.0 )
+  if ( fullExtent.width() == 0.0 || fullExtent.height() == 0.0 )
   {
     // If all of the features are at the one point, buffer the
     // rectangle a bit. If they are all at zero, do something a bit
     // more crude.
 
-    if ( mFullExtent.xMinimum() == 0.0 && mFullExtent.xMaximum() == 0.0 &&
-         mFullExtent.yMinimum() == 0.0 && mFullExtent.yMaximum() == 0.0 )
+    if ( fullExtent.xMinimum() == 0.0 && fullExtent.xMaximum() == 0.0 &&
+         fullExtent.yMinimum() == 0.0 && fullExtent.yMaximum() == 0.0 )
     {
-      mFullExtent.set( -1.0, -1.0, 1.0, 1.0 );
+      fullExtent.set( -1.0, -1.0, 1.0, 1.0 );
     }
     else
     {
       const double padFactor = 1e-8;
-      double widthPad = mFullExtent.xMinimum() * padFactor;
-      double heightPad = mFullExtent.yMinimum() * padFactor;
-      double xmin = mFullExtent.xMinimum() - widthPad;
-      double xmax = mFullExtent.xMaximum() + widthPad;
-      double ymin = mFullExtent.yMinimum() - heightPad;
-      double ymax = mFullExtent.yMaximum() + heightPad;
-      mFullExtent.set( xmin, ymin, xmax, ymax );
+      double widthPad = fullExtent.xMinimum() * padFactor;
+      double heightPad = fullExtent.yMinimum() * padFactor;
+      double xmin = fullExtent.xMinimum() - widthPad;
+      double xmax = fullExtent.xMaximum() + widthPad;
+      double ymin = fullExtent.yMinimum() - heightPad;
+      double ymax = fullExtent.yMaximum() + heightPad;
+      fullExtent.set( xmin, ymin, xmax, ymax );
     }
   }
 
-  QgsDebugMsg( "Full extent: " + mFullExtent.toString() );
-}
-
-QgsRectangle QgsMapRenderer::fullExtent()
-{
-  updateFullExtent();
-  return mFullExtent;
+  QgsDebugMsg( "Full extent: " + fullExtent.toString() );
+  return fullExtent;
 }
 
 void QgsMapRenderer::setLayerSet( const QStringList& layers )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  foreach (QString layerId, mLayerSet)
+  foreach (QString layerId, next.layerSet)
   {
     QgsMapLayer* ml = QgsMapLayerRegistry::instance()->mapLayer(layerId);
     if (ml)
@@ -1088,9 +1050,9 @@ void QgsMapRenderer::setLayerSet( const QStringList& layers )
     }
   }
 
-  mLayerSet = layers;
+  next.layerSet = layers;
 
-  foreach (QString layerId, mLayerSet)
+  foreach (QString layerId, next.layerSet)
   {
     QgsMapLayer* ml = QgsMapLayerRegistry::instance()->mapLayer(layerId);
     if (ml)
@@ -1101,12 +1063,11 @@ void QgsMapRenderer::setLayerSet( const QStringList& layers )
     }
   }
 
-  updateFullExtent();
 }
 
 QStringList& QgsMapRenderer::layerSet()
 {
-  return mLayerSet;
+  return next.layerSet;
 }
 
 void QgsMapRenderer::clearLayerCache()
@@ -1315,55 +1276,31 @@ void QgsMapRenderer::setLabelingEngine( QgsLabelingEngineInterface* iface )
     return; // do not allow changes while rendering
   }
 
-  if ( mLabelingEngine )
-    delete mLabelingEngine;
+  if ( next.labelingEngine )
+    delete next.labelingEngine;
 
-  mLabelingEngine = iface;
+  next.labelingEngine = iface;
 }
 
 
 void QgsMapRenderer::setScale( double scale )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mScale = scale;
+  next.scale = scale;
 }
 
 void QgsMapRenderer::enableOverviewMode( bool isOverview )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mOverview = isOverview;
+  next.overview = isOverview;
 }
 
 void QgsMapRenderer::setOutputUnits( OutputUnits u )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mOutputUnits = u;
+  next.outputUnits = u;
 }
 
 void QgsMapRenderer::setThreadingEnabled( bool use )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
-
-  mThreadingEnabled = use;
+  // currently does nothing
 }
 
 void QgsMapRenderer::setCachingEnabled( bool enabled )
@@ -1388,13 +1325,42 @@ void QgsMapRenderer::setCachingEnabled( bool enabled )
 
 void QgsMapRenderer::setAntialiasingEnabled( bool enabled )
 {
-  if ( mDrawing )
-  {
-    QgsDebugMsg("Ignored --- drawing now!");
-    return; // do not allow changes while rendering
-  }
+  next.antialiasingEnabled = enabled;
+}
 
-  mAntialiasingEnabled = enabled;
+double QgsMapRenderer::scale() const
+{
+  return next.scale;
+}
+
+double QgsMapRenderer::mapUnitsPerPixel() const
+{
+  return next.mapUnitsPerPixel;
+}
+
+int QgsMapRenderer::width() const
+{
+  return next.size.width();
+}
+
+int QgsMapRenderer::height() const
+{
+  return next.size.height();
+}
+
+QgsMapRenderer::OutputUnits QgsMapRenderer::outputUnits() const
+{
+  return next.outputUnits;
+}
+
+QgsLabelingEngineInterface* QgsMapRenderer::labelingEngine()
+{
+  return next.labelingEngine;
+}
+
+bool QgsMapRenderer::isAntialiasingEnabled() const
+{
+  return next.antialiasingEnabled;
 }
 
 void QgsMapRenderer::clearCache()
@@ -1414,7 +1380,7 @@ void QgsMapRenderer::clearCache()
 
 void QgsMapRenderer::handleLayerRemoval(QString layerId)
 {
-  if (mLayerSet.contains(layerId))
+  if (next.layerSet.contains(layerId))
   {
     // make sure that the layer won't be used in further rendering
     if (isDrawing())

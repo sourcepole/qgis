@@ -27,6 +27,7 @@
 #include "qgis.h"
 #include "qgsrectangle.h"
 #include "qgsrendercontext.h"
+#include "qgscoordinatereferencesystem.h"
 
 class QDomDocument;
 class QDomNode;
@@ -35,7 +36,6 @@ class QPainter;
 class QgsMapToPixel;
 class QgsMapLayer;
 class QgsMapRenderer;
-class QgsCoordinateReferenceSystem;
 class QgsDistanceArea;
 class QgsOverlayObjectPositionManager;
 class QgsVectorLayer;
@@ -142,14 +142,14 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     const QgsMapToPixel* coordinateTransform() { return &( mRenderContext.mapToPixel() ); }
 
-    double scale() const { return mScale; }
+    double scale() const;
     /**Sets scale for scale based visibility. Normally, the scale is calculated automatically. This
      function is only used to force a preview scale (e.g. for print composer)*/
     void setScale( double scale );
-    double mapUnitsPerPixel() const { return mMapUnitsPerPixel; }
+    double mapUnitsPerPixel() const;
 
-    int width() const { return mSize.width(); };
-    int height() const { return mSize.height(); };
+    int width() const;
+    int height() const;
 
     //! Recalculate the map scale
     void updateScale();
@@ -195,7 +195,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     void setOutputUnits( OutputUnits u );
 
-    OutputUnits outputUnits() const {return mOutputUnits;}
+    OutputUnits outputUnits() const;
 
     //! returns current extent of layer set
     QgsRectangle fullExtent();
@@ -206,7 +206,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! change current layer set
     void setLayerSet( const QStringList& layers );
 
-    //! updates extent of the layer set
+    //! @deprecated does nothing. Just use fullExtent()
     void updateFullExtent();
 
     //! read settings
@@ -220,7 +220,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
     //! Labeling engine (NULL if there's no custom engine)
     //! \note Added in QGIS v1.4
-    QgsLabelingEngineInterface* labelingEngine() { return mLabelingEngine; }
+    QgsLabelingEngineInterface* labelingEngine();
 
     //! Set labeling engine. Previous engine (if any) is deleted.
     //! Takes ownership of the engine.
@@ -247,7 +247,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void setAntialiasingEnabled( bool enabled );
 
     //! Added in QGIS v1.6
-    bool isAntialiasingEnabled() const { return mAntialiasingEnabled; }
+    bool isAntialiasingEnabled() const;
 
     //! Schedule a redraw of the layers.
     //! This function returns immediately after starting the asynchronous rendering process.
@@ -352,49 +352,58 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
   protected:
 
+    typedef struct
+    {
+      //! map units per pixel
+      double mapUnitsPerPixel;
+
+      //! Map scale at its current zool level
+      double scale;
+
+      //! Scene DPI
+      double dpi;
+
+      //! map unit type
+      QGis::UnitType mapUnits;
+
+      //! current extent to be drawn
+      QgsRectangle extent;
+
+      //! indicates whether it's map image for overview
+      bool overview;
+
+      QSize size;
+
+      //! detemines whether on the fly projection support is enabled
+      bool projectionsEnabled;
+
+      //! destination spatial reference system of the projection
+      QgsCoordinateReferenceSystem destCRS;
+
+      //! stores array of layers to be rendered (identified by string)
+      QStringList layerSet;
+
+      //! Output units
+      OutputUnits outputUnits;
+
+      //! Labeling engine (NULL by default)
+      QgsLabelingEngineInterface* labelingEngine;
+
+      bool antialiasingEnabled;
+
+    } Parameters;
+
+    //! parameters for the next rendering process
+    Parameters next;
+
+    //! parameters for the current rendering process
+    Parameters curr;
+
     //! indicates drawing in progress
     bool mDrawing;
 
-    //! map units per pixel
-    double mMapUnitsPerPixel;
-
-    //! Map scale at its current zool level
-    double mScale;
-
-    //! Scene DPI
-    double mDpi;
-
-    //! map unit type
-    QGis::UnitType mMapUnits;
-
-    //! current extent to be drawn
-    QgsRectangle mExtent;
-
-    //! indicates whether it's map image for overview
-    bool mOverview;
-
-    QSize mSize;
-
-    //! detemines whether on the fly projection support is enabled
-    bool mProjectionsEnabled;
-
-    //! destination spatial reference system of the projection
-    QgsCoordinateReferenceSystem* mDestCRS;
-
-    //! stores array of layers to be rendered (identified by string)
-    QStringList mLayerSet;
-
-    //! full extent of the layer set
-    QgsRectangle mFullExtent;
-
     //! tool for measuring
     QgsDistanceArea* mDistArea;
-
-    //!Output units
-    OutputUnits mOutputUnits;
-
-    //! Labeling engine (NULL by default)
-    QgsLabelingEngineInterface* mLabelingEngine;
 
     //! Multithreaded rendering
     bool mThreadingEnabled;
@@ -402,7 +411,6 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Render caching
     QgsMapRendererCache* mCache;
 
-    bool mAntialiasingEnabled;
 
     QFuture<void> mFuture;
     QFutureWatcher<void> mFW;
