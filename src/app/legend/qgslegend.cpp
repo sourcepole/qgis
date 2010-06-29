@@ -420,11 +420,6 @@ void QgsLegend::mouseDoubleClickEvent( QMouseEvent* e )
 
 void QgsLegend::handleRightClickEvent( QTreeWidgetItem* item, const QPoint& position )
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QMenu theMenu;
 
   QgsLegendItem* li = dynamic_cast<QgsLegendItem *>( item );
@@ -495,25 +490,13 @@ int QgsLegend::getItemPos( QTreeWidgetItem* item )
 
 void QgsLegend::addLayer( QgsMapLayer * layer )
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsLegendLayer* llayer = new QgsLegendLayer( layer );
 
   //set the correct check states
+  Qt::CheckState checkState = llayer->isVisible() ? Qt::Checked : Qt::Unchecked;
   blockSignals( true );
-  if ( llayer->isVisible() )
-  {
-    llayer->setCheckState( 0, Qt::Checked );
-    llayer->setData( 0, Qt::UserRole, Qt::Checked );
-  }
-  else
-  {
-    llayer->setCheckState( 0, Qt::Unchecked );
-    llayer->setData( 0, Qt::UserRole, Qt::Unchecked );
-  }
+  llayer->setCheckState( 0, checkState );
+  llayer->setData( 0, Qt::UserRole, checkState );
   blockSignals( false );
 
   QgsLegendGroup *lg = dynamic_cast<QgsLegendGroup *>( currentItem() );
@@ -601,11 +584,6 @@ bool QgsLegend::setCurrentLayer( QgsMapLayer *layer )
 
 void QgsLegend::legendGroupRemove()
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsLegendGroup* lg = dynamic_cast<QgsLegendGroup *>( currentItem() );
   if ( lg )
   {
@@ -615,11 +593,6 @@ void QgsLegend::legendGroupRemove()
 
 void QgsLegend::removeGroup( QgsLegendGroup * lg )
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   //delete the legend layers first
   QTreeWidgetItem * child = lg->child( 0 );
   while ( child )

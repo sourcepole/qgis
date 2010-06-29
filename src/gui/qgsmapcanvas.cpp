@@ -227,9 +227,6 @@ const QgsMapToPixel * QgsMapCanvas::getCoordinateTransform()
 
 void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
 {
-  // make sure we're not rendering
-  cancelRendering();
-
   // create layer set
   QStringList layerSet, layerSetOverview;
 
@@ -260,6 +257,9 @@ void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
   // update only if needed
   if ( layerSetChanged )
   {
+    // make sure we're not rendering
+    cancelRendering();
+
     for ( i = 0; i < layerCount(); i++ )
     {
       // Add check if vector layer when disconnecting from selectionChanged slot
@@ -313,7 +313,7 @@ void QgsMapCanvas::setLayerSet( QList<QgsMapCanvasLayer> &layers )
     refresh();
   }
 
-} // addLayer
+} // setLayerSet
 
 void QgsMapCanvas::enableOverviewMode( QgsMapOverviewCanvas* overview )
 {
