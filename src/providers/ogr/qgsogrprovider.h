@@ -24,6 +24,8 @@ class QgsField;
 
 #include <ogr_api.h>
 
+#include <QMutex>
+
 /**
   \class QgsOgrProvider
   \brief Data provider for ESRI shapefiles
@@ -78,6 +80,12 @@ class QgsOgrProvider : public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
      * Gets the feature at the given feature ID.
@@ -279,13 +287,12 @@ class QgsOgrProvider : public QgsVectorDataProvider
     QString ogrDriverName;
 
     bool valid;
-    //! Flag to indicate that spatial intersect should be used in selecting features
-    bool mUseIntersect;
     int geomType;
     long featuresCounted;
 
-    //! Selection rectangle
-    OGRGeometryH mSelectionRectangle;
+    QgsFeatureIterator mOldApiIter;
+    friend class QgsOgrFeatureIterator;
+
     /**Adds one feature*/
     bool addFeature( QgsFeature& f );
     /**Deletes one feature*/
@@ -295,4 +302,6 @@ class QgsOgrProvider : public QgsVectorDataProvider
 
     /**Calls OGR_L_SyncToDisk and recreates the spatial index if present*/
     bool syncToDisc();
+
+    QMutex mLayerMutex;
 };

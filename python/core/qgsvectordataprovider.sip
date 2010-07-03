@@ -1,4 +1,39 @@
 
+typedef QList<int> QgsAttributeList;
+
+class QgsFeatureIterator
+{
+%TypeHeaderCode
+#include <qgsvectordataprovider.h>
+%End
+
+public:
+  //! construct invalid iterator
+  QgsFeatureIterator();
+  //! construct an iterator for iterating an instance of vector data provider
+  //QgsFeatureIterator(QgsVectorDataProviderIterator* iter);
+  //! construct an iterator for iterating an instance of vector layer (data provider + uncommitted data)
+  //QgsFeatureIterator(VectorLayerIterator* layerIter);
+  //! copy constructor copies the provider iterator, increases ref.count
+  QgsFeatureIterator(const QgsFeatureIterator& fi);
+  //! destructor deletes the provider iterator if it has no more references
+  ~QgsFeatureIterator();
+
+  // TODO? QgsFeatureIterator& operator=(const QgsFeatureIterator& other);
+
+  bool nextFeature(QgsFeature& f);
+  bool rewind();
+  bool close();
+
+  //! find out whether the iterator is still valid or closed already
+  bool isClosed();
+
+};
+
+bool operator== (const QgsFeatureIterator &fi1, const QgsFeatureIterator &fi2);
+bool operator!= (const QgsFeatureIterator &fi1, const QgsFeatureIterator &fi2);
+
+
 class QgsVectorDataProvider : QgsDataProvider
 {
 %TypeHeaderCode
@@ -82,7 +117,17 @@ class QgsVectorDataProvider : QgsDataProvider
        */
       virtual long updateFeatureCount();
 
-      /** 
+      /**
+       * Start iterating over features of the vector data provider.
+       * For new code, consider using this method instead of select/nextFeature combo.
+       * @note Added in v1.6
+       */
+      virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                              QgsRectangle rect = QgsRectangle(),
+                                              bool fetchGeometry = true,
+                                              bool useIntersect = false );
+
+      /**
        * Gets the feature at the given feature ID.
        * @param featureId id of the feature
        * @param feature feature which will receive the data

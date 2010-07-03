@@ -2,7 +2,7 @@
 ########################################################
 # Files
 
-SET(PG_SRCS qgspostgresprovider.cpp)
+SET(PG_SRCS qgspostgresprovider.cpp qgspostgresfeatureiterator.cpp)
 SET(PG_MOC_HDRS qgspostgresprovider.h)
 
 

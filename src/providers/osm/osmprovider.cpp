@@ -22,6 +22,7 @@
 #include "qgslogger.h"
 #include "qgsvectordataprovider.h"
 #include "qgsapplication.h"
+#include "qgsvectorlayer.h"
 
 #include <QFileInfo>
 #include <QDateTime>

@@ -37,6 +37,7 @@
 #include "qgsproviderextentcalcevent.h"
 
 #include "qgspostgresprovider.h"
+#include "qgspostgresfeatureiterator.h"
 
 #include "qgslogger.h"
 
@@ -56,10 +57,8 @@ int QgsPostgresProvider::providerIds = 0;
 
 QgsPostgresProvider::QgsPostgresProvider( QString const & uri )
     : QgsVectorDataProvider( uri )
-    , mFetching( false )
     , mIsDbPrimaryKey( false )
     , geomType( QGis::WKBUnknown )
-    , mFeatureQueueSize( 200 )
     , mUseEstimatedMetadata( false )
     , mPrimaryKeyDefault( QString::null )
 {
@@ -304,11 +303,7 @@ QgsPostgresProvider::Conn *QgsPostgresProvider::Conn::connectDb( const QString &
 
 void QgsPostgresProvider::disconnectDb()
 {
-  if ( mFetching )
-  {
-    connectionRO->closeCursor( QString( "qgisf%1" ).arg( providerId ) );
-    mFetching = false;
-  }
+  mOldApiIter.close();
 
   if ( connectionRO )
   {
@@ -337,8 +332,8 @@ void QgsPostgresProvider::Conn::disconnect( QMap<QString, Conn *>& connections, 
   for ( i = connections.begin(); i != connections.end() && i.value() != conn; i++ )
     ;
 
-  assert( i.value() == conn );
-  assert( i.value()->ref > 0 );
+  Q_ASSERT( i.value() == conn );
+  Q_ASSERT( i.value()->ref > 0 );
 
   if ( --i.value()->ref == 0 )
   {
@@ -520,131 +515,37 @@ bool QgsPostgresProvider::getFeature( PGresult *queryResult, int row, bool fetch
   }
 }
 
+QgsFeatureIterator QgsPostgresProvider::getFeatures( QgsAttributeList fetchAttributes,
+                                                     QgsRectangle rect,
+                                                     bool fetchGeometry,
+                                                     bool useIntersect )
+{
+  return QgsFeatureIterator( new QgsPostgresFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
+}
+
+
 void QgsPostgresProvider::select( QgsAttributeList fetchAttributes, QgsRectangle rect, bool fetchGeometry, bool useIntersect )
 {
-  QString cursorName = QString( "qgisf%1" ).arg( providerId );
-
-  if ( mFetching )
-  {
-    connectionRO->closeCursor( cursorName );
-    mFetching = false;
-
-    while ( !mFeatureQueue.empty() )
-    {
-      mFeatureQueue.pop();
-    }
-  }
-
-  QString whereClause;
-
-  if ( !rect.isEmpty() )
-  {
-    if ( useIntersect )
-    {
-      // Contributed by #qgis irc "creeping"
-      // This version actually invokes PostGIS's use of spatial indexes
-      whereClause = QString( "%1 && setsrid('BOX3D(%2)'::box3d,%3) and intersects(%1,setsrid('BOX3D(%2)'::box3d,%3))" )
-                    .arg( quotedIdentifier( geometryColumn ) )
-                    .arg( rect.asWktCoordinates() )
-                    .arg( srid );
-    }
-    else
-    {
-      whereClause = QString( "%1 && setsrid('BOX3D(%2)'::box3d,%3)" )
-                    .arg( quotedIdentifier( geometryColumn ) )
-                    .arg( rect.asWktCoordinates() )
-                    .arg( srid );
-    }
-  }
-
-  if ( !sqlWhereClause.isEmpty() )
-  {
-    if ( !whereClause.isEmpty() )
-      whereClause += " and ";
-
-    whereClause += "(" + sqlWhereClause + ")";
-  }
-
-  mFetchGeom = fetchGeometry;
-  mAttributesToFetch = fetchAttributes;
-  if ( !declareCursor( cursorName, fetchAttributes, fetchGeometry, whereClause ) )
-    return;
-
-  mFetching = true;
-  mFetched = 0;
+  if (!mOldApiIter.isClosed())
+    mOldApiIter.close();
+  mOldApiIter = getFeatures(fetchAttributes, rect, fetchGeometry, useIntersect);
 }
 
 bool QgsPostgresProvider::nextFeature( QgsFeature& feature )
 {
-  feature.setValid( false );
   if ( !valid )
   {
     QgsDebugMsg( "Read attempt on an invalid postgresql data source" );
     return false;
   }
 
-  if ( !mFetching )
+  if ( mOldApiIter.isClosed() )
   {
     QgsDebugMsg( "nextFeature() without select()" );
     return false;
   }
 
-  QString cursorName = QString( "qgisf%1" ).arg( providerId );
-
-  if ( mFeatureQueue.empty() )
-  {
-    QString fetch = QString( "fetch forward %1 from %2" ).arg( mFeatureQueueSize ).arg( cursorName );
-    if ( connectionRO->PQsendQuery( fetch ) == 0 ) // fetch features asynchronously
-    {
-      QgsDebugMsg( "PQsendQuery failed" );
-    }
-
-    Result queryResult;
-    while (( queryResult = connectionRO->PQgetResult() ) )
-    {
-      int rows = PQntuples( queryResult );
-      if ( rows == 0 )
-        continue;
-
-      for ( int row = 0; row < rows; row++ )
-      {
-        mFeatureQueue.push( QgsFeature() );
-        getFeature( queryResult, row, mFetchGeom, mFeatureQueue.back(), mAttributesToFetch );
-      } // for each row in queue
-    }
-  }
-
-  if ( mFeatureQueue.empty() )
-  {
-    QgsDebugMsg( QString( "finished after %1 features" ).arg( mFetched ) );
-    connectionRO->closeCursor( cursorName );
-    mFetching = false;
-    if ( featuresCounted < mFetched )
-    {
-      QgsDebugMsg( QString( "feature count adjusted from %1 to %2" ).arg( featuresCounted ).arg( mFetched ) );
-      featuresCounted = mFetched;
-    }
-    return false;
-  }
-
-  // Now return the next feature from the queue
-  if ( mFetchGeom )
-  {
-    QgsGeometry* featureGeom = mFeatureQueue.front().geometryAndOwnership();
-    feature.setGeometry( featureGeom );
-  }
-  else
-  {
-    feature.setGeometryAndOwnership( 0, 0 );
-  }
-  feature.setFeatureId( mFeatureQueue.front().id() );
-  feature.setAttributeMap( mFeatureQueue.front().attributeMap() );
-
-  mFeatureQueue.pop();
-  mFetched++;
-
-  feature.setValid( true );
-  return true;
+  return mOldApiIter.nextFeature( feature );
 }
 
 QString QgsPostgresProvider::whereClause( int featureId ) const
@@ -673,6 +574,8 @@ QString QgsPostgresProvider::whereClause( int featureId ) const
 
 bool QgsPostgresProvider::featureAtId( int featureId, QgsFeature& feature, bool fetchGeometry, QgsAttributeList fetchAttributes )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   feature.setValid( false );
   QString cursorName = QString( "qgisfid%1" ).arg( providerId );
 
@@ -758,13 +661,7 @@ QString QgsPostgresProvider::dataComment() const
 
 void QgsPostgresProvider::rewind()
 {
-  if ( mFetching )
-  {
-    //move cursor to first record
-    connectionRO->PQexecNR( QString( "move 0 in qgisf%1" ).arg( providerId ) );
-  }
-  mFeatureQueue.empty();
-  loadFields();
+  mOldApiIter.rewind();
 }
 
 /** @todo XXX Perhaps this should be promoted to QgsDataProvider? */
@@ -1586,6 +1483,8 @@ QString QgsPostgresProvider::chooseViewColumn( const tableCols &cols )
 
 bool QgsPostgresProvider::uniqueData( QString query, QString colName )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   // Check to see if the given column contains unique data
 
   bool isUnique = false;
@@ -1855,6 +1754,8 @@ void QgsPostgresProvider::findColumns( tableCols& cols )
 // Returns the minimum value of an attribute
 QVariant QgsPostgresProvider::minimumValue( int index )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   try
   {
     // get the field name
@@ -1880,6 +1781,8 @@ QVariant QgsPostgresProvider::minimumValue( int index )
 // Returns the list of unique values of an attribute
 void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int limit )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   uniqueValues.clear();
 
   try
@@ -1917,6 +1820,8 @@ void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues
 
 void QgsPostgresProvider::enumValues( int index, QStringList& enumList )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   enumList.clear();
 
   QString typeName;
@@ -2048,6 +1953,8 @@ bool QgsPostgresProvider::parseDomainCheckConstraint( QStringList& enumValues, c
 // Returns the maximum value of an attribute
 QVariant QgsPostgresProvider::maximumValue( int index )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   try
   {
     // get the field name
@@ -2108,6 +2015,8 @@ QVariant QgsPostgresProvider::defaultValue( QString fieldName, QString tableName
 
 QVariant QgsPostgresProvider::defaultValue( int fieldId )
 {
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   try
   {
     return defaultValue( field( fieldId ).name() );
@@ -2748,6 +2657,8 @@ long QgsPostgresProvider::featureCount() const
   if ( featuresCounted >= 0 )
     return featuresCounted;
 
+  QMutexLocker connectionROLocker(&mConnectionROMutex);
+
   // get total number of features
   QString sql;
 
@@ -2781,6 +2692,8 @@ QgsRectangle QgsPostgresProvider::extent()
 {
   if ( layerExtent.isEmpty() )
   {
+    QMutexLocker connectionROLocker(&mConnectionROMutex);
+
     QString sql;
     Result result;
     QString ext;

@@ -87,6 +87,7 @@ SET(QGIS_CORE_SRCS
   qgsvectordataprovider.cpp
   qgsvectorfilewriter.cpp
   qgsvectorlayer.cpp
+  qgsvectorlayeriterator.cpp
   qgsvectorlayerundocommand.cpp
   qgsvectoroverlay.cpp
 

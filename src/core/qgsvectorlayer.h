@@ -30,11 +30,14 @@
 #include "qgssnapper.h"
 #include "qgsfield.h"
 
+#include "qgsvectordataprovider.h"
+
 class QPainter;
 class QImage;
 
 class QgsAttributeAction;
 class QgsCoordinateTransform;
+class QgsFeatureIterator;
 class QgsGeometry;
 class QgsGeometryVertexIndex;
 class QgsMapToPixel;
@@ -49,10 +52,6 @@ class QgsSingleSymbolRendererV2;
 class QgsRectangle;
 
 class QgsFeatureRendererV2;
-
-typedef QList<int> QgsAttributeList;
-typedef QSet<int> QgsFeatureIds;
-typedef QSet<int> QgsAttributeIds;
 
 
 /** \ingroup core
@@ -180,9 +179,9 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     void setUsingRendererV2( bool usingRendererV2 );
 
     /** Draw layer with renderer V2. Added in QGIS 1.4 */
-    void drawRendererV2( QgsRenderContext& rendererContext, bool labeling );
+    void drawRendererV2( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi );
     /** Draw layer with renderer V2 using symbol levels. Added in QGIS 1.4 */
-    void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling );
+    void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi );
 
     /** Returns point, line or polygon */
     QGis::GeometryType geometryType() const;
@@ -254,6 +253,16 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
                  bool useIntersect = false );
 
     bool nextFeature( QgsFeature& feature );
+
+    /**
+     * Start iterating over features of the layer.
+     * For new code, consider using this method instead of select/nextFeature combo.
+     * @note Added in v1.6
+     */
+    QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                    QgsRectangle rect = QgsRectangle(),
+                                    bool fetchGeometry = true,
+                                    bool useIntersect = false );
 
     /**Gets the feature at the given feature id. Considers the changed, added, deleted and permanent features
      @return true in case of success*/
@@ -652,7 +661,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     static int currentVertexMarkerSize();
 
     /**Update feature with uncommited attribute updates*/
-    void updateFeatureAttributes( QgsFeature &f, bool all = false );
+    void updateFeatureAttributes( QgsFeature &f, const QgsAttributeList& fetchAttributes );
 
     /**Update feature with uncommited geometry updates*/
     void updateFeatureGeometry( QgsFeature &f );
@@ -779,15 +788,9 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     //annotation form for this layer
     QString mAnnotationForm;
 
-    bool mFetching;
-    QgsRectangle mFetchRect;
-    QgsAttributeList mFetchAttributes;
-    QgsAttributeList mFetchProvAttributes;
-    bool mFetchGeometry;
+    QgsFeatureIterator mOldApiIter;
+    friend class QgsVectorLayerIterator;
 
-    QSet<int> mFetchConsidered;
-    QgsGeometryMap::iterator mFetchChangedGeomIt;
-    QgsFeatureList::iterator mFetchAddedFeaturesIt;
 };
 
 #endif

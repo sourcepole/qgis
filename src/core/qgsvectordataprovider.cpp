@@ -25,6 +25,114 @@
 #include "qgsfield.h"
 #include "qgslogger.h"
 
+
+
+QgsVectorDataProviderIterator::QgsVectorDataProviderIterator(QgsAttributeList fetchAttributes,
+                                                             QgsRectangle rect,
+                                                             bool fetchGeometry,
+                                                             bool useIntersect )
+ : mFetchAttributes(fetchAttributes),
+   mFetchGeometry(fetchGeometry),
+   mRect(rect),
+   mUseIntersect(useIntersect),
+   refs(0),
+   mClosed(false)
+{
+}
+
+QgsVectorDataProviderIterator::~QgsVectorDataProviderIterator()
+{
+}
+
+void QgsVectorDataProviderIterator::ref()
+{
+  refs++;
+  QgsDebugMsg("ADDED REF: "+QString::number(refs));
+}
+void QgsVectorDataProviderIterator::deref()
+{
+  refs--;
+  QgsDebugMsg("REMOVED REF: "+QString::number(refs));
+  if (!refs)
+    delete this;
+}
+
+////////
+
+QgsFeatureIterator::QgsFeatureIterator()
+  : provIter(NULL)
+{
+  QgsDebugMsg("CREATED INVALID ITER");
+}
+
+QgsFeatureIterator::QgsFeatureIterator(QgsVectorDataProviderIterator* iter)
+  : provIter(iter)
+{
+  QgsDebugMsg("CREATED GOOD ITER");
+  if (iter)
+    iter->ref();
+}
+
+QgsFeatureIterator::QgsFeatureIterator(const QgsFeatureIterator& fi)
+  : provIter(fi.provIter)
+{
+  QgsDebugMsg("CREATED COPIED ITER");
+  if (provIter)
+    provIter->ref();
+}
+
+QgsFeatureIterator::~QgsFeatureIterator()
+{
+  QgsDebugMsg("DELETING ITER");
+  if (provIter)
+    provIter->deref();
+}
+
+QgsFeatureIterator& QgsFeatureIterator::operator=(const QgsFeatureIterator& other)
+{
+  if (this != &other)
+  {
+    if (provIter)
+      provIter->deref();
+    provIter = other.provIter;
+    if (provIter)
+      provIter->ref();
+  }
+  return *this;
+}
+
+bool QgsFeatureIterator::nextFeature(QgsFeature& f)
+{
+  return provIter ? provIter->nextFeature(f) : false;
+}
+
+bool QgsFeatureIterator::rewind()
+{
+  return provIter ? provIter->rewind() : false;
+}
+
+bool QgsFeatureIterator::close()
+{
+  return provIter ? provIter->close() : false;
+}
+
+bool QgsFeatureIterator::isClosed()
+{
+  return provIter ? provIter->mClosed : true;
+}
+
+
+bool operator== (const QgsFeatureIterator &fi1, const QgsFeatureIterator &fi2)
+{
+  return (fi1.provIter == fi2.provIter);
+}
+bool operator!= (const QgsFeatureIterator &fi1, const QgsFeatureIterator &fi2)
+{
+  return !(fi1 == fi2);
+}
+
+////////////
+
 QgsVectorDataProvider::QgsVectorDataProvider( QString uri )
     : QgsDataProvider( uri ),
     mCacheMinMaxDirty( true ),
@@ -47,6 +155,11 @@ QString QgsVectorDataProvider::storageType() const
 long QgsVectorDataProvider::updateFeatureCount()
 {
   return -1;
+}
+
+QgsFeatureIterator QgsVectorDataProvider::getFeatures( QgsAttributeList, QgsRectangle, bool, bool)
+{
+  return QgsFeatureIterator();
 }
 
 bool QgsVectorDataProvider::featureAtId( int featureId,

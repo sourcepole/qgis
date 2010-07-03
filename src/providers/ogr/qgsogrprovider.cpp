@@ -87,8 +87,6 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
 
   QgsApplication::registerOgrDrivers();
 
-  // set the selection rectangle pointer to 0
-  mSelectionRectangle = 0;
   // make connection to the data source
 
   QgsDebugMsg( "Data source uri is " + uri );
@@ -213,11 +211,6 @@ QgsOgrProvider::~QgsOgrProvider()
     extent_ = 0;
   }
 
-  if ( mSelectionRectangle )
-  {
-    OGR_G_DestroyGeometry( mSelectionRectangle );
-    mSelectionRectangle = 0;
-  }
 }
 
 bool QgsOgrProvider::setSubsetString( QString theSQL )
@@ -403,12 +396,31 @@ QString QgsOgrProvider::storageType() const
   return ogrDriverName;
 }
 
+#include "qgsogrfeatureiterator.h"
+
+QgsFeatureIterator QgsOgrProvider::getFeatures( QgsAttributeList fetchAttributes,
+                                                QgsRectangle rect,
+                                                bool fetchGeometry,
+                                                bool useIntersect )
+{
+  if ( !valid )
+  {
+    QgsDebugMsg( "Read attempt on an invalid OGR layer" );
+    return QgsFeatureIterator();
+  }
+
+  return QgsFeatureIterator( new QgsOgrFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
+}
+
 
 bool QgsOgrProvider::featureAtId( int featureId,
                                   QgsFeature& feature,
                                   bool fetchGeometry,
                                   QgsAttributeList fetchAttributes )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   OGRFeatureH fet = OGR_L_GetFeature( ogrLayer, featureId );
   if ( fet == NULL )
     return false;
@@ -456,140 +468,27 @@ bool QgsOgrProvider::featureAtId( int featureId,
 
 bool QgsOgrProvider::nextFeature( QgsFeature& feature )
 {
-  feature.setValid( false );
-
-  if ( !valid )
-  {
-    QgsLogger::warning( "Read attempt on an invalid shapefile data source" );
-    return false;
-  }
-
-  OGRFeatureH fet;
-  QgsRectangle selectionRect;
-
-  while (( fet = OGR_L_GetNextFeature( ogrLayer ) ) != NULL )
-  {
-    // skip features without geometry
-    if ( !mFetchFeaturesWithoutGeom && OGR_F_GetGeometryRef( fet ) == NULL )
-    {
-      OGR_F_Destroy( fet );
-      continue;
-    }
-
-    OGRFeatureDefnH featureDefinition = OGR_F_GetDefnRef( fet );
-    QString featureTypeName = featureDefinition ? QString( OGR_FD_GetName( featureDefinition ) ) : QString( "" );
-    feature.setFeatureId( OGR_F_GetFID( fet ) );
-    feature.clearAttributeMap();
-    feature.setTypeName( featureTypeName );
-
-    /* fetch geometry */
-    if ( mFetchGeom || mUseIntersect )
-    {
-      OGRGeometryH geom = OGR_F_GetGeometryRef( fet );
-
-      if ( geom == 0 )
-      {
-        OGR_F_Destroy( fet );
-        continue;
-      }
-
-      // get the wkb representation
-      unsigned char *wkb = new unsigned char[OGR_G_WkbSize( geom )];
-      OGR_G_ExportToWkb( geom, ( OGRwkbByteOrder ) QgsApplication::endian(), wkb );
-
-      feature.setGeometryAndOwnership( wkb, OGR_G_WkbSize( geom ) );
-
-      if ( mUseIntersect )
-      {
-        //precise test for intersection with search rectangle
-        //first make QgsRectangle from OGRPolygon
-        OGREnvelope env;
-        memset( &env, 0, sizeof( env ) );
-        if ( mSelectionRectangle )
-          OGR_G_GetEnvelope( mSelectionRectangle, &env );
-        if ( env.MinX != 0 || env.MinY != 0 || env.MaxX != 0 || env.MaxY != 0 ) //if envelope is invalid, skip the precise intersection test
-        {
-          selectionRect.set( env.MinX, env.MinY, env.MaxX, env.MaxY );
-          if ( !feature.geometry()->intersects( selectionRect ) )
-          {
-            OGR_F_Destroy( fet );
-            continue;
-          }
-        }
-
-      }
-    }
-
-    /* fetch attributes */
-    for ( QgsAttributeList::iterator it = mAttributesToFetch.begin(); it != mAttributesToFetch.end(); ++it )
-    {
-      getFeatureAttribute( fet, feature, *it );
-    }
-
-    /* we have a feature, end this cycle */
-    break;
-
-  } /* while */
-
-  if ( fet )
-  {
-    if ( OGR_F_GetGeometryRef( fet ) != NULL )
-    {
-      feature.setValid( true );
-    }
-    else
-    {
-      feature.setValid( false );
-    }
-    OGR_F_Destroy( fet );
+  if (mOldApiIter.nextFeature(feature))
     return true;
-  }
   else
   {
-    QgsDebugMsg( "Feature is null" );
-    // probably should reset reading here
-    OGR_L_ResetReading( ogrLayer );
+    mOldApiIter.close(); // make sure to unlock the layer
     return false;
   }
 }
+#include <QThread>
 
 void QgsOgrProvider::select( QgsAttributeList fetchAttributes, QgsRectangle rect, bool fetchGeometry, bool useIntersect )
 {
-  mUseIntersect = useIntersect;
-  mAttributesToFetch = fetchAttributes;
-  mFetchGeom = fetchGeometry;
-
-  // spatial query to select features
-  if ( rect.isEmpty() )
+  if (qApp->thread() != QThread::currentThread())
   {
-    OGR_L_SetSpatialFilter( ogrLayer, 0 );
-  }
-  else
-  {
-    OGRGeometryH filter = 0;
-    QString wktExtent = QString( "POLYGON((%1))" ).arg( rect.asPolygon() );
-    QByteArray ba = wktExtent.toAscii();
-    const char *wktText = ba;
-
-    if ( useIntersect )
-    {
-      // store the selection rectangle for use in filtering features during
-      // an identify and display attributes
-      if ( mSelectionRectangle )
-        OGR_G_DestroyGeometry( mSelectionRectangle );
-
-      OGR_G_CreateFromWkt(( char ** )&wktText, NULL, &mSelectionRectangle );
-      wktText = ba;
-    }
-
-    OGR_G_CreateFromWkt(( char ** )&wktText, NULL, &filter );
-    QgsDebugMsg( "Setting spatial filter using " + wktExtent );
-    OGR_L_SetSpatialFilter( ogrLayer, filter );
-    OGR_G_DestroyGeometry( filter );
+    QgsDebugMsg("accessing old provider API from non-gui thread! (IGNORING)");
+    return;
   }
 
-  //start with first feature
-  OGR_L_ResetReading( ogrLayer );
+  //if (mOldApiIter != QgsFeatureIterator())
+  mOldApiIter.close();
+  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
 }
 
 
@@ -613,6 +512,9 @@ QgsRectangle QgsOgrProvider::extent()
 {
   if ( !extent_ )
   {
+    // make sure no other thread is accessing the layer right now
+    QMutexLocker layerLocker(&mLayerMutex);
+
     extent_ = calloc( sizeof( OGREnvelope ), 1 );
 
     // get the extent_ (envelope) of the layer
@@ -732,7 +634,9 @@ const QgsFieldMap & QgsOgrProvider::fields() const
 
 void QgsOgrProvider::rewind()
 {
-  OGR_L_ResetReading( ogrLayer );
+  // the iterator is closed everyt
+  //mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
+  mOldApiIter.rewind();
 }
 
 
@@ -746,6 +650,9 @@ bool QgsOgrProvider::isValid()
 
 bool QgsOgrProvider::addFeature( QgsFeature& f )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   bool returnValue = true;
   OGRFeatureDefnH fdef = OGR_L_GetLayerDefn( ogrLayer );
   OGRFeatureH feature = OGR_F_Create( fdef );
@@ -848,6 +755,9 @@ bool QgsOgrProvider::addFeatures( QgsFeatureList & flist )
 
 bool QgsOgrProvider::addAttributes( const QList<QgsField> &attributes )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   bool returnvalue = true;
 
   for ( QList<QgsField>::const_iterator iter = attributes.begin(); iter != attributes.end(); ++iter )
@@ -888,6 +798,9 @@ bool QgsOgrProvider::addAttributes( const QList<QgsField> &attributes )
 
 bool QgsOgrProvider::changeAttributeValues( const QgsChangedAttributesMap & attr_map )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   for ( QgsChangedAttributesMap::const_iterator it = attr_map.begin(); it != attr_map.end(); ++it )
   {
     long fid = ( long ) it.key();
@@ -953,6 +866,9 @@ bool QgsOgrProvider::changeAttributeValues( const QgsChangedAttributesMap & attr
 
 bool QgsOgrProvider::changeGeometryValues( QgsGeometryMap & geometry_map )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   OGRErr res;
   OGRFeatureH theOGRFeature = 0;
   OGRGeometryH theNewGeometry = 0;
@@ -1060,6 +976,9 @@ bool QgsOgrProvider::deleteFeatures( const QgsFeatureIds & id )
 
 bool QgsOgrProvider::deleteFeature( int id )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   return OGR_L_DeleteFeature( ogrLayer, id ) == OGRERR_NONE;
 }
 
@@ -1784,6 +1703,9 @@ QgsCoordinateReferenceSystem QgsOgrProvider::crs()
 
 void QgsOgrProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int limit )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
 
@@ -1820,6 +1742,9 @@ void QgsOgrProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int
 
 QVariant QgsOgrProvider::minimumValue( int index )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
 
@@ -1854,6 +1779,9 @@ QVariant QgsOgrProvider::minimumValue( int index )
 
 QVariant QgsOgrProvider::maximumValue( int index )
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
 
@@ -1895,6 +1823,9 @@ QString QgsOgrProvider::quotedIdentifier( QString field )
 
 bool QgsOgrProvider::syncToDisc()
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   OGR_L_SyncToDisk( ogrLayer );
 
   //for shapefiles: is there already a spatial index?
@@ -1923,6 +1854,9 @@ bool QgsOgrProvider::syncToDisc()
 
 void QgsOgrProvider::recalculateFeatureCount()
 {
+  // make sure no other thread is accessing the layer right now
+  QMutexLocker layerLocker(&mLayerMutex);
+
   OGRGeometryH filter = OGR_L_GetSpatialFilter( ogrLayer );
   if ( filter )
   {

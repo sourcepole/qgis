@@ -67,6 +67,7 @@
 #include "qgssinglesymbolrenderer.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsvectordataprovider.h"
+#include "qgsvectorlayeriterator.h"
 #include "qgsvectorlayerundocommand.h"
 #include "qgsvectoroverlay.h"
 #include "qgsmaplayerregistry.h"
@@ -106,8 +107,7 @@ QgsVectorLayer::QgsVectorLayer( QString vectorLayerPath,
     mUsingRendererV2( false ),
     mLabel( 0 ),
     mLabelOn( false ),
-    mVertexMarkerOnlyForSelection( false ),
-    mFetching( false )
+    mVertexMarkerOnlyForSelection( false )
 {
   mActions = new QgsAttributeAction;
 
@@ -689,7 +689,7 @@ unsigned char *QgsVectorLayer::drawPolygon( unsigned char *feature, QgsRenderCon
   return ptr;
 }
 
-void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool labeling )
+void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi )
 {
   QSettings settings;
   bool vertexMarkerOnlyForSelection = settings.value( "/qgis/digitizing/marker_only_for_selected", false ).toBool();
@@ -697,7 +697,7 @@ void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool lab
   mRendererV2->startRender( rendererContext, this );
 
   QgsFeature fet;
-  while ( nextFeature( fet ) )
+  while ( fi.nextFeature( fet ) )
   {
     try
     {
@@ -730,7 +730,7 @@ void QgsVectorLayer::drawRendererV2( QgsRenderContext& rendererContext, bool lab
   }
 }
 
-void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling )
+void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi )
 {
   QHash< QgsSymbolV2*, QList<QgsFeature> > features; // key = symbol, value = array of features
 
@@ -751,7 +751,7 @@ void QgsVectorLayer::drawRendererV2Levels( QgsRenderContext& rendererContext, bo
 
   // 1. fetch features
   QgsFeature fet;
-  while ( nextFeature( fet ) )
+  while ( fi.nextFeature( fet ) )
   {
     if ( rendererContext.renderingStopped() )
     {
@@ -872,12 +872,14 @@ bool QgsVectorLayer::draw( QgsRenderContext& rendererContext )
       }
     }
 
-    select( attributes, rendererContext.extent() );
+    QgsFeatureIterator fi = getFeatures( attributes, rendererContext.extent() );
 
     if ( mRendererV2->usingSymbolLevels() )
-      drawRendererV2Levels( rendererContext, labeling );
+      drawRendererV2Levels( rendererContext, labeling, fi );
     else
-      drawRendererV2( rendererContext, labeling );
+      drawRendererV2( rendererContext, labeling, fi );
+
+    fi.close();
 
     return true;
   }
@@ -929,11 +931,11 @@ bool QgsVectorLayer::draw( QgsRenderContext& rendererContext )
       }
     }
 
-    select( attributes, rendererContext.extent() );
+    QgsFeatureIterator fi = getFeatures( attributes, rendererContext.extent() );
 
     try
     {
-      while ( nextFeature( fet ) )
+      while ( fi.nextFeature( fet ) )
       {
 
         if ( rendererContext.renderingStopped() )
@@ -1360,7 +1362,7 @@ bool QgsVectorLayer::setSubsetString( QString subset )
   return res;
 }
 
-void QgsVectorLayer::updateFeatureAttributes( QgsFeature &f, bool all )
+void QgsVectorLayer::updateFeatureAttributes( QgsFeature &f, const QgsAttributeList& fetchAttributes )
 {
   // do not update when we aren't in editing mode
   if ( !mEditable )
@@ -1381,7 +1383,7 @@ void QgsVectorLayer::updateFeatureAttributes( QgsFeature &f, bool all )
 
   // null/add all attributes that were added, but don't exist in the feature yet
   for ( QgsFieldMap::const_iterator it = mUpdatedFields.begin(); it != mUpdatedFields.end(); it++ )
-    if ( !map.contains( it.key() ) && ( all || mFetchAttributes.contains( it.key() ) ) )
+    if ( !map.contains( it.key() ) && fetchAttributes.contains( it.key() ) )
       f.changeAttribute( it.key(), QVariant( QString::null ) );
 }
 
@@ -1394,164 +1396,24 @@ void QgsVectorLayer::updateFeatureGeometry( QgsFeature &f )
 
 void QgsVectorLayer::select( QgsAttributeList attributes, QgsRectangle rect, bool fetchGeometries, bool useIntersect )
 {
-  if ( !mDataProvider )
-    return;
-
-  mFetching        = true;
-  mFetchRect       = rect;
-  mFetchAttributes = attributes;
-  mFetchGeometry   = fetchGeometries;
-
-  mFetchConsidered = mDeletedFeatureIds;
-
-  if ( mEditable )
-  {
-    mFetchAddedFeaturesIt = mAddedFeatures.begin();
-    mFetchChangedGeomIt = mChangedGeometries.begin();
-  }
-
-  //look in the normal features of the provider
-  if ( mFetchAttributes.size() > 0 )
-  {
-    if ( mEditable )
-    {
-      // fetch only available field from provider
-      mFetchProvAttributes.clear();
-      for ( QgsAttributeList::iterator it = mFetchAttributes.begin(); it != mFetchAttributes.end(); it++ )
-      {
-        if ( !mUpdatedFields.contains( *it ) || mAddedAttributeIds.contains( *it ) )
-          continue;
-
-        mFetchProvAttributes << *it;
-      }
-
-      mDataProvider->select( mFetchProvAttributes, rect, fetchGeometries, useIntersect );
-    }
-    else
-      mDataProvider->select( mFetchAttributes, rect, fetchGeometries, useIntersect );
-  }
-  else
-  {
-    mDataProvider->select( QgsAttributeList(), rect, fetchGeometries, useIntersect );
-  }
+  if (!mOldApiIter.isClosed())
+    mOldApiIter.close();
+  mOldApiIter = getFeatures( attributes, rect, fetchGeometries, useIntersect );
 }
 
 bool QgsVectorLayer::nextFeature( QgsFeature &f )
 {
-  if ( !mFetching )
-    return false;
-
-  if ( mEditable )
-  {
-    if ( !mFetchRect.isEmpty() )
-    {
-      // check if changed geometries are in rectangle
-      for ( ; mFetchChangedGeomIt != mChangedGeometries.end(); mFetchChangedGeomIt++ )
-      {
-        int fid = mFetchChangedGeomIt.key();
-
-        if ( mFetchConsidered.contains( fid ) )
-          // skip deleted features
-          continue;
-
-        mFetchConsidered << fid;
-
-        if ( !mFetchChangedGeomIt->intersects( mFetchRect ) )
-          // skip changed geometries not in rectangle and don't check again
-          continue;
-
-        f.setFeatureId( fid );
-        f.setValid( true );
-
-        if ( mFetchGeometry )
-          f.setGeometry( mFetchChangedGeomIt.value() );
-
-        if ( mFetchAttributes.size() > 0 )
-        {
-          if ( fid < 0 )
-          {
-            // fid<0 => in mAddedFeatures
-            bool found = false;
-
-            for ( QgsFeatureList::iterator it = mAddedFeatures.begin(); it != mAddedFeatures.end(); it++ )
-            {
-              if ( fid != it->id() )
-              {
-                found = true;
-                f.setAttributeMap( it->attributeMap() );
-                break;
-              }
-            }
-
-            if ( !found )
-              QgsDebugMsg( QString( "No attributes for the added feature %1 found" ).arg( f.id() ) );
-          }
-          else
-          {
-            // retrieve attributes from provider
-            QgsFeature tmp;
-            mDataProvider->featureAtId( fid, tmp, false, mFetchProvAttributes );
-            updateFeatureAttributes( tmp );
-            f.setAttributeMap( tmp.attributeMap() );
-          }
-        }
-
-        // return complete feature
-        mFetchChangedGeomIt++;
-        return true;
-      }
-
-      // no more changed geometries
-    }
-
-    for ( ; mFetchAddedFeaturesIt != mAddedFeatures.end(); mFetchAddedFeaturesIt++ )
-    {
-      int fid = mFetchAddedFeaturesIt->id();
-
-      if ( mFetchConsidered.contains( fid ) )
-        // must have changed geometry outside rectangle
-        continue;
-
-      if ( !mFetchRect.isEmpty() &&
-           mFetchAddedFeaturesIt->geometry() &&
-           !mFetchAddedFeaturesIt->geometry()->intersects( mFetchRect ) )
-        // skip added features not in rectangle
-        continue;
-
-      f.setFeatureId( fid );
-      f.setValid( true );
-
-      if ( mFetchGeometry )
-        f.setGeometry( *mFetchAddedFeaturesIt->geometry() );
-
-      if ( mFetchAttributes.size() > 0 )
-      {
-        f.setAttributeMap( mFetchAddedFeaturesIt->attributeMap() );
-        updateFeatureAttributes( f );
-      }
-
-      mFetchAddedFeaturesIt++;
-      return true;
-    }
-
-    // no more added features
-  }
-
-  while ( dataProvider()->nextFeature( f ) )
-  {
-    if ( mFetchConsidered.contains( f.id() ) )
-      continue;
-
-    if ( mEditable )
-      updateFeatureAttributes( f );
-
-    // found it
-    return true;
-  }
-
-  mFetching = false;
-  return false;
+  return mOldApiIter.nextFeature(f);
 }
+
+QgsFeatureIterator QgsVectorLayer::getFeatures( QgsAttributeList fetchAttributes,
+                                                QgsRectangle rect,
+                                                bool fetchGeometry,
+                                                bool useIntersect )
+{
+  return QgsFeatureIterator( new QgsVectorLayerIterator( this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
+}
+
 
 bool QgsVectorLayer::featureAtId( int featureId, QgsFeature& f, bool fetchGeometries, bool fetchAttributes )
 {
@@ -1594,7 +1456,7 @@ bool QgsVectorLayer::featureAtId( int featureId, QgsFeature& f, bool fetchGeomet
         mDataProvider->featureAtId( featureId, tmp, false, mDataProvider->attributeIndexes() );
         f.setAttributeMap( tmp.attributeMap() );
       }
-      updateFeatureAttributes( f, true );
+      updateFeatureAttributes( f, pendingAllAttributesList() );
     }
     return true;
   }
@@ -1621,7 +1483,7 @@ bool QgsVectorLayer::featureAtId( int featureId, QgsFeature& f, bool fetchGeomet
   {
     if ( mDataProvider->featureAtId( featureId, f, fetchGeometries, mDataProvider->attributeIndexes() ) )
     {
-      updateFeatureAttributes( f, true );
+      updateFeatureAttributes( f, pendingAllAttributesList() );
       return true;
     }
   }
@@ -3444,6 +3306,7 @@ QgsFeatureList QgsVectorLayer::selectedFeatures()
   QgsFeatureList features;
 
   QgsAttributeList allAttrs = mDataProvider->attributeIndexes();
+  QgsAttributeList pendingAllAttrs = pendingAllAttributesList();
 
   for ( QgsFeatureIds::iterator it = mSelectedFeatureIds.begin(); it != mSelectedFeatureIds.end(); ++it )
   {
@@ -3468,7 +3331,7 @@ QgsFeatureList QgsVectorLayer::selectedFeatures()
       mDataProvider->featureAtId( *it, feat, true, allAttrs );
     }
 
-    updateFeatureAttributes( feat );
+    updateFeatureAttributes( feat, pendingAllAttrs );
     updateFeatureGeometry( feat );
 
     features << feat;

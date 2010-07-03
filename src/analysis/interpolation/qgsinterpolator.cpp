@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 #include "qgsinterpolator.h"
-#include "qgsvectordataprovider.h"
+#include "qgsvectorlayer.h"
 #include "qgsgeometry.h"
 #ifndef Q_OS_MACX
 #include <cmath>

@@ -132,9 +132,9 @@ public:
   void setUsingRendererV2(bool usingRendererV2);
     
   /** Draw layer with renderer V2. Added in QGIS 1.4 */
-  void drawRendererV2( QgsRenderContext& rendererContext, bool labeling );
+  void drawRendererV2( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi );
   /** Draw layer with renderer V2 using symbol levels. Added in QGIS 1.4 */
-  void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling );
+  void drawRendererV2Levels( QgsRenderContext& rendererContext, bool labeling, QgsFeatureIterator& fi );
 
   /** Returns point, line or polygon */
   QGis::GeometryType geometryType() const;
@@ -207,6 +207,15 @@ public:
 
   bool nextFeature(QgsFeature& feature);
 
+  /**
+   * Start iterating over features of the layer.
+   * For new code, consider using this method instead of select/nextFeature combo.
+   * @note Added in v1.6
+   */
+  QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                  QgsRectangle rect = QgsRectangle(),
+                                  bool fetchGeometry = true,
+                                  bool useIntersect = false );
 
   /**Gets the feature at the given feature id. Considers the changed, added, deleted and permanent features
    @return true in case of success*/

@@ -15,7 +15,7 @@
 // QGIS includes
 #include <qgsmapcanvas.h>
 #include <qgsmaplayer.h>
-#include <qgsvectordataprovider.h>
+#include <qgsvectorlayer.h>
 #include <qgsfield.h>
 
 // Qt includes

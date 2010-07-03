@@ -26,9 +26,10 @@ extern "C"
 #include "qgsvectordataprovider.h"
 #include "qgsrectangle.h"
 #include <list>
-#include <queue>
 #include <fstream>
 #include <set>
+#include <vector>
+#include <QMutex>
 
 class QgsFeature;
 class QgsField;
@@ -90,6 +91,11 @@ class QgsPostgresProvider : public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
       * Gets the feature at the given feature ID.
@@ -363,11 +369,12 @@ class QgsPostgresProvider : public QgsVectorDataProvider
     */
     bool parseDomainCheckConstraint( QStringList& enumValues, const QString& attributeName ) const;
 
-    bool mFetching; // true if a cursor was declared
-    int mFetched; // number of retrieved features
     std::vector < QgsFeature > features;
     QgsFieldMap attributeFields;
     QString mDataComment;
+
+    QgsFeatureIterator mOldApiIter;
+    friend class QgsPostgresFeatureIterator;
 
     //! Data source URI struct for this layer
     QgsDataSourceURI mUri;
@@ -438,17 +445,6 @@ class QgsPostgresProvider : public QgsVectorDataProvider
      * Number of features in the layer
      */
     mutable long featuresCounted;
-
-    /**
-     * Feature queue that GetNextFeature will retrieve from
-     * before the next fetch from PostgreSQL
-     */
-    std::queue<QgsFeature> mFeatureQueue;
-
-    /**
-     * Maximal size of the feature queue
-     */
-    int mFeatureQueueSize;
 
     /**
      * Flag indicating whether data from binary cursors must undergo an
@@ -706,6 +702,8 @@ class QgsPostgresProvider : public QgsVectorDataProvider
      * Default value for primary key
      */
     QString mPrimaryKeyDefault;
-};
+
+    mutable QMutex mConnectionROMutex;
+  };
 
 #endif
