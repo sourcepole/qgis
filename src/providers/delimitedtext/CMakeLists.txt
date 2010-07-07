@@ -2,7 +2,7 @@
 ########################################################
 # Files
 
-SET (DTEXT_SRCS qgsdelimitedtextprovider.cpp)
+SET (DTEXT_SRCS qgsdelimitedtextprovider.cpp qgsdelimitedtextfeatureiterator.cpp)
 
 SET (DTEXT_MOC_HDRS	qgsdelimitedtextprovider.h)
 

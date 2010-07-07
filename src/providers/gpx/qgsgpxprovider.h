@@ -21,6 +21,7 @@
 #include "qgsvectordataprovider.h"
 #include "gpsdata.h"
 
+#include <QMutex>
 
 class QgsFeature;
 class QgsField;
@@ -69,6 +70,11 @@ class QgsGPXProvider : public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
      * Get feature type.
@@ -150,15 +156,6 @@ class QgsGPXProvider : public QgsVectorDataProvider
     /** Adds one feature (used by addFeatures()) */
     bool addFeature( QgsFeature& f );
 
-    /**
-     * Check to see if the point is withn the selection
-     * rectangle
-     * @param x X value of point
-     * @param y Y value of point
-     * @return True if point is within the rectangle
-     */
-    bool boundsCheck( double x, double y );
-
 
   private:
 
@@ -174,25 +171,12 @@ class QgsGPXProvider : public QgsVectorDataProvider
                      CmtAttr, DscAttr, SrcAttr, URLAttr, URLNameAttr
                  };
     static const char* attr[];
-    //! Current selection rectangle
-    QgsRectangle *mSelectionRectangle;
+
     bool mValid;
     long mNumberFeatures;
 
-    //! Current waypoint iterator
-    QgsGPSData::WaypointIterator mWptIter;
-    //! Current route iterator
-    QgsGPSData::RouteIterator mRteIter;
-    //! Current track iterator
-    QgsGPSData::TrackIterator mTrkIter;
+    friend class QgsGPXFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
 
-    struct wkbPoint
-    {
-      char byteOrder;
-      unsigned wkbType;
-      double x;
-      double y;
-    };
-    wkbPoint mWKBpt;
-
+    QMutex mDataMutex;
 };

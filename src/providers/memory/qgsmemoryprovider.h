@@ -15,6 +15,7 @@
 
 #include "qgsvectordataprovider.h"
 
+#include <QMutex>
 
 typedef QMap<int, QgsFeature> QgsFeatureMap;
 
@@ -57,6 +58,11 @@ class QgsMemoryProvider : public QgsVectorDataProvider
      * feature, or EOF.  The feature found on the current line is parsed.
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
       * Gets the feature at the given feature ID.
@@ -194,17 +200,11 @@ class QgsMemoryProvider : public QgsVectorDataProvider
     QgsFeatureMap mFeatures;
     int mNextFeatureId;
 
-    // selection
-    QgsAttributeList mSelectAttrs;
-    QgsRectangle mSelectRect;
-    QgsGeometry* mSelectRectGeom;
-    bool mSelectGeometry, mSelectUseIntersect;
-    QgsFeatureMap::iterator mSelectIterator;
-    bool mSelectUsingSpatialIndex;
-    QList<int> mSelectSI_Features;
-    QList<int>::iterator mSelectSI_Iterator;
-
     // indexing
     QgsSpatialIndex* mSpatialIndex;
 
+    friend class QgsMemoryFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
+
+    QMutex mDataMutex;
 };

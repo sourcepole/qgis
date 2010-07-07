@@ -17,7 +17,7 @@
 /* $Id$ */
 
 #include "qgsdelimitedtextprovider.h"
-
+#include "qgsdelimitedtextfeatureiterator.h"
 
 #include <QtGlobal>
 #include <QFile>
@@ -30,7 +30,6 @@
 #include <QUrl>
 
 
-#include "qgsapplication.h"
 #include "qgsdataprovider.h"
 #include "qgsfeature.h"
 #include "qgsfield.h"
@@ -46,7 +45,7 @@ static const QString TEXT_PROVIDER_DESCRIPTION = "Delimited text data provider";
 
 QStringList QgsDelimitedTextProvider::splitLine( QString line )
 {
-  QgsDebugMsg( "Attempting to split the input line: " + line + " using delimiter " + mDelimiter );
+  //QgsDebugMsg( "Attempting to split the input line: " + line + " using delimiter " + mDelimiter );
 
   QStringList parts;
   if ( mDelimiterType == "regexp" )
@@ -54,7 +53,7 @@ QStringList QgsDelimitedTextProvider::splitLine( QString line )
   else
     parts = line.split( mDelimiter );
 
-  QgsDebugMsg( "Split line into " + QString::number( parts.size() ) + " parts" );
+  //QgsDebugMsg( "Split line into " + QString::number( parts.size() ) + " parts" );
 
   if ( mDelimiterType == "plain" )
   {
@@ -146,8 +145,6 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( QString uri )
   else
     mDelimiter.replace( "\\t", "\t" ); // replace "\t" with a real tabulator
 
-  // Set the selection rectangle to null
-  mSelectionRectangle = QgsRectangle();
   // assume the layer is invalid until proven otherwise
   mValid = false;
   if ( mFileName.isEmpty() || mDelimiter.isEmpty() || xField.isEmpty() || yField.isEmpty() )
@@ -329,120 +326,46 @@ QString QgsDelimitedTextProvider::storageType() const
   return "Delimited text file";
 }
 
+QgsFeatureIterator QgsDelimitedTextProvider::getFeatures( QgsAttributeList fetchAttributes,
+                                                          QgsRectangle rect,
+                                                          bool fetchGeometry,
+                                                          bool useIntersect )
+{
+  return QgsFeatureIterator( new QgsDelimitedTextFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect));
+}
+
 
 bool QgsDelimitedTextProvider::nextFeature( QgsFeature& feature )
 {
-  // before we do anything else, assume that there's something wrong with
-  // the feature
-  feature.setValid( false );
-  while ( ! mStream->atEnd() )
-  {
-    double x = 0.0;
-    double y = 0.0;
-    QString line = mStream->readLine(); // Default local 8 bit encoding
-
-    // lex the tokens from the current data line
-    QStringList tokens = splitLine( line );
-
-    bool xOk = false;
-    bool yOk = false;
-
-    // Skip indexing malformed lines.
-    if ( attributeFields.size() == tokens.size() )
-    {
-      x = tokens[mXFieldIndex].toDouble( &xOk );
-      y = tokens[mYFieldIndex].toDouble( &yOk );
-    }
-
-    if ( !( xOk && yOk ) )
-    {
-      // Accumulate any lines that weren't ok, to report on them
-      // later, and look at the next line in the file, but only if
-      // we need to.
-      QgsDebugMsg( "Malformed line : " + line );
-      if ( mShowInvalidLines )
-        mInvalidLines << line;
-
-      continue;
-    }
-
-    // Give every valid line in the file an id, even if it's not
-    // in the current extent or bounds.
-    ++mFid;             // increment to next feature ID
-
-    // skip the feature if it's out of current bounds
-    if ( ! boundsCheck( x, y ) )
-      continue;
-
-    // at this point, one way or another, the current feature values
-    // are valid
-    feature.setValid( true );
-
-    feature.setFeatureId( mFid );
-
-    QByteArray  buffer;
-    QDataStream s( &buffer, static_cast<QIODevice::OpenMode>( QIODevice::WriteOnly ) ); // open on buffers's data
-
-    switch ( QgsApplication::endian() )
-    {
-      case QgsApplication::NDR :
-        // we're on a little-endian platform, so tell the data
-        // stream to use that
-        s.setByteOrder( QDataStream::LittleEndian );
-        s << ( quint8 )1; // 1 is for little-endian
-        break;
-      case QgsApplication::XDR :
-        // don't change byte order since QDataStream is big endian by default
-        s << ( quint8 )0; // 0 is for big-endian
-        break;
-      default :
-        QgsDebugMsg( "unknown endian" );
-        //delete [] geometry;
-        return false;
-    }
-
-    s << ( quint32 )QGis::WKBPoint;
-    s << x;
-    s << y;
-
-    unsigned char* geometry = new unsigned char[buffer.size()];
-    memcpy( geometry, buffer.data(), buffer.size() );
-
-    feature.setGeometryAndOwnership( geometry, sizeof( wkbPoint ) );
-
-    for ( QgsAttributeList::const_iterator i = mAttributesToFetch.begin();
-          i != mAttributesToFetch.end();
-          ++i )
-    {
-      QVariant val;
-      switch ( attributeFields[*i].type() )
-      {
-        case QVariant::Int:
-          if( !tokens[*i].isEmpty() )
-            val = QVariant( tokens[*i].toInt() );
-          else
-            val = QVariant( attributeFields[*i].type() );
-          break;
-        case QVariant::Double:
-          if( !tokens[*i].isEmpty() )
-            val = QVariant( tokens[*i].toDouble() );
-          else
-            val = QVariant( attributeFields[*i].type() );
-          break;
-        default:
-          val = QVariant( tokens[*i] );
-          break;
-      }
-      feature.addAttribute( *i, val );
-    }
-
-    // We have a good line, so return
+  if (mOldApiIter.nextFeature(feature))
     return true;
+  else
+  {
+    mOldApiIter.close(); // make sure to unlock the layer
+    return false;
+  }
+}
 
-  } // ! textStream EOF
 
-  // End of the file. If there are any lines that couldn't be
-  // loaded, display them now.
+void QgsDelimitedTextProvider::select( QgsAttributeList fetchAttributes,
+                                       QgsRectangle rect,
+                                       bool fetchGeometry,
+                                       bool useIntersect )
+{
+  mOldApiIter.close();
+  mOldApiIter = getFeatures(fetchAttributes, rect, fetchGeometry, useIntersect);
+}
+
+void QgsDelimitedTextProvider::rewind()
+{
+  mOldApiIter.rewind();
+}
+
+
+
+void QgsDelimitedTextProvider::showInvalidLinesErrors()
+{
+  // TODO: this should be modified to only set an error string that can be read from provider
 
   if ( mShowInvalidLines && !mInvalidLines.isEmpty() )
   {
@@ -463,31 +386,7 @@ bool QgsDelimitedTextProvider::nextFeature( QgsFeature& feature )
     // We no longer need these lines.
     mInvalidLines.empty();
   }
-
-  return false;
-
-} // nextFeature
-
-
-void QgsDelimitedTextProvider::select( QgsAttributeList fetchAttributes,
-                                       QgsRectangle rect,
-                                       bool fetchGeometry,
-                                       bool useIntersect )
-{
-  mSelectionRectangle = rect;
-  mAttributesToFetch = fetchAttributes;
-  mFetchGeom = fetchGeometry;
-  if ( rect.isEmpty() )
-  {
-    mSelectionRectangle = mExtent;
-  }
-  else
-  {
-    mSelectionRectangle = rect;
-  }
-  rewind();
 }
-
 
 
 
@@ -527,33 +426,11 @@ const QgsFieldMap & QgsDelimitedTextProvider::fields() const
   return attributeFields;
 }
 
-void QgsDelimitedTextProvider::rewind()
-{
-  // Reset feature id to 0
-  mFid = 0;
-  // Skip ahead one line since first record is always assumed to be
-  // the header record
-  mStream->seek( 0 );
-  mStream->readLine();
-}
-
 bool QgsDelimitedTextProvider::isValid()
 {
   return mValid;
 }
 
-/**
- * Check to see if the point is within the selection rectangle
- */
-bool QgsDelimitedTextProvider::boundsCheck( double x, double y )
-{
-  // no selection rectangle => always in the bounds
-  if ( mSelectionRectangle.isEmpty() )
-    return true;
-
-  return ( x <= mSelectionRectangle.xMaximum() ) && ( x >= mSelectionRectangle.xMinimum() ) &&
-         ( y <= mSelectionRectangle.yMaximum() ) && ( y >= mSelectionRectangle.yMinimum() );
-}
 
 int QgsDelimitedTextProvider::capabilities() const
 {

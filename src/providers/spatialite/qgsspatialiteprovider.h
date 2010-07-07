@@ -28,6 +28,8 @@ extern "C"
 #include <fstream>
 #include <set>
 
+#include <QMutex>
+
 class QgsFeature;
 class QgsField;
 
@@ -99,6 +101,11 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature & feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /** Get the feature type. This corresponds to
      * WKBPoint,
@@ -314,10 +321,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      */
     sqlite3 *sqliteHandle;
     /**
-      * SQLite statement handle
-     */
-    sqlite3_stmt *sqliteStatement;
-    /**
      * String used to define a subset of the layer
      */
     QString mSubsetString;
@@ -356,8 +359,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     */
     //void sqliteOpen();
     void closeDb();
-    QString quotedIdentifier( QString id ) const;
-    QString quotedValue( QString value ) const;
+
     bool checkLayerType();
     bool getGeometryDetails();
     bool getTableGeometryDetails();
@@ -365,6 +367,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     bool getVShapeGeometryDetails();
     bool getSridDetails();
     bool getTableSummary();
+
+    static QString quotedIdentifier( QString id );
+    static QString quotedValue( QString value );
 
   public:
     class SqliteHandles
@@ -404,4 +409,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * sqlite3 handles pointer
      */
     SqliteHandles *handle;
+
+    friend class QgsSpatiaLiteFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
+
+    QMutex mHandleMutex;
 };

@@ -20,6 +20,7 @@
 #include "qgsvectordataprovider.h"
 
 #include <QStringList>
+#include <QMutex>
 
 class QgsFeature;
 class QgsField;
@@ -78,6 +79,11 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
      * feature, or EOF.  The feature found on the current line is parsed.
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
      * Get feature type.
@@ -156,18 +162,6 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
 
     /* new functions */
 
-    /**
-     * Check to see if the point is withn the selection
-     * rectangle
-     * @param x X value of point
-     * @param y Y value of point
-     * @return True if point is within the rectangle
-    */
-    bool boundsCheck( double x, double y );
-
-
-
-
 
   private:
 
@@ -187,18 +181,12 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     //! Layer extent
     QgsRectangle mExtent;
 
-    //! Current selection rectangle
-
-    QgsRectangle mSelectionRectangle;
-
     //! Text file
     QFile *mFile;
 
     QTextStream *mStream;
 
     bool mValid;
-
-    int mGeomType;
 
     long mNumberFeatures;
 
@@ -207,18 +195,12 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     //! Only want to show the invalid lines once to the user
     bool mShowInvalidLines;
 
-    //! Feature id
-    long mFid;
-
-    struct wkbPoint
-    {
-      unsigned char byteOrder;
-      quint32 wkbType;
-      double x;
-      double y;
-    };
-    wkbPoint mWKBpt;
-
     QStringList splitLine( QString line );
 
+    void showInvalidLinesErrors();
+
+    friend class QgsDelimitedTextFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
+
+    QMutex mStreamMutex;
 };
