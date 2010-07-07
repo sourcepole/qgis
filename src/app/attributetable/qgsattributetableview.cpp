@@ -55,6 +55,9 @@ void QgsAttributeTableView::setLayer( QgsVectorLayer* layer )
   else
     mModel = new QgsAttributeTableMemoryModel( layer );
 
+  // tell the model to get initialized
+  mModel->loadLayer();
+
   mFilterModel = new QgsAttributeTableFilterModel( layer );
   mFilterModel->setSourceModel( mModel );
   setModel( mFilterModel );

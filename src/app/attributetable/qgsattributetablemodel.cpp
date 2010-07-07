@@ -43,7 +43,8 @@ QgsAttributeTableModel::QgsAttributeTableModel( QgsVectorLayer *theLayer, QObjec
   //connect(mLayer, SIGNAL(featureDeleted(int)), this, SLOT( featureDeleted(int)));
   //connect(mLayer, SIGNAL(featureAdded(int)), this, SLOT( featureAdded(int)));
 
-  loadLayer();
+  // do not call virtual methods in constructors!
+  //loadLayer();
 }
 
 bool QgsAttributeTableModel::featureAtId( int fid ) const

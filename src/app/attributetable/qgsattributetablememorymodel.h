@@ -39,6 +39,11 @@ class QgsAttributeTableMemoryModel : public QgsAttributeTableModel
      */
     QgsAttributeTableMemoryModel( QgsVectorLayer *theLayer );
 
+    /**
+     * Loads the layer into the model
+     */
+    virtual void loadLayer();
+
   protected slots:
 #if 0
     /**
@@ -72,12 +77,7 @@ class QgsAttributeTableMemoryModel : public QgsAttributeTableModel
      * @param fid feature id
      * @return feature exists
      */
-    virtual bool featureAtId( int fid );
-
-    /**
-     * Loads the layer into the model
-     */
-    virtual void loadLayer();
+    virtual bool featureAtId( int fid ) const;
 
     QHash<int, QgsFeature> mFeatureMap;
 };

@@ -43,10 +43,11 @@ QgsAttributeTableMemoryModel::QgsAttributeTableMemoryModel
 ( QgsVectorLayer *theLayer )
     : QgsAttributeTableModel( theLayer )
 {
-  loadLayer();
+  // do not call virtual methods in constructors!
+  //loadLayer();
 }
 
-bool QgsAttributeTableMemoryModel::featureAtId( int fid )
+bool QgsAttributeTableMemoryModel::featureAtId( int fid ) const
 {
   if ( mFeatureMap.contains( fid ) )
   {

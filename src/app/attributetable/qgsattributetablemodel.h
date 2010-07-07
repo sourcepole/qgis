@@ -128,6 +128,12 @@ class QgsAttributeTableModel: public QAbstractTableModel
     /** Execute an action */
     void executeAction( int action, const QModelIndex &idx ) const;
 
+    /**
+     * Loads the layer into the model
+     */
+    virtual void loadLayer();
+
+
   signals:
     /**
      * Model has been changed
@@ -200,11 +206,6 @@ class QgsAttributeTableModel: public QAbstractTableModel
      * Initializes id <-> row maps
      */
     void initIdMaps();
-
-    /**
-     * Loads the layer into the model
-     */
-    virtual void loadLayer();
 
     /**
       * Gets mFieldCount, mAttributes and mValueMaps
