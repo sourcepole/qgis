@@ -16,7 +16,7 @@
 
 #include <sqlite3.h>
 #include <QFile>
-
+#include <QMutex>
 
 /**
  * Quantum GIS provider for OpenStreetMap data.
@@ -72,9 +72,6 @@ class QgsOSMDataProvider: public QgsVectorDataProvider
     sqlite3 *mDatabase;
 
     //! pointer to main sqlite3 database statement object; this statement serves to select OSM data
-    sqlite3_stmt *mDatabaseStmt;
-
-    //! pointer to main sqlite3 database statement object; this statement serves to select OSM data
     sqlite3_stmt *mSelectFeatsStmt;
 
     //! pointer to main sqlite3 db stmt object; this stmt serves to select OSM data from some boundary
@@ -92,24 +89,14 @@ class QgsOSMDataProvider: public QgsVectorDataProvider
     //! sqlite3 database statement for exact node selection
     sqlite3_stmt *mNodeStmt;
 
-    // variables used to select OSM data; used mainly in select(), nextFeature() functions:
 
     //! list of supported attribute fields
     QgsFieldMap mAttributeFields;
 
-    //! which attributes should be fetched after calling of select() function
-    QgsAttributeList mAttributesToFetch;
+    friend class QgsOSMFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
 
-    //! features from which area should be fetched after calling of select() function?
-    QgsRectangle mSelectionRectangle;
-
-    //! geometry object of area from which features should be fetched after calling of select() function
-    QgsGeometry* mSelectionRectangleGeom;
-
-    //! determines if intersect should be used while selecting OSM data
-    bool mSelectUseIntersect;
-
-
+    mutable QMutex mDatabaseMutex;
 
   public:
 
@@ -150,6 +137,11 @@ class QgsOSMDataProvider: public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     /**
      * Gets the feature at the given feature ID.
@@ -356,9 +348,10 @@ class QgsOSMDataProvider: public QgsVectorDataProvider
      * @param stmt database statement to fetch way from
      * @param fetchGeometry determines if way geometry should be fetched also
      * @param fetchAttrs list of attributes to be fetched with way
+     * @param intersectGeom if using exact intersection, pointer to selection rect geometry, otherwise NULL
      * @return success of failure flag (true/false)
      */
-    bool fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool fetchGeometry, QgsAttributeList& fetchAttrs );
+    bool fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool fetchGeometry, QgsAttributeList& fetchAttrs, QgsGeometry* intersectGeom );
 
     /**
      * Function returns string of concatenated tags of specified feature.

@@ -7,6 +7,7 @@ osmhandler.cpp
 osmprovider.cpp
 osmrenderer.cpp
 osmstyle.cpp
+qgsosmfeatureiterator.cpp
 )
 
 SET(OSM_MOC_HDRS osmprovider.h)

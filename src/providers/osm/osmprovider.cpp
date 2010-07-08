@@ -15,6 +15,7 @@
 #include "osmprovider.h"
 #include "osmhandler.h"
 #include "osmrenderer.h"
+#include "qgsosmfeatureiterator.h"
 
 #include "qgsfeature.h"
 #include "qgsfield.h"
@@ -43,12 +44,8 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
 {
   QgsDebugMsg( "Initializing provider: " + uri );
 
-  mDatabaseStmt = NULL;
   mValid = false;
 
-  // set the selection rectangle to null
-  mSelectionRectangle = 0;
-  mSelectionRectangleGeom = NULL;
   mDatabase = NULL;
   mInitObserver = NULL;
   mFeatureType = PointType;    // default feature type ~ point
@@ -330,9 +327,6 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
 
 QgsOSMDataProvider::~QgsOSMDataProvider()
 {
-  // destruct selected geometry
-  delete mSelectionRectangleGeom;
-
   // finalize all created sqlite3 statements
   sqlite3_finalize( mTagsStmt );
   sqlite3_finalize( mCustomTagsStmt );
@@ -414,83 +408,6 @@ QString QgsOSMDataProvider::storageType() const
 }
 
 
-void QgsOSMDataProvider::select( QgsAttributeList fetchAttributes,
-                                 QgsRectangle rect,
-                                 bool fetchGeometry,
-                                 bool useIntersect )
-{
-  // re-initialization
-  delete mSelectionRectangleGeom;
-  if ( mDatabaseStmt )
-    // we must reset sqlite3 statement after recent selection - make it ready for next features selection
-    sqlite3_reset( mDatabaseStmt );
-
-  // store list of attributes to fetch, rectangle of area, geometry, etc.
-  mSelectionRectangle = rect;
-  mSelectionRectangleGeom = QgsGeometry::fromRect( rect );
-  mAttributesToFetch = fetchAttributes;
-
-  // set flags
-  mFetchGeom = fetchGeometry;
-  mSelectUseIntersect = useIntersect;
-
-  if ( mSelectionRectangle.isEmpty() )
-  {
-    // we want to select all features from OSM data; we will use mSelectFeatsStmt
-    // sqlite3 statement that is well prepared for this purpose
-    mDatabaseStmt = mSelectFeatsStmt;
-    return;
-  }
-
-  // we want to select features from specified boundary; we will use mSelectFeatsInStmt
-  // sqlite3 statement that is well prepared for this purpose
-  mDatabaseStmt = mSelectFeatsInStmt;
-
-  if ( mFeatureType == PointType )
-  {
-    // binding variables (boundary) for points selection!
-    sqlite3_bind_double( mDatabaseStmt, 1, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 2, mSelectionRectangle.yMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 3, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 4, mSelectionRectangle.xMaximum() );
-  }
-  else if ( mFeatureType == LineType )
-  {
-    // binding variables (boundary) for lines selection!
-    sqlite3_bind_double( mDatabaseStmt, 1, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 2, mSelectionRectangle.yMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 3, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 4, mSelectionRectangle.yMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 5, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 6, mSelectionRectangle.yMaximum() );
-
-    sqlite3_bind_double( mDatabaseStmt, 7, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 8, mSelectionRectangle.xMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 9, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 10, mSelectionRectangle.xMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 11, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 12, mSelectionRectangle.xMaximum() );
-  }
-  else // mFeatureType == PolygonType
-  {
-    // binding variables (boundary) for polygons selection!
-    sqlite3_bind_double( mDatabaseStmt, 1, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 2, mSelectionRectangle.yMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 3, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 4, mSelectionRectangle.yMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 5, mSelectionRectangle.yMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 6, mSelectionRectangle.yMaximum() );
-
-    sqlite3_bind_double( mDatabaseStmt, 7, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 8, mSelectionRectangle.xMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 9, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 10, mSelectionRectangle.xMaximum() );
-    sqlite3_bind_double( mDatabaseStmt, 11, mSelectionRectangle.xMinimum() );
-    sqlite3_bind_double( mDatabaseStmt, 12, mSelectionRectangle.xMaximum() );
-  }
-}
-
-
 int QgsOSMDataProvider::wayMemberCount( int wayId )
 {
   // prepare select: get count of all the WAY members
@@ -522,33 +439,44 @@ int QgsOSMDataProvider::wayMemberCount( int wayId )
 }
 
 
+QgsFeatureIterator QgsOSMDataProvider::getFeatures( QgsAttributeList fetchAttributes,
+                                                    QgsRectangle rect,
+                                                    bool fetchGeometry,
+                                                    bool useIntersect )
+{
+  if ( !mValid )
+  {
+    QgsDebugMsg( "Read attempt on an invalid OSM layer" );
+    return QgsFeatureIterator();
+  }
+
+  return QgsFeatureIterator( new QgsOSMFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
+}
+
+
+void QgsOSMDataProvider::select( QgsAttributeList fetchAttributes,
+                                 QgsRectangle rect,
+                                 bool fetchGeometry,
+                                 bool useIntersect )
+{
+  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
+}
+
+
 bool QgsOSMDataProvider::nextFeature( QgsFeature& feature )
 {
-  // load next requested feature from sqlite3 database
-  switch ( sqlite3_step( mDatabaseStmt ) )
+  if (mOldApiIter.nextFeature(feature))
+    return true;
+  else
   {
-    case SQLITE_DONE:  // no more features to return
-      feature.setValid( false );
-      return false;
-
-    case SQLITE_ROW:  // another feature to return
-      if ( mFeatureType == PointType )
-        return fetchNode( feature, mDatabaseStmt, mFetchGeom, mAttributesToFetch );
-      else if ( mFeatureType == LineType )
-        return fetchWay( feature, mDatabaseStmt, mFetchGeom, mAttributesToFetch );
-      else if ( mFeatureType == PolygonType )
-        return fetchWay( feature, mDatabaseStmt, mFetchGeom, mAttributesToFetch );
-
-    default:
-      if ( mFeatureType == PointType )
-        QgsDebugMsg( "Getting next feature of type <point> failed." );
-      else if ( mFeatureType == LineType )
-        QgsDebugMsg( "Getting next feature of type <line> failed." );
-      else if ( mFeatureType == PolygonType )
-        QgsDebugMsg( "Getting next feature of type <polygon> failed." );
-      feature.setValid( false );
-      return false;
+    mOldApiIter.close(); // make sure to unlock the layer
+    return false;
   }
+}
+
+void QgsOSMDataProvider::rewind()
+{
+  mOldApiIter.rewind();
 }
 
 
@@ -557,6 +485,8 @@ bool QgsOSMDataProvider::featureAtId( int featureId,
                                       bool fetchGeometry,
                                       QgsAttributeList fetchAttributes )
 {
+  QMutexLocker locker(&mDatabaseMutex);
+
   // load exact feature from sqlite3 database
   if ( mFeatureType == PointType )
   {
@@ -585,7 +515,7 @@ bool QgsOSMDataProvider::featureAtId( int featureId,
       return false;
     }
 
-    fetchWay( feature, mWayStmt, fetchGeometry, fetchAttributes );
+    fetchWay( feature, mWayStmt, fetchGeometry, fetchAttributes, NULL );
 
     // prepare statement for next call
     sqlite3_reset( mWayStmt );
@@ -641,7 +571,7 @@ bool QgsOSMDataProvider::fetchNode( QgsFeature& feature, sqlite3_stmt* stmt, boo
 }
 
 
-bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool fetchGeometry, QgsAttributeList& fetchAttrs )
+bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool fetchGeometry, QgsAttributeList& fetchAttrs, QgsGeometry* intersectGeom )
 {
   int selId;
   const char* selTimestamp;
@@ -658,7 +588,7 @@ bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool
     unsigned char *pzBlob = 0;
     int pnBlob = 0;
 
-    if ( fetchGeometry || mSelectUseIntersect || !mSelectionRectangle.isEmpty() )
+    if ( fetchGeometry || intersectGeom )
     {
       pnBlob = sqlite3_column_bytes( stmt, 1 );
       pzBlob = new unsigned char[pnBlob];
@@ -678,21 +608,22 @@ bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool
       theGeometry->fromWkb(( unsigned char * ) geo, ( size_t ) geolen );
     }
 
-    if ( mSelectUseIntersect )
+    if ( intersectGeom )
     {
       // when using intersect, some features might be ignored if they don't intersect the selection rect
       // intersect is a costly operation, use rectangle converted to geos for less conversions
       // (this is usually used during identification of an object)
-      if ( theGeometry->intersects( mSelectionRectangleGeom ) )
+      if ( theGeometry->intersects( intersectGeom ) )
         fetchMoreRows = false;
     }
-    else if ( !mSelectionRectangle.isEmpty() )
+    /* this is should not be necessary, selection rectangle is used in the query
+    else if ( !selectionRectangle.isEmpty() )
     {
       // when using selection rectangle but without exact intersection, check only overlap of bounding box
       // (usually used when drawing)
-      if ( mSelectionRectangle.intersects( theGeometry->boundingBox() ) )
+      if ( selectionRectangle.intersects( theGeometry->boundingBox() ) )
         fetchMoreRows = false;
-    }
+    }*/
     else
     {
       // no filter => always accept the new feature
@@ -848,6 +779,8 @@ QGis::WkbType QgsOSMDataProvider::geometryType() const
 
 long QgsOSMDataProvider::featureCount() const
 {
+  QMutexLocker locker(&mDatabaseMutex);
+
   sqlite3_stmt* countStmt;
   long cnt = 0;
 
@@ -869,7 +802,7 @@ long QgsOSMDataProvider::featureCount() const
 
 uint QgsOSMDataProvider::fieldCount() const
 {
-  return mAttributeFields.size();;
+  return mAttributeFields.size();
 }
 
 
@@ -941,14 +874,6 @@ QgsCoordinateReferenceSystem QgsOSMDataProvider::crs()
   return QgsCoordinateReferenceSystem( GEOSRID, QgsCoordinateReferenceSystem::PostgisCrsId ); // use WGS84
 }
 
-
-void QgsOSMDataProvider::rewind()
-{
-  // we have to reset precompiled database statement; thanx to this action the first feature
-  // (returned by the query) will be selected again with the next calling of sqlite3_step(mDatabaseStmt)
-  if ( mDatabaseStmt )
-    sqlite3_reset( mDatabaseStmt );
-}
 
 
 int QgsOSMDataProvider::freeFeatureId()
