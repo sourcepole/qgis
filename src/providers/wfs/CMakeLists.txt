@@ -2,7 +2,7 @@
 ########################################################
 # Files
 
-SET(WFS_SRCS qgswfsprovider.cpp qgswfsdata.cpp)
+SET(WFS_SRCS qgswfsprovider.cpp qgswfsdata.cpp qgswfsfeatureiterator.cpp)
 
 SET (WFS_MOC_HDRS
      qgswfsdata.h

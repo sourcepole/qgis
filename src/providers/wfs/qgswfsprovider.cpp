@@ -23,6 +23,7 @@
 #include "qgscoordinatereferencesystem.h"
 #include "qgswfsdata.h"
 #include "qgswfsprovider.h"
+#include "qgswfsfeatureiterator.h"
 #include "qgsspatialindex.h"
 #include "qgslogger.h"
 #include <QDomDocument>
@@ -38,7 +39,7 @@ static const QString WFS_NAMESPACE = "http://www.opengis.net/wfs";
 static const QString GML_NAMESPACE = "http://www.opengis.net/gml";
 
 QgsWFSProvider::QgsWFSProvider( const QString& uri )
-    : QgsVectorDataProvider( uri ), mUseIntersect( false ), mSourceCRS( 0 ), mFeatureCount( 0 ), mValid( true )
+    : QgsVectorDataProvider( uri ), mSourceCRS( 0 ), mFeatureCount( 0 ), mValid( true )
 {
   mSpatialIndex = new QgsSpatialIndex;
   if ( getFeature( uri ) == 0 )
@@ -56,60 +57,10 @@ QgsWFSProvider::QgsWFSProvider( const QString& uri )
 
 QgsWFSProvider::~QgsWFSProvider()
 {
-  mSelectedFeatures.clear();
-  for ( int i = 0; i < mFeatures.size(); i++ )
-    delete mFeatures[i];
-  mFeatures.clear();
+  mOldApiIter.close();
+
   delete mSpatialIndex;
 }
-
-bool QgsWFSProvider::nextFeature( QgsFeature& feature )
-{
-  feature.setValid( false );
-
-  while ( true ) //go through the loop until we find a feature in the filter
-  {
-    if ( mSelectedFeatures.size() == 0 || mFeatureIterator == mSelectedFeatures.end() )
-    {
-      return 0;
-    }
-
-    feature.setFeatureId( mFeatures[*mFeatureIterator]->id() );
-
-    //we need geometry anyway, e.g. for intersection tests
-    QgsGeometry* geometry = mFeatures[*mFeatureIterator]->geometry();
-    unsigned char *geom = geometry->asWkb();
-    int geomSize = geometry->wkbSize();
-    unsigned char* copiedGeom = new unsigned char[geomSize];
-    memcpy( copiedGeom, geom, geomSize );
-    feature.setGeometryAndOwnership( copiedGeom, geomSize );
-
-    const QgsAttributeMap& attributes = mFeatures[*mFeatureIterator]->attributeMap();
-    for ( QgsAttributeList::const_iterator it = mAttributesToFetch.begin(); it != mAttributesToFetch.end(); ++it )
-    {
-      feature.addAttribute( *it, attributes[*it] );
-    }
-    ++mFeatureIterator;
-    if ( mUseIntersect )
-    {
-      if ( feature.geometry() && feature.geometry()->intersects( mSpatialFilter ) )
-      {
-        feature.setValid( true );
-        return true;
-      }
-      else
-      {
-        continue; //go for the next feature
-      }
-    }
-    else
-    {
-      feature.setValid( true );
-      return true;
-    }
-  }
-}
-
 
 
 QGis::WkbType QgsWFSProvider::geometryType() const
@@ -132,11 +83,6 @@ const QgsFieldMap & QgsWFSProvider::fields() const
   return mFields;
 }
 
-void QgsWFSProvider::rewind()
-{
-  mFeatureIterator = mSelectedFeatures.begin();
-}
-
 QgsCoordinateReferenceSystem QgsWFSProvider::crs()
 {
   return mSourceCRS;
@@ -152,27 +98,46 @@ bool QgsWFSProvider::isValid()
   return mValid;
 }
 
+QgsFeatureIterator QgsWFSProvider::getFeatures( QgsAttributeList fetchAttributes,
+                                                QgsRectangle rect,
+                                                bool fetchGeometry,
+                                                bool useIntersect )
+{
+  if ( !mValid )
+  {
+    QgsDebugMsg( "Read attempt on an invalid WFS layer" );
+    return QgsFeatureIterator();
+  }
+
+  return QgsFeatureIterator( new QgsWFSFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
+}
+
+
 void QgsWFSProvider::select( QgsAttributeList fetchAttributes,
                              QgsRectangle rect,
                              bool fetchGeometry,
                              bool useIntersect )
 {
-  mUseIntersect = useIntersect;
-  mAttributesToFetch = fetchAttributes;
-  mFetchGeom = fetchGeometry;
+  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
+}
 
-  if ( rect.isEmpty() )
-  {
-    mSpatialFilter = mExtent;
-  }
+bool QgsWFSProvider::nextFeature( QgsFeature& feature )
+{
+  if (mOldApiIter.nextFeature(feature))
+    return true;
   else
   {
-    mSpatialFilter = rect;
+    mOldApiIter.close(); // make sure to unlock the layer
+    return false;
   }
-
-  mSelectedFeatures = mSpatialIndex->intersects( mSpatialFilter );
-  mFeatureIterator = mSelectedFeatures.begin();
 }
+
+void QgsWFSProvider::rewind()
+{
+  mOldApiIter.rewind();
+}
+
+
 
 int QgsWFSProvider::getFeature( const QString& uri )
 {

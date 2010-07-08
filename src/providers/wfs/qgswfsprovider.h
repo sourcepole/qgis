@@ -24,6 +24,8 @@
 #include "qgscoordinatereferencesystem.h"
 #include "qgsvectordataprovider.h"
 
+#include <QMutex>
+
 class QgsRectangle;
 class QgsSpatialIndex;
 
@@ -64,6 +66,11 @@ class QgsWFSProvider: public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
     QGis::WkbType geometryType() const;
     long featureCount() const;
@@ -106,16 +113,8 @@ class QgsWFSProvider: public QgsVectorDataProvider
     REQUEST_ENCODING mEncoding;
     /**Bounding box for the layer*/
     QgsRectangle mExtent;
-    /**Spatial filter for the layer*/
-    QgsRectangle mSpatialFilter;
-    /**Flag if precise intersection test is needed. Otherwise, every feature is returned (even if a filter is set)*/
-    bool mUseIntersect;
     /**A spatial index for fast access to a feature subset*/
     QgsSpatialIndex *mSpatialIndex;
-    /**Vector where the ids of the selected features are inserted*/
-    QList<int> mSelectedFeatures;
-    /**Iterator on the feature vector for use in rewind(), nextFeature(), etc...*/
-    QList<int>::iterator mFeatureIterator;
     /**Vector where the features are inserted*/
     QList<QgsFeature*> mFeatures;
     /**Geometry type of the features in this layer*/
@@ -125,6 +124,11 @@ class QgsWFSProvider: public QgsVectorDataProvider
     int mFeatureCount;
     /**Flag if provider is valid*/
     bool mValid;
+
+    friend class QgsWFSFeatureIterator;
+    QgsFeatureIterator mOldApiIter;
+
+    QMutex mDataMutex;
 
 
     /**Collects information about the field types. Is called internally from QgsWFSProvider::getFeature. The method delegates the work to request specific ones and gives back the name of the geometry attribute and the thematic attributes with their types*/
