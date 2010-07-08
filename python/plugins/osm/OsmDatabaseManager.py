@@ -287,23 +287,37 @@ class OsmDatabaseManager:
         # finds out tolerance for snapping
         tolerance=self.getTolerance()
         area=QgsRectangle(mapPoint.x()-tolerance,mapPoint.y()-tolerance,mapPoint.x()+tolerance,mapPoint.y()+tolerance)
+        
+        mapPointGeom = QgsGeometry.fromPoint(mapPoint)
 
         feat=QgsFeature()
         lay=self.pointLayers[self.currentKey]
         lay.select([],area,True,True)
-        result=lay.nextFeature(feat)
-        lay.dataProvider().rewind()
-
-        if result:
-            return (feat,'Point')
+        minDist = 1e10
+        minFeat = None
+        while lay.nextFeature(feat):
+            dist = feat.geometry().distance(mapPointGeom)
+            if dist < minDist:
+                minDist = dist
+                minFeat = QgsFeature(feat)
+            
+        if minFeat:
+            return (minFeat,'Point')
 
         feat=QgsFeature()
         lay=self.lineLayers[self.currentKey]
         lay.select([],area,True,True)
-        result=lay.nextFeature(feat)
-        lay.dataProvider().rewind()
 
-        if result:
+        minDist = 1e10
+        minFeat = None
+        while lay.nextFeature(feat):
+            dist = feat.geometry().distance(mapPointGeom)
+            if dist < minDist:
+                minDist = dist
+                minFeat = QgsFeature(feat)
+
+        if minFeat:
+            feat = minFeat
             # line vertices
             c=self.getConnection().cursor()
             c.execute("select n.id,n.lat,n.lon from node n,way_member wm where n.u=1 and wm.u=1 and wm.way_id=:lineId and wm.node_id=n.id and n.status<>'R' and n.lat>=:minLat and n.lat<=:maxLat and n.lon>=:minLon and n.lon<=:maxLon"
@@ -322,10 +336,17 @@ class OsmDatabaseManager:
         feat=QgsFeature()
         lay=self.polygonLayers[self.currentKey]
         lay.select([],area,True,True)
-        result=lay.nextFeature(feat)
-        lay.dataProvider().rewind()
 
-        if result:
+        minDist = 1e10
+        minFeat = None
+        while lay.nextFeature(feat):
+            dist = feat.geometry().distance(mapPointGeom)
+            if dist < minDist:
+                minDist = dist
+                minFeat = QgsFeature(feat)
+
+        if minFeat:
+            feat = minFeat
             # polygon vertices
             c=self.getConnection().cursor()
             c.execute("select n.id,n.lat,n.lon from node n,way_member wm where n.u=1 and wm.u=1 and wm.way_id=:polygonId and wm.node_id=n.id and n.status<>'R' and n.lat>=:minLat and n.lat<=:maxLat and n.lon>=:minLon and n.lon<=:maxLon"
@@ -365,20 +386,16 @@ class OsmDatabaseManager:
         lay=self.pointLayers[self.currentKey]
         lay.select([],area,True,True)
         feat=QgsFeature()
-        result=lay.nextFeature(feat)
         featMap={}
 
-        while result:
+        while lay.nextFeature(feat):
             foundPoints.append((feat,'Point'))
-            feat=QgsFeature()
-            result=lay.nextFeature(feat)
 
         lay=self.lineLayers[self.currentKey]
         lay.select([],area,True,True)
         feat=QgsFeature()
-        result=lay.nextFeature(feat)
 
-        while result:
+        while lay.nextFeature(feat):
             # line vertices
             c=self.getConnection().cursor()
             c.execute("select n.id,n.lat,n.lon from node n,way_member wm where n.u=1 and wm.u=1 and wm.way_id=:lineId and wm.node_id=n.id and n.status<>'R' and n.lat>=:minLat and n.lat<=:maxLat and n.lon>=:minLon and n.lon<=:maxLon"
@@ -393,15 +410,12 @@ class OsmDatabaseManager:
             c.close()
 
             foundLines.append((feat,'Line'))
-            feat=QgsFeature()
-            result=lay.nextFeature(feat)
 
         lay=self.polygonLayers[self.currentKey]
         lay.select([],area,True,True)
         feat=QgsFeature()
-        result=lay.nextFeature(feat)
 
-        while result:
+        while lay.nextFeature(feat):
             # polygon vertices
             c=self.getConnection().cursor()
             c.execute("select n.id,n.lat,n.lon from node n,way_member wm where n.u=1 and wm.u=1 and wm.way_id=:polygonId and wm.node_id=n.id and n.status<>'R' and n.lat>=:minLat and n.lat<=:maxLat and n.lon>=:minLon and n.lon<=:maxLon"
@@ -416,8 +430,6 @@ class OsmDatabaseManager:
             c.close()
 
             foundPolygons.append((feat,'Polygon'))
-            feat=QgsFeature()
-            result=lay.nextFeature(feat)
 
         res=foundPoints
         for key in featMap.keys():
