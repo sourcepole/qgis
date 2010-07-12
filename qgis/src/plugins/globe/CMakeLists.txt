@@ -1,10 +1,17 @@
 
+# set path to additional CMake modules
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
+
+FIND_PACKAGE(OSG REQUIRED)
+FIND_PACKAGE(Threads)
+
 ########################################################
 # Files
 
 SET (globe_plugin_SRCS
      globe_plugin.cpp
      globe_plugin_gui.cpp
+     qgsosgviewer.cpp
 )
 
 SET (globe_plugin_UIS globe_plugin_guibase.ui)
@@ -34,9 +41,17 @@ INCLUDE_DIRECTORIES(
      ..
 )
 
+# SET(TARGET_LIBRARIES_VARS OSG_LIBRARY OSGDB_LIBRARY OSGUTIL_LIBRARY OSGVIEWER_LIBRARY OPENTHREADS_LIBRARY)
+
 TARGET_LINK_LIBRARIES(globeplugin
   qgis_core
   qgis_gui
+  QtOpenGL
+  osgDB
+  osgGA
+  osg
+  osgViewer
+  ${OPENTHREADS_LIBRARY}
 )
 
 

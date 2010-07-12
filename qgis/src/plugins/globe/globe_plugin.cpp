@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "globe_plugin.h"
+#include "qgsosgviewer.h"
 #include "globe_plugin_gui.h"
 
 #include <qgisinterface.h>
@@ -24,6 +25,46 @@
 
 #include <QAction>
 #include <QToolBar>
+
+#include <osgGA/TrackballManipulator>
+#include <osgDB/ReadFile>
+
+#include <osg/Notify>
+#include <osgGA/StateSetManipulator>
+#include <osgGA/GUIEventHandler>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+#include <osgEarth/Map>
+#include <osgEarth/MapNode>
+#include <osgEarthUtil/EarthManipulator>
+#include <osgEarthUtil/Viewpoint>
+
+// some preset viewpoints.
+static osgEarthUtil::Viewpoint VPs[] = {
+    osgEarthUtil::Viewpoint( "Africa",        osg::Vec3d(    0.0,   0.0, 0.0 ), 0.0, -90.0, 10e6 ),
+    osgEarthUtil::Viewpoint( "California",    osg::Vec3d( -121.0,  34.0, 0.0 ), 0.0, -90.0, 6e6 ),
+    osgEarthUtil::Viewpoint( "Europe",        osg::Vec3d(    0.0,  45.0, 0.0 ), 0.0, -90.0, 4e6 ),
+    osgEarthUtil::Viewpoint( "Washington DC", osg::Vec3d(  -77.0,  38.0, 0.0 ), 0.0, -90.0, 1e6 ),
+    osgEarthUtil::Viewpoint( "Australia",     osg::Vec3d(  135.0, -20.0, 0.0 ), 0.0, -90.0, 2e6 )
+};
+
+// a simple handler that demonstrates the "viewpoint" functionality in 
+// osgEarthUtil::EarthManipulator. Press a number key to fly to a viewpoint.
+struct FlyToViewpointHandler : public osgGA::GUIEventHandler 
+{
+    FlyToViewpointHandler( osgEarthUtil::EarthManipulator* manip ) : _manip(manip) { }
+
+    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
+    {
+        if ( ea.getEventType() == ea.KEYDOWN && ea.getKey() >= '1' && ea.getKey() <= '5' )
+        {
+            _manip->setViewpoint( VPs[ea.getKey()-'1'], 4.0 );
+        }
+        return false;
+    }
+
+    osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
+};
 
 //static const char * const sIdent = "$Id: plugin.cpp 9327 2008-09-14 11:18:44Z jef $";
 static const QString sName = QObject::tr( "Globe" );
@@ -57,10 +98,17 @@ void GlobePlugin::initGui()
 
 void GlobePlugin::run()
 {
-  QgsGlobePluginGui *myPluginGui = new QgsGlobePluginGui( mQGisIface->mainWindow(), QgisGui::ModalDialogFlags );
-  myPluginGui->setAttribute( Qt::WA_DeleteOnClose );
+  int argc = 2;
+  char* argv[] = {"GlobePlugin", "/home/pi/src/OpenSceneGraph-Data/cow.osg"};
+  osg::ArgumentParser arguments(&argc, argv);
+  osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFiles(arguments);
 
-  myPluginGui->show();
+  QgsOsgViewer* viewerWindow = new QgsOsgViewer;
+
+  viewerWindow->setCameraManipulator(new osgGA::TrackballManipulator);
+  viewerWindow->setSceneData(loadedModel.get());
+
+  viewerWindow->show();
 }
 
 void GlobePlugin::unload()
