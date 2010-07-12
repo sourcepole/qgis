@@ -114,6 +114,18 @@ void GlobePlugin::run()
     map->addMapLayer( layer );
   }
 
+  // Add transparent WMS layer to the map.
+  {
+    osgEarth::Config conf;
+    conf.add( "url", "http://geoserver.sourcepole.ch/cgi-bin/benchmark_2010/qgis_mapserv.fcgi?transparent=true" );
+    conf.add( "layers", "motorway" );
+    conf.add( "tile_size", "512" );
+    conf.add( "srs", "EPSG:4326" );
+    conf.add( "format", "png" );
+    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "qgis_mapserv", osgEarth::MapLayer::TYPE_IMAGE, "wms", conf );
+    map->addMapLayer( layer );
+  }
+
   // Add a heightfield layer to the map. You can add any number of heightfields and
   // osgEarth will composite them automatically.
   {
