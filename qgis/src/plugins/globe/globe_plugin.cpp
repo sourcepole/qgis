@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include "globe_plugin.h"
-#include "qgsosgviewer.h"
 #include "globe_plugin_gui.h"
 
 #include <qgisinterface.h>
@@ -75,7 +74,8 @@ static const QgisPlugin::PLUGINTYPE sPluginType = QgisPlugin::UI;
 GlobePlugin::GlobePlugin( QgisInterface* theQgisInterface )
   : QgisPlugin( sName, sDescription, sPluginVersion, sPluginType ),
     mQGisIface( theQgisInterface ),
-    mQActionPointer( NULL )
+    mQActionPointer( NULL ),
+    viewer()
 {
 }
 
@@ -98,17 +98,57 @@ void GlobePlugin::initGui()
 
 void GlobePlugin::run()
 {
-  int argc = 2;
-  char* argv[] = {"GlobePlugin", "/home/pi/src/OpenSceneGraph-Data/cow.osg"};
-  osg::ArgumentParser arguments(&argc, argv);
-  osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFiles(arguments);
+  // install the programmable manipulator.
+  osgEarthUtil::EarthManipulator* manip = new osgEarthUtil::EarthManipulator();
+  viewer.setCameraManipulator( manip );
 
-  QgsOsgViewer* viewerWindow = new QgsOsgViewer;
+  // The "Map" is the data model object that we will be visualizing. It will be
+  // geocentric by default, but you can specify a projected map in the constructor.
+  osgEarth::Map* map = new osgEarth::Map();
 
-  viewerWindow->setCameraManipulator(new osgGA::TrackballManipulator);
-  viewerWindow->setSceneData(loadedModel.get());
+  // Add an image layer to the map.
+  {
+    osgEarth::Config conf;
+    conf.add( "url", "http://demo.pelicanmapping.com/rmweb/data/bluemarble-tms/tms.xml" );
+    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "NASA", osgEarth::MapLayer::TYPE_IMAGE, "tms", conf );
+    map->addMapLayer( layer );
+  }
 
-  viewerWindow->show();
+  // Add a heightfield layer to the map. You can add any number of heightfields and
+  // osgEarth will composite them automatically.
+  {
+    osgEarth::Config conf;
+    conf.add( "url", "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml" );
+    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "SRTM", osgEarth::MapLayer::TYPE_HEIGHTFIELD, "tms", conf );
+    map->addMapLayer( layer );
+  }
+
+  // The MapNode will render the Map object in the scene graph.
+  osgEarth::MapNode* mapNode = new osgEarth::MapNode( map );
+
+  // Set a home viewpoint
+  if ( mapNode && mapNode->getMap()->isGeocentric() )
+  {
+    manip->setHomeViewpoint( 
+      osgEarthUtil::Viewpoint( osg::Vec3d( -90, 0, 0 ), 0.0, -90.0, 4e7 ),
+      1.0 );
+  }
+
+  viewer.setSceneData( mapNode );
+
+  manip->getSettings()->bindMouseDoubleClick(
+      osgEarthUtil::EarthManipulator::ACTION_GOTO,
+      osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON );
+
+  // add our fly-to handler
+  viewer.addEventHandler(new FlyToViewpointHandler( manip ));
+
+  // add some stock OSG handlers:
+  viewer.addEventHandler(new osgViewer::StatsHandler());
+  viewer.addEventHandler(new osgViewer::WindowSizeHandler());
+  viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+
+  viewer.show();
 }
 
 void GlobePlugin::unload()

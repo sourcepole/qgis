@@ -51,6 +51,9 @@ TARGET_LINK_LIBRARIES(globeplugin
   osgGA
   osg
   osgViewer
+  osgEarth
+  osgEarthFeatures
+  osgEarthUtil
   ${OPENTHREADS_LIBRARY}
 )
 

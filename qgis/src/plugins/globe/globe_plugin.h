@@ -20,6 +20,7 @@
 #define QGS_GLOBE_PLUGIN_H
 
 #include "../qgisplugin.h"
+#include "qgsosgviewer.h"
 #include <QObject>
 
 class QAction;
@@ -50,6 +51,8 @@ class GlobePlugin : public QObject, public QgisPlugin
     QgisInterface *mQGisIface;
     //!pointer to the qaction for this plugin
     QAction * mQActionPointer;
+    //! OSG Viewer
+    QgsOsgViewer viewer;
 };
 
 #endif // QGS_GLOBE_PLUGIN_H
