@@ -87,6 +87,7 @@ SET(QGIS_CORE_SRCS
   qgsvectordataprovider.cpp
   qgsvectorfilewriter.cpp
   qgsvectorlayer.cpp
+  qgsvectorlayereditbuffer.cpp
   qgsvectorlayeriterator.cpp
   qgsvectorlayerundocommand.cpp
   qgsvectoroverlay.cpp
@@ -237,6 +238,7 @@ SET(QGIS_CORE_MOC_HDRS
   qgsproject.h
   qgsrunprocess.h
   qgsvectorlayer.h
+  qgsvectorlayereditbuffer.h
   qgsrasterdataprovider.h
   qgsnetworkaccessmanager.h
 

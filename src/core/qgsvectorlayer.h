@@ -53,6 +53,7 @@ class QgsRectangle;
 
 class QgsFeatureRendererV2;
 
+class QgsVectorLayerEditBuffer;
 
 /** \ingroup core
  * Vector layer backed by a data source provider.
@@ -650,21 +651,11 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     void snapToGeometry( const QgsPoint& startPoint, int featureId, QgsGeometry* geom, double sqrSnappingTolerance,
                          QMultiMap<double, QgsSnappingResult>& snappingResults, QgsSnapper::SnappingType snap_to ) const;
 
-    /**Little helper function that gives bounding box from a list of points.
-    @return 0 in case of success*/
-    int boundingBoxFromPointList( const QList<QgsPoint>& list, double& xmin, double& ymin, double& xmax, double& ymax ) const;
-
     /**Reads vertex marker type from settings*/
     static QgsVectorLayer::VertexMarkerType currentVertexMarkerType();
 
     /**Reads vertex marker size from settings*/
     static int currentVertexMarkerSize();
-
-    /**Update feature with uncommited attribute updates*/
-    void updateFeatureAttributes( QgsFeature &f, const QgsAttributeList& fetchAttributes );
-
-    /**Update feature with uncommited geometry updates*/
-    void updateFeatureGeometry( QgsFeature &f );
 
     /** Record changed geometry, store in active command (if any) */
     void editGeometryChange( int featureId, QgsGeometry& geometry );
@@ -696,10 +687,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     QgsAttributeAction* mActions;
 
     /** Flag indicating whether the layer is in editing mode or not */
-    bool mEditable;
-
-    /** Flag indicating whether the layer has been modified since the last commit */
-    bool mModified;
+    //bool mEditable;
 
     /** cache of the committed geometries retrieved *for the current display* */
     QgsGeometryMap mCachedGeometries;
@@ -713,42 +701,11 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
      */
     QgsFeatureIds mSelectedFeatureIds;
 
-    /** Deleted feature IDs which are not commited.  Note a feature can be added and then deleted
-        again before the change is committed - in that case the added feature would be removed
-        from mAddedFeatures only and *not* entered here.
-     */
-    QgsFeatureIds mDeletedFeatureIds;
-
-    /** New features which are not commited.  Note a feature can be added and then changed,
-        therefore the details here can be overridden by mChangedAttributeValues and mChangedGeometries.
-     */
-    QgsFeatureList mAddedFeatures;
-
-    /** Changed attributes values which are not commited */
-    QgsChangedAttributesMap mChangedAttributeValues;
-
-    /** deleted attributes fields which are not commited */
-    QgsAttributeIds mDeletedAttributeIds;
-
-    /** added attributes fields which are not commited */
-    QgsAttributeIds mAddedAttributeIds;
-
-    /** Changed geometries which are not commited. */
-    QgsGeometryMap mChangedGeometries;
-
-    /** field map to commit */
-    QgsFieldMap mUpdatedFields;
-
     /**Map that stores the aliases for attributes. Key is the attribute index and value the alias for that attribute*/
     QMap<int, QString> mAttributeAliasMap;
 
-    /** max field index */
-    int mMaxUpdatedIndex;
-
     /** Geometry type as defined in enum WkbType (qgis.h) */
     int mWkbType;
-
-    QgsUndoCommand * mActiveCommand;
 
     /** Renderer object which holds the information about how to display the features */
     QgsRenderer *mRenderer;
@@ -791,6 +748,8 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer
     QgsFeatureIterator mOldApiIter;
     friend class QgsVectorLayerIterator;
 
+    QgsVectorLayerEditBuffer* mEditBuffer;
+    friend class QgsVectorLayerEditBuffer;
 };
 
 #endif

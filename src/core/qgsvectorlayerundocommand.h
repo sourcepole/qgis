@@ -142,6 +142,7 @@ class QgsUndoCommand : public QUndoCommand
     QgsFeatureList mAddedFeatures;
 
     friend class QgsVectorLayer;
+    friend class QgsVectorLayerEditBuffer;
 };
 
 #endif

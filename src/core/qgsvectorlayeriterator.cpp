@@ -1,6 +1,7 @@
 #include "qgsvectorlayeriterator.h"
 
 #include "qgsvectorlayer.h"
+#include "qgsvectorlayereditbuffer.h"
 
 #include "qgsgeometry.h"
 #include "qgslogger.h"
@@ -30,24 +31,25 @@ QgsVectorLayerIterator::QgsVectorLayerIterator( QgsVectorLayer* l,
     return;
   }
 
-  mFetchConsidered = L->mDeletedFeatureIds;
+  QgsVectorLayerEditBuffer* b = L->mEditBuffer;
 
-  if ( L->mEditable )
+  if ( b )
   {
-    mFetchAddedFeaturesIt = L->mAddedFeatures.begin();
-    mFetchChangedGeomIt = L->mChangedGeometries.begin();
+    mFetchConsidered = b->mDeletedFeatureIds;
+    mFetchAddedFeaturesIt = b->mAddedFeatures.begin();
+    mFetchChangedGeomIt = b->mChangedGeometries.begin();
   }
 
   //look in the normal features of the provider
   if ( mFetchAttributes.size() > 0 )
   {
-    if ( L->mEditable )
+    if ( b )
     {
       // fetch only available field from provider
       mFetchProvAttributes.clear();
       for ( QgsAttributeList::iterator it = mFetchAttributes.begin(); it != mFetchAttributes.end(); it++ )
       {
-        if ( !L->mUpdatedFields.contains( *it ) || L->mAddedAttributeIds.contains( *it ) )
+        if ( !b->mUpdatedFields.contains( *it ) || b->mAddedAttributeIds.contains( *it ) )
           continue;
 
         mFetchProvAttributes << *it;
@@ -76,12 +78,13 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
   if ( mClosed )
     return false;
 
-  if ( L->mEditable )
+  if ( L->mEditBuffer )
   {
+    QgsVectorLayerEditBuffer* b = L->mEditBuffer;
     if ( !mRect.isEmpty() )
     {
       // check if changed geometries are in rectangle
-      for ( ; mFetchChangedGeomIt != L->mChangedGeometries.end(); mFetchChangedGeomIt++ )
+      for ( ; mFetchChangedGeomIt != b->mChangedGeometries.end(); mFetchChangedGeomIt++ )
       {
         int fid = mFetchChangedGeomIt.key();
 
@@ -108,7 +111,7 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
             // fid<0 => in mAddedFeatures
             bool found = false;
 
-            for ( QgsFeatureList::iterator it = L->mAddedFeatures.begin(); it != L->mAddedFeatures.end(); it++ )
+            for ( QgsFeatureList::iterator it = b->mAddedFeatures.begin(); it != b->mAddedFeatures.end(); it++ )
             {
               if ( fid != it->id() )
               {
@@ -127,7 +130,7 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
             QgsFeature tmp;
             // TODO: do not fetch here using featureAtId - do it when iterating in provider
             L->mDataProvider->featureAtId( fid, tmp, false, mFetchProvAttributes );
-            L->updateFeatureAttributes( tmp, mFetchAttributes );
+            b->updateFeatureAttributes( tmp, mFetchAttributes );
             f.setAttributeMap( tmp.attributeMap() );
           }
         }
@@ -140,7 +143,7 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
       // no more changed geometries
     }
 
-    for ( ; mFetchAddedFeaturesIt != L->mAddedFeatures.end(); mFetchAddedFeaturesIt++ )
+    for ( ; mFetchAddedFeaturesIt != b->mAddedFeatures.end(); mFetchAddedFeaturesIt++ )
     {
       int fid = mFetchAddedFeaturesIt->id();
 
@@ -163,7 +166,7 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
       if ( mFetchAttributes.size() > 0 )
       {
         f.setAttributeMap( mFetchAddedFeaturesIt->attributeMap() );
-        L->updateFeatureAttributes( f, mFetchAttributes );
+        b->updateFeatureAttributes( f, mFetchAttributes );
       }
 
       mFetchAddedFeaturesIt++;
@@ -178,8 +181,8 @@ bool QgsVectorLayerIterator::nextFeature(QgsFeature& f)
     if ( mFetchConsidered.contains( f.id() ) )
       continue;
 
-    if ( L->mEditable )
-      L->updateFeatureAttributes( f, mFetchAttributes );
+    if ( L->mEditBuffer )
+      L->mEditBuffer->updateFeatureAttributes( f, mFetchAttributes );
 
     // found it
     return true;
