@@ -30,7 +30,6 @@
 #include <QDomDocument>
 #include <QGraphicsView>
 #include <QtCore>
-#include <QTimer>
 
 class QWheelEvent;
 class QPixmap;
@@ -286,7 +285,7 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     /** The map units may have changed, so cope with that */
     void mapUnitsChanged();
 
-    /** updates pixmap on render progress */
+    /** @deprecated does nothing. map is updated within QgsMapCanvasMap */
     void updateMap();
 
     //! show whatever error is exposed by the QgsMapLayer.
@@ -411,17 +410,6 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     //! Flag indicating if the map canvas is frozen.
     bool mFrozen;
 
-    /*! \brief Flag to track the state of the Map canvas.
-     *
-     * The canvas is
-     * flagged as dirty by any operation that changes the state of
-     * the layers or the view extent. If the canvas is not dirty, paint
-     * events are handled by bit-blitting the stored canvas bitmap to
-     * the canvas. This improves performance by not reading the data source
-     * when no real change has occurred
-     */
-    bool mDirty;
-
     //! determines whether user has requested to suppress rendering
     bool mRenderFlag;
 
@@ -456,8 +444,6 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
 
     //! Mouse wheel action
     WheelAction mWheelAction;
-
-    QTimer mMapUpdateTimer;
 
 }; // class QgsMapCanvas
 

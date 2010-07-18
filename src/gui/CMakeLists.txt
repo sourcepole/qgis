@@ -83,6 +83,7 @@ qgsencodingfiledialog.h
 qgsformannotationitem.h
 qgsgenericprojectionselector.h
 qgsmapcanvas.h
+qgsmapcanvasmap.h
 qgsmapoverviewcanvas.h
 qgsmaptoolemitpoint.h
 qgsmessageviewer.h

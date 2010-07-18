@@ -92,7 +92,6 @@ QgsMapCanvas::QgsMapCanvas( QWidget * parent, const char *name )
   mLastNonZoomMapTool = NULL;
 
   mFrozen = false;
-  mDirty = true;
 
   setWheelAction( WheelZoom );
 
@@ -103,16 +102,16 @@ QgsMapCanvas::QgsMapCanvas( QWidget * parent, const char *name )
   setFocusPolicy( Qt::StrongFocus );
 
   mMapRenderer = new QgsMapRenderer;
-  connect(mMapRenderer, SIGNAL(finishedThreadedRendering(QImage)), SLOT(renderingFinished(QImage)));
 
   // create map canvas item which will show the map
   mMap = new QgsMapCanvasMap( this );
   mScene->addItem( mMap );
   mScene->update(); // porting??
 
+  connect( mMap, SIGNAL(renderStarting()), this, SIGNAL(renderStarting()) );
+
   moveCanvasContents( true );
 
-  connect( &mMapUpdateTimer, SIGNAL(timeout()), this, SLOT(updateMap()));
   connect( mMapRenderer, SIGNAL( drawError( QgsMapLayer* ) ), this, SLOT( showError( QgsMapLayer* ) ) );
 
   // project handling
@@ -202,12 +201,12 @@ double QgsMapCanvas::scale()
 
 void QgsMapCanvas::setDirty( bool dirty )
 {
-  mDirty = dirty;
+  mMap->setDirty(dirty);
 }
 
 bool QgsMapCanvas::isDirty() const
 {
-  return mDirty;
+  return mMap->isDirty();
 }
 
 
@@ -356,44 +355,20 @@ QgsMapLayer* QgsMapCanvas::currentLayer()
   return mCurrentLayer;
 }
 
-
 void QgsMapCanvas::refresh()
 {
-  if ( !mRenderFlag || mFrozen )
-  {
-    QgsDebugMsg("REFRESH ignored: canvas frozen");
-    return;
-  }
+  QgsDebugMsg("refresh called.");
 
   cancelRendering();
 
-  clear();
-
-  // Tell the user we're going to be a while
-  //QApplication::setOverrideCursor( Qt::WaitCursor );
-
-  emit renderStarting();
-
-  // TRIGGER RENDERING
-  //mMap->render();
-  qDebug("STARTING \n\n\n\n\n");
-  mMapRenderer->startThreadedRendering();
-
-  mMapUpdateTimer.start(250);
-
-  updateMap();
+  mMap->setDirty(true);
+  mMap->update();
 
 } // refresh
 
 void QgsMapCanvas::updateMap()
 {
-  QgsDebugMsg("updating map!");
-  QImage i = mMapRenderer->threadedRenderingOutput();
-  if (!i.isNull())
-  {
-    mMap->setMap(i);
-    mMap->update();
-  }
+  // nop
 }
 
 //the format defaults to "PNG" if not specified
@@ -475,11 +450,6 @@ void QgsMapCanvas::updateFullExtent()
 
 void QgsMapCanvas::setExtent( QgsRectangle const & r )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   QgsRectangle current = extent();
 
   if ( r.isEmpty() )
@@ -544,11 +514,6 @@ void QgsMapCanvas::clear()
 
 void QgsMapCanvas::zoomToFullExtent()
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   QgsRectangle extent = fullExtent();
   // If the full extent is an empty set, don't do the zoom
   if ( !extent.isEmpty() )
@@ -565,11 +530,6 @@ void QgsMapCanvas::zoomToFullExtent()
 
 void QgsMapCanvas::zoomToPreviousExtent()
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   if ( mLastExtentIndex > 0 )
   {
     mLastExtentIndex--;
@@ -588,10 +548,6 @@ void QgsMapCanvas::zoomToPreviousExtent()
 
 void QgsMapCanvas::zoomToNextExtent()
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
   if ( mLastExtentIndex < mLastExtent.size() - 1 )
   {
     mLastExtentIndex++;
@@ -643,11 +599,6 @@ void QgsMapCanvas::mapUnitsChanged()
 
 void QgsMapCanvas::zoomToSelected( QgsVectorLayer* layer )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   if ( layer == NULL )
   {
     // use current layer by default
@@ -690,12 +641,6 @@ void QgsMapCanvas::zoomToSelected( QgsVectorLayer* layer )
 
 void QgsMapCanvas::keyPressEvent( QKeyEvent * e )
 {
-
-  if ( isDrawing() )
-  {
-    e->ignore();
-  }
-
   emit keyPressed( e );
 
   if ( mCanvasProperties->mouseButtonDown || mCanvasProperties->panSelectorDown )
@@ -792,11 +737,6 @@ void QgsMapCanvas::keyReleaseEvent( QKeyEvent * e )
 {
   QgsDebugMsg( "keyRelease event" );
 
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   switch ( e->key() )
   {
     case Qt::Key_Space:
@@ -828,11 +768,6 @@ void QgsMapCanvas::keyReleaseEvent( QKeyEvent * e )
 
 void QgsMapCanvas::mouseDoubleClickEvent( QMouseEvent * e )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   // call handler of current map tool
   if ( mMapTool )
     mMapTool->canvasDoubleClickEvent( e );
@@ -930,12 +865,9 @@ void QgsMapCanvas::resizeEvent( QResizeEvent * e )
     updateCanvasItemPositions();
 
     updateScale();
-#if QT_VERSION >= 0x40600
-    // FIXME: temporary workaround for #2714
-    QTimer::singleShot( 1, this, SLOT( refresh() ) );
-#else
+
     refresh();
-#endif
+
     emit extentsChanged();
   }
 } // resizeEvent
@@ -1030,11 +962,6 @@ void QgsMapCanvas::zoomScale( double newScale )
 
 void QgsMapCanvas::zoomWithCenter( int x, int y, bool zoomIn )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   double scaleFactor = ( zoomIn ? 1 / mWheelZoomFactor : mWheelZoomFactor );
 
   // transform the mouse pos to map coordinates
@@ -1169,6 +1096,10 @@ void QgsMapCanvas::layerStateChange()
 void QgsMapCanvas::freeze( bool frz )
 {
   mFrozen = frz;
+
+  if (!mFrozen)
+    update();
+
 } // freeze
 
 bool QgsMapCanvas::isFrozen()
@@ -1231,11 +1162,6 @@ QgsMapTool* QgsMapCanvas::mapTool()
 
 void QgsMapCanvas::panActionEnd( QPoint releasePoint )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   // move map image and other items to standard position
   moveCanvasContents( true ); // true means reset
 
@@ -1378,11 +1304,6 @@ void QgsMapCanvas::writeProject( QDomDocument & doc )
 
 void QgsMapCanvas::zoomByFactor( double scaleFactor )
 {
-  if ( isDrawing() )
-  {
-    return;
-  }
-
   QgsRectangle r = mMapRenderer->extent();
   r.scale( scaleFactor );
   setExtent( r );
@@ -1399,32 +1320,18 @@ void QgsMapCanvas::selectionChangedSlot()
 
 void QgsMapCanvas::renderingFinished(QImage img)
 {
-  QgsDebugMsg("finished!!!");
-  mMapUpdateTimer.stop();
-
-  mDirty = false;
-
   // notify any listeners that rendering is complete
   QPainter p;
   p.begin( &img );
   emit renderComplete( &p );
   p.end();
 
-  mMap->setMap(img);
-  mMap->update();
-
   // notifies current map tool
   if ( mMapTool )
     mMapTool->renderComplete();
-
-  // Tell the user we've finished going to be a while
-  //QApplication::restoreOverrideCursor();
 }
 
 void QgsMapCanvas::cancelRendering()
 {
-  if ( isDrawing() )
-  {
-    mMapRenderer->cancelThreadedRendering();
-  }
+  mMap->cancelRendering();
 }

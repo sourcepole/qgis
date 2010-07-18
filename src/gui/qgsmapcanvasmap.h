@@ -19,7 +19,7 @@
 
 #include <QGraphicsRectItem>
 #include <QPixmap>
-
+#include <QTimer>
 
 class QgsMapRenderer;
 class QgsMapCanvas;
@@ -27,8 +27,10 @@ class QgsMapCanvas;
 /** \ingroup gui
  * A rectangular graphics item representing the map on the canvas.
  */
-class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
+class GUI_EXPORT QgsMapCanvasMap : public QObject, public QGraphicsRectItem
 {
+  Q_OBJECT
+
   public:
 
     //! constructor
@@ -66,6 +68,21 @@ class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
 
     void setMap(QImage img) { mPixmap = QPixmap::fromImage(img); }
 
+    bool isDirty() const { return mDirty; }
+    void setDirty(bool dirty) { mDirty = dirty; }
+
+    //! force stop of the rendering process
+    void cancelRendering();
+
+  public slots:
+    void updateMap();
+
+    //! Called when asynchronous rendering is finished
+    void renderingFinished(QImage img);
+
+  signals:
+    void renderStarting();
+
   private:
 
     //! indicates whether antialiasing will be used for rendering
@@ -83,6 +100,20 @@ class GUI_EXPORT QgsMapCanvasMap : public QGraphicsRectItem
     QColor mBgColor;
 
     QPoint mOffset;
+
+    QTimer mMapUpdateTimer;
+
+    /*! \brief Flag to track the state of the Map canvas.
+     *
+     * The canvas is
+     * flagged as dirty by any operation that changes the state of
+     * the layers or the view extent. If the canvas is not dirty, paint
+     * events are handled by bit-blitting the stored canvas bitmap to
+     * the canvas. This improves performance by not reading the data source
+     * when no real change has occurred
+     */
+    bool mDirty;
+
 };
 
 #endif

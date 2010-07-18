@@ -29,13 +29,81 @@ QgsMapCanvasMap::QgsMapCanvasMap( QgsMapCanvas* canvas )
   resize( QSize( 1, 1 ) );
   mUseQImageToRender = false;
 
+  mDirty = true;
+
+  connect( mCanvas->mapRenderer(), SIGNAL(finishedThreadedRendering(QImage)), SLOT(renderingFinished(QImage)));
+  connect( &mMapUpdateTimer, SIGNAL(timeout()), this, SLOT(updateMap()));
 }
 
 void QgsMapCanvasMap::paint( QPainter* p, const QStyleOptionGraphicsItem*, QWidget* )
 {
+
+  if ( mDirty )
+  {
+    if ( mCanvas->isDrawing() )
+    {
+      QgsDebugMsg("drawing already started");
+    }
+    else if ( ! mCanvas->renderFlag() || mCanvas->isFrozen() )
+    {
+      QgsDebugMsg("redraw ignored: canvas frozen");
+    }
+    else
+    {
+      emit renderStarting();
+
+      // TRIGGER RENDERING
+      qDebug("STARTING \n\n\n\n\n");
+      mCanvas->mapRenderer()->startThreadedRendering();
+
+      mMapUpdateTimer.start(250);
+
+      updateMap();
+    }
+  }
+  else
+  {
+    QgsDebugMsg("not dirty");
+  }
+
   //refreshes the canvas map with the current offscreen image
   p->drawPixmap( 0, 0, mPixmap );
 }
+
+void QgsMapCanvasMap::updateMap()
+{
+  QgsDebugMsg("updating map!");
+  QImage i = mCanvas->mapRenderer()->threadedRenderingOutput();
+  if (!i.isNull())
+  {
+    setMap(i);
+    update();
+  }
+}
+
+void QgsMapCanvasMap::renderingFinished(QImage img)
+{
+  QgsDebugMsg("finished!!!");
+
+  mMapUpdateTimer.stop();
+
+  mDirty = false;
+
+  // inform canvas
+  mCanvas->renderingFinished(img);
+
+  setMap(img);
+  update();
+}
+
+void QgsMapCanvasMap::cancelRendering()
+{
+  if ( mCanvas->isDrawing() )
+  {
+    mCanvas->mapRenderer()->cancelThreadedRendering();
+  }
+}
+
 
 QRectF QgsMapCanvasMap::boundingRect() const
 {

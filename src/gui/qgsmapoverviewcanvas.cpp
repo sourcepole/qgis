@@ -163,6 +163,8 @@ void QgsMapOverviewCanvas::drawExtentRect()
 
   mPanningWidget->setGeometry( r );
   mPanningWidget->show(); // show if hidden
+
+  repaint();
 }
 
 
