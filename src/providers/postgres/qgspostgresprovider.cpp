@@ -524,30 +524,6 @@ QgsFeatureIterator QgsPostgresProvider::getFeatures( QgsAttributeList fetchAttri
 }
 
 
-void QgsPostgresProvider::select( QgsAttributeList fetchAttributes, QgsRectangle rect, bool fetchGeometry, bool useIntersect )
-{
-  if (!mOldApiIter.isClosed())
-    mOldApiIter.close();
-  mOldApiIter = getFeatures(fetchAttributes, rect, fetchGeometry, useIntersect);
-}
-
-bool QgsPostgresProvider::nextFeature( QgsFeature& feature )
-{
-  if ( !valid )
-  {
-    QgsDebugMsg( "Read attempt on an invalid postgresql data source" );
-    return false;
-  }
-
-  if ( mOldApiIter.isClosed() )
-  {
-    QgsDebugMsg( "nextFeature() without select()" );
-    return false;
-  }
-
-  return mOldApiIter.nextFeature( feature );
-}
-
 QString QgsPostgresProvider::whereClause( int featureId ) const
 {
   QString whereClause;
@@ -657,11 +633,6 @@ const QgsFieldMap & QgsPostgresProvider::fields() const
 QString QgsPostgresProvider::dataComment() const
 {
   return mDataComment;
-}
-
-void QgsPostgresProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 /** @todo XXX Perhaps this should be promoted to QgsDataProvider? */

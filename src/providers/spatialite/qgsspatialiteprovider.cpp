@@ -391,41 +391,7 @@ QgsFeatureIterator QgsSpatiaLiteProvider::getFeatures( QgsAttributeList fetchAtt
                                                        bool fetchGeometry,
                                                        bool useIntersect )
 {
-  if ( !valid )
-  {
-    QgsDebugMsg( "Read attempt on an invalid SpatiaLite data source" );
-    return QgsFeatureIterator();
-  }
-
   return QgsFeatureIterator( new QgsSpatiaLiteFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
-}
-
-
-void QgsSpatiaLiteProvider::select( QgsAttributeList fetchAttributes, QgsRectangle rect, bool fetchGeometry, bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-bool QgsSpatiaLiteProvider::nextFeature( QgsFeature & feature )
-{
-  if ( !valid )
-  {
-    QgsDebugMsg( "Read attempt on an invalid SpatiaLite data source" );
-    return false;
-  }
-
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-void QgsSpatiaLiteProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 

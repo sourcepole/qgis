@@ -103,38 +103,7 @@ QgsFeatureIterator QgsWFSProvider::getFeatures( QgsAttributeList fetchAttributes
                                                 bool fetchGeometry,
                                                 bool useIntersect )
 {
-  if ( !mValid )
-  {
-    QgsDebugMsg( "Read attempt on an invalid WFS layer" );
-    return QgsFeatureIterator();
-  }
-
   return QgsFeatureIterator( new QgsWFSFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
-}
-
-
-void QgsWFSProvider::select( QgsAttributeList fetchAttributes,
-                             QgsRectangle rect,
-                             bool fetchGeometry,
-                             bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-bool QgsWFSProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-void QgsWFSProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 

@@ -241,6 +241,9 @@ void QgsGrassProvider::update( void )
 QgsGrassProvider::~QgsGrassProvider()
 {
   QgsDebugMsg( "entered." );
+
+  mOldApiIter.close();
+
   closeLayer( mLayerId );
 }
 
@@ -256,31 +259,6 @@ QgsFeatureIterator QgsGrassProvider::getFeatures( QgsAttributeList fetchAttribut
                                                   bool useIntersect )
 {
   return QgsFeatureIterator( new QgsGrassFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
-}
-
-void QgsGrassProvider::select( QgsAttributeList fetchAttributes,
-                               QgsRectangle rect,
-                               bool fetchGeometry,
-                               bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-bool QgsGrassProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-
-void QgsGrassProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 

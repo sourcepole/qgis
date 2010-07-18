@@ -48,25 +48,17 @@ class QgsWFSProvider: public QgsVectorDataProvider
 
     /* Inherited from QgsVectorDataProvider */
 
-    /** Select features based on a bounding rectangle. Features can be retrieved with calls to nextFeature.
-     *  @param fetchAttributes list of attributes which should be fetched
-     *  @param rect spatial filter
-     *  @param fetchGeometry true if the feature geometry should be fetched
-     *  @param useIntersect true if an accurate intersection test should be used,
-     *                     false if a test based on bounding box is sufficient
-     */
-    virtual void select( QgsAttributeList fetchAttributes = QgsAttributeList(),
-                         QgsRectangle rect = QgsRectangle(),
-                         bool fetchGeometry = true,
-                         bool useIntersect = false );
-
     /**
-     * Get the next feature resulting from a select operation.
-     * @param feature feature which will receive data from the provider
-     * @return true when there was a feature to fetch, false when end was hit
+     * Start iterating over features of the vector data provider.
+     * For new code, consider using this method instead of select/nextFeature combo.
+     * @param fetchAttributes list of attributes which should be fetched
+     * @param rect spatial filter
+     * @param fetchGeometry true if the feature geometry should be fetched
+     * @param useIntersect true if an accurate intersection test should be used,
+     *                     false if a test based on bounding box is sufficient
+     * @return iterator instance for retrieval of features
+     * @note Added in v1.6
      */
-    virtual bool nextFeature( QgsFeature& feature );
-
     virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
                                             QgsRectangle rect = QgsRectangle(),
                                             bool fetchGeometry = true,
@@ -76,7 +68,6 @@ class QgsWFSProvider: public QgsVectorDataProvider
     long featureCount() const;
     uint fieldCount() const;
     const QgsFieldMap & fields() const;
-    void rewind();
 
     virtual QgsCoordinateReferenceSystem crs();
 
@@ -126,7 +117,6 @@ class QgsWFSProvider: public QgsVectorDataProvider
     bool mValid;
 
     friend class QgsWFSFeatureIterator;
-    QgsFeatureIterator mOldApiIter;
 
     QMutex mDataMutex;
 

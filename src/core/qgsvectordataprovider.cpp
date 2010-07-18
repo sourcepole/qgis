@@ -20,6 +20,10 @@
 #include <cfloat> // for DBL_MAX
 #include <climits>
 
+#include <QApplication>
+#include <QThread>
+
+
 #include "qgsvectordataprovider.h"
 #include "qgsfeature.h"
 #include "qgsfield.h"
@@ -161,6 +165,55 @@ QgsFeatureIterator QgsVectorDataProvider::getFeatures( QgsAttributeList, QgsRect
 {
   return QgsFeatureIterator();
 }
+
+void QgsVectorDataProvider::select( QgsAttributeList fetchAttributes,
+                                    QgsRectangle rect,
+                                    bool fetchGeometry,
+                                    bool useIntersect )
+{
+  if ( !isValid() )
+  {
+    QgsDebugMsg( "Read attempt on an invalid data source" );
+    return;
+  }
+
+  if (qApp->thread() != QThread::currentThread())
+  {
+    QgsDebugMsg("accessing old provider API from non-gui thread! (IGNORING)");
+    return;
+  }
+
+  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
+}
+
+bool QgsVectorDataProvider::nextFeature( QgsFeature& feature )
+{
+  if ( !isValid() )
+  {
+    QgsDebugMsg( "Read attempt on an invalid data source" );
+    return false;
+  }
+
+  if ( mOldApiIter.isClosed() )
+  {
+    QgsDebugMsg( "nextFeature() without select()" );
+    return false;
+  }
+
+  if (mOldApiIter.nextFeature(feature))
+    return true;
+  else
+  {
+    mOldApiIter.close(); // make sure to unlock the layer
+    return false;
+  }
+}
+
+void QgsVectorDataProvider::rewind()
+{
+  mOldApiIter.rewind();
+}
+
 
 bool QgsVectorDataProvider::featureAtId( int featureId,
     QgsFeature& feature,
@@ -453,12 +506,12 @@ void QgsVectorDataProvider::uniqueValues( int index, QList<QVariant> &values, in
   QgsFeature f;
   QgsAttributeList keys;
   keys.append( index );
-  select( keys, QgsRectangle(), false );
+  QgsFeatureIterator fi = getFeatures( keys, QgsRectangle(), false );
 
   QSet<QString> set;
   values.clear();
 
-  while ( nextFeature( f ) )
+  while ( fi.nextFeature( f ) )
   {
     if ( !set.contains( f.attributeMap()[index].toString() ) )
     {
@@ -490,9 +543,9 @@ void QgsVectorDataProvider::fillMinMaxCache()
 
   QgsFeature f;
   QgsAttributeList keys = mCacheMinValues.keys();
-  select( keys, QgsRectangle(), false );
+  QgsFeatureIterator fi = getFeatures( keys, QgsRectangle(), false );
 
-  while ( nextFeature( f ) )
+  while ( fi.nextFeature( f ) )
   {
     QgsAttributeMap attrMap = f.attributeMap();
     for ( QgsAttributeList::const_iterator it = keys.begin(); it != keys.end(); ++it )

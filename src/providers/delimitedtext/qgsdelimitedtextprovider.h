@@ -58,28 +58,17 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
      */
     virtual QString storageType() const;
 
-    /** Select features based on a bounding rectangle. Features can be retrieved with calls to nextFeature.
-     *  @param fetchAttributes list of attributes which should be fetched
-     *  @param rect spatial filter
-     *  @param fetchGeometry true if the feature geometry should be fetched
-     *  @param useIntersect true if an accurate intersection test should be used,
-     *                     false if a test based on bounding box is sufficient
-     */
-    virtual void select( QgsAttributeList fetchAttributes = QgsAttributeList(),
-                         QgsRectangle rect = QgsRectangle(),
-                         bool fetchGeometry = true,
-                         bool useIntersect = false );
-
     /**
-     * Get the next feature resulting from a select operation.
-     * @param feature feature which will receive data from the provider
-     * @return true when there was a feature to fetch, false when end was hit
-     *
-     * mFile should be open with the file pointer at the record of the next
-     * feature, or EOF.  The feature found on the current line is parsed.
+     * Start iterating over features of the vector data provider.
+     * For new code, consider using this method instead of select/nextFeature combo.
+     * @param fetchAttributes list of attributes which should be fetched
+     * @param rect spatial filter
+     * @param fetchGeometry true if the feature geometry should be fetched
+     * @param useIntersect true if an accurate intersection test should be used,
+     *                     false if a test based on bounding box is sufficient
+     * @return iterator instance for retrieval of features
+     * @note Added in v1.6
      */
-    virtual bool nextFeature( QgsFeature& feature );
-
     virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
                                             QgsRectangle rect = QgsRectangle(),
                                             bool fetchGeometry = true,
@@ -107,9 +96,6 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
      * @return map of fields
      */
     virtual const QgsFieldMap & fields() const;
-
-    /** Restart reading features from previous select operation */
-    virtual void rewind();
 
     /** Returns a bitmask containing the supported capabilities
         Note, some capabilities may change depending on whether
@@ -200,7 +186,6 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     void showInvalidLinesErrors();
 
     friend class QgsDelimitedTextFeatureIterator;
-    QgsFeatureIterator mOldApiIter;
 
     QMutex mStreamMutex;
 };

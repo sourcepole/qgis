@@ -315,6 +315,8 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( QString uri )
 
 QgsDelimitedTextProvider::~QgsDelimitedTextProvider()
 {
+  mOldApiIter.close();
+
   mFile->close();
   delete mFile;
   delete mStream;
@@ -333,34 +335,6 @@ QgsFeatureIterator QgsDelimitedTextProvider::getFeatures( QgsAttributeList fetch
 {
   return QgsFeatureIterator( new QgsDelimitedTextFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect));
 }
-
-
-bool QgsDelimitedTextProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-
-void QgsDelimitedTextProvider::select( QgsAttributeList fetchAttributes,
-                                       QgsRectangle rect,
-                                       bool fetchGeometry,
-                                       bool useIntersect )
-{
-  mOldApiIter.close();
-  mOldApiIter = getFeatures(fetchAttributes, rect, fetchGeometry, useIntersect);
-}
-
-void QgsDelimitedTextProvider::rewind()
-{
-  mOldApiIter.rewind();
-}
-
 
 
 void QgsDelimitedTextProvider::showInvalidLinesErrors()

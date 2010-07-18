@@ -327,6 +327,8 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
 
 QgsOSMDataProvider::~QgsOSMDataProvider()
 {
+  mOldApiIter.close();
+
   // finalize all created sqlite3 statements
   sqlite3_finalize( mTagsStmt );
   sqlite3_finalize( mCustomTagsStmt );
@@ -451,32 +453,6 @@ QgsFeatureIterator QgsOSMDataProvider::getFeatures( QgsAttributeList fetchAttrib
   }
 
   return QgsFeatureIterator( new QgsOSMFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
-}
-
-
-void QgsOSMDataProvider::select( QgsAttributeList fetchAttributes,
-                                 QgsRectangle rect,
-                                 bool fetchGeometry,
-                                 bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-
-bool QgsOSMDataProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-void QgsOSMDataProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 

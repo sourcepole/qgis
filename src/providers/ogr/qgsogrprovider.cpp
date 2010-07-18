@@ -197,6 +197,8 @@ QgsOgrProvider::QgsOgrProvider( QString const & uri )
 
 QgsOgrProvider::~QgsOgrProvider()
 {
+  mOldApiIter.close();
+
   if ( ogrLayer != ogrOrigLayer )
   {
     OGR_DS_ReleaseResultSet( ogrDataSource, ogrLayer );
@@ -466,31 +468,6 @@ bool QgsOgrProvider::featureAtId( int featureId,
   return true;
 }
 
-bool QgsOgrProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-#include <QThread>
-
-void QgsOgrProvider::select( QgsAttributeList fetchAttributes, QgsRectangle rect, bool fetchGeometry, bool useIntersect )
-{
-  if (qApp->thread() != QThread::currentThread())
-  {
-    QgsDebugMsg("accessing old provider API from non-gui thread! (IGNORING)");
-    return;
-  }
-
-  //if (mOldApiIter != QgsFeatureIterator())
-  mOldApiIter.close();
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
 
 unsigned char * QgsOgrProvider::getGeometryPointer( OGRFeatureH fet )
 {
@@ -630,13 +607,6 @@ void QgsOgrProvider::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, in
 const QgsFieldMap & QgsOgrProvider::fields() const
 {
   return mAttributeFields;
-}
-
-void QgsOgrProvider::rewind()
-{
-  // the iterator is closed everyt
-  //mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-  mOldApiIter.rewind();
 }
 
 

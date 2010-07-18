@@ -108,6 +108,8 @@ QgsGPXProvider::QgsGPXProvider( QString uri ) :
 
 QgsGPXProvider::~QgsGPXProvider()
 {
+  mOldApiIter.close();
+
   QgsGPSData::releaseData( mFileName );
 }
 
@@ -131,32 +133,6 @@ QgsFeatureIterator QgsGPXProvider::getFeatures( QgsAttributeList fetchAttributes
 {
   return QgsFeatureIterator( new QgsGPXFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
 }
-
-bool QgsGPXProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
-}
-
-void QgsGPXProvider::select( QgsAttributeList fetchAttributes,
-                             QgsRectangle rect,
-                             bool fetchGeometry,
-                             bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-
-void QgsGPXProvider::rewind()
-{
-  mOldApiIter.rewind();
-}
-
 
 
 // Return the extent of the layer

@@ -57,6 +57,8 @@ QgsMemoryProvider::QgsMemoryProvider( QString uri )
 
 QgsMemoryProvider::~QgsMemoryProvider()
 {
+  mOldApiIter.close();
+
   delete mSpatialIndex;
 }
 
@@ -71,17 +73,6 @@ QgsFeatureIterator QgsMemoryProvider::getFeatures( QgsAttributeList fetchAttribu
                                                    bool useIntersect )
 {
   return QgsFeatureIterator( new QgsMemoryFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
-}
-
-bool QgsMemoryProvider::nextFeature( QgsFeature& feature )
-{
-  if (mOldApiIter.nextFeature(feature))
-    return true;
-  else
-  {
-    mOldApiIter.close(); // make sure to unlock the layer
-    return false;
-  }
 }
 
 
@@ -101,20 +92,6 @@ bool QgsMemoryProvider::featureAtId( int featureId,
   feature = *it;
   feature.setValid( true );
   return true;
-}
-
-
-void QgsMemoryProvider::select( QgsAttributeList fetchAttributes,
-                                QgsRectangle rect,
-                                bool fetchGeometry,
-                                bool useIntersect )
-{
-  mOldApiIter = getFeatures( fetchAttributes, rect, fetchGeometry, useIntersect );
-}
-
-void QgsMemoryProvider::rewind()
-{
-  mOldApiIter.rewind();
 }
 
 

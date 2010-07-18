@@ -178,11 +178,12 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      * @param fetchGeometry true if the feature geometry should be fetched
      * @param useIntersect true if an accurate intersection test should be used,
      *                     false if a test based on bounding box is sufficient
+     * @deprecated do not use nor implement in providers, use getFeatures() instead
      */
     virtual void select( QgsAttributeList fetchAttributes = QgsAttributeList(),
                          QgsRectangle rect = QgsRectangle(),
                          bool fetchGeometry = true,
-                         bool useIntersect = false ) = 0;
+                         bool useIntersect = false );
 
     /**
      * This function does nothing useful, it's kept only for compatibility.
@@ -193,6 +194,12 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
     /**
      * Start iterating over features of the vector data provider.
      * For new code, consider using this method instead of select/nextFeature combo.
+     * @param fetchAttributes list of attributes which should be fetched
+     * @param rect spatial filter
+     * @param fetchGeometry true if the feature geometry should be fetched
+     * @param useIntersect true if an accurate intersection test should be used,
+     *                     false if a test based on bounding box is sufficient
+     * @return iterator instance for retrieval of features
      * @note Added in v1.6
      */
     virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
@@ -220,8 +227,9 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      * Get the next feature resulting from a select operation.
      * @param feature feature which will receive data from the provider
      * @return true when there was a feature to fetch, false when end was hit
+     * @deprecated do not use nor implement in providers, use getFeatures() instead
      */
-    virtual bool nextFeature( QgsFeature& feature ) = 0;
+    virtual bool nextFeature( QgsFeature& feature );
 
     /**
      * Get feature type.
@@ -255,8 +263,9 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      */
     virtual QString dataComment() const;
 
-    /** Restart reading features from previous select operation */
-    virtual void rewind() = 0;
+    /** Restart reading features from previous select operation
+     @deprecated do not use nor implement in providers, use getFeatures() instead */
+    virtual void rewind();
 
     /**
      * Returns the minimum value of an attribute
@@ -461,6 +470,8 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
 
     /**The names of the providers native types*/
     QList< NativeType > mNativeTypes;
+
+    QgsFeatureIterator mOldApiIter;
 
   private:
     /** old notation **/
