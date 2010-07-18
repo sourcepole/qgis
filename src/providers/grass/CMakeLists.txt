@@ -7,7 +7,7 @@ SET(GRASS_PROVIDER_SRCS provider.cpp)
 
 SET(GRASS_RASTER_PROVIDER_SRCS qgsgrassrasterprovider.cpp)
 
-SET(GRASS_LIB_SRCS qgsgrassprovider.cpp qgsgrass.cpp)
+SET(GRASS_LIB_SRCS qgsgrassprovider.cpp qgsgrass.cpp qgsgrassfeatureiterator.cpp)
 
 SET(QGIS_D_RAST_SRCS qgis.d.rast.c)
 

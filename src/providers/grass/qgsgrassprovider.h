@@ -20,7 +20,10 @@ class QgsFeature;
 class QgsField;
 
 #include <QDateTime>
+#include <QMutex>
 #include "qgsvectordataprovider.h"
+
+#include <vector>
 
 /* Update.
  * Vectors are updated (reloaded) if:
@@ -144,6 +147,11 @@ class GRASS_EXPORT QgsGrassProvider : public QgsVectorDataProvider
      * @return true when there was a feature to fetch, false when end was hit
      */
     virtual bool nextFeature( QgsFeature& feature );
+
+    virtual QgsFeatureIterator getFeatures( QgsAttributeList fetchAttributes = QgsAttributeList(),
+                                            QgsRectangle rect = QgsRectangle(),
+                                            bool fetchGeometry = true,
+                                            bool useIntersect = false );
 
 
     /**
@@ -535,27 +543,16 @@ class GRASS_EXPORT QgsGrassProvider : public QgsVectorDataProvider
     struct  Map_info *mMap; // vector header pointer
     int     mMapVersion;    // The version of the map for which the instance was last time updated
 
-    struct line_pnts *mPoints; // points structure
-    struct line_cats *mCats;   // cats structure
-    struct ilist     *mList;
     int    mCidxFieldIndex;    // !UPDATE! Index for layerField in category index or -1 if no such field
     int    mCidxFieldNumCats;  // !UPDATE! Number of records in field index
-    int    mNextCidx;          // !UPDATE! Next index in cidxFieldIndex to be read, used to find nextFeature
-
-    // selection: array of size nlines or nareas + 1, set to 1 - selected or 0 - not selected, 2 - read
-    // Code 2 means that the line was already read in this cycle, all 2 must be reset to 1
-    // if getFirstFeature() or select() is calles.
-    // Distinction between 1 and 2 is used if attribute table exists, in that case attributes are
-    // read from the table and geometry is append and selection set to 2.
-    // In the end the selection array is scanned for 1 (attributes missing), and the geometry
-    // is returned without attributes
-    char    *mSelection;           // !UPDATE!
-    int     mSelectionSize;        // !UPDATE! Size of selection array
 
     bool    mValid;                // !UPDATE!
     long    mNumberFeatures;       // !UPDATE!
 
-    void resetSelection( bool sel ); // reset selection
+    QgsFeatureIterator mOldApiIter;
+    friend class QgsGrassFeatureIterator;
+
+    QMutex mMapMutex;
 
     // Reopen map after edit or freeze
     bool reopenMap();
@@ -640,15 +637,6 @@ class GRASS_EXPORT QgsGrassProvider : public QgsVectorDataProvider
      *  @param mapId
      */
     static bool attributesOutdated( int mapId );
-
-    /*! Allocate sellection array for given map id. The array is large enough for lines or areas
-     *  (bigger from num lines and num areas)
-     *  Possible old selection array is not released.
-     *  @param map pointer to map structure
-     *  @param selection pointer to pointer to char array
-     *  @return selection size
-     */
-    static int allocateSelection( struct Map_info *map, char **selection );
 
     /*! Get layer map.
      *  @param layerId

@@ -167,9 +167,9 @@ bool QgsVectorDataProvider::featureAtId( int featureId,
     bool fetchGeometry,
     QgsAttributeList fetchAttributes )
 {
-  select( fetchAttributes, QgsRectangle(), fetchGeometry );
+  QgsFeatureIterator fi = getFeatures( fetchAttributes, QgsRectangle(), fetchGeometry );
 
-  while ( nextFeature( feature ) )
+  while ( fi.nextFeature( feature ) )
   {
     if ( feature.id() == featureId )
       return true;

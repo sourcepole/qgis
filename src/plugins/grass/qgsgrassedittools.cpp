@@ -18,6 +18,7 @@
 #include "qgsgrassattributes.h"
 #include "qgsgrassedit.h"
 #include "qgsgrassprovider.h"
+#include "qgsvectorlayer.h"
 
 #include "qgisinterface.h"
 #include "qgslogger.h"
