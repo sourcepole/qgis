@@ -26,7 +26,7 @@ QgsPostgresFeatureIterator::QgsPostgresFeatureIterator( QgsPostgresProvider* p,
 {
   P->mConnectionROMutex.lock();
 
-  QString cursorName = QString( "qgisf%1" ).arg( P->providerId );
+  mCursorName = QString( "qgisf%1" ).arg( P->providerId );
 
   QString whereClause;
 
@@ -58,7 +58,7 @@ QgsPostgresFeatureIterator::QgsPostgresFeatureIterator( QgsPostgresProvider* p,
     whereClause += "(" + P->sqlWhereClause + ")";
   }
 
-  if ( !P->declareCursor( cursorName, fetchAttributes, fetchGeometry, whereClause ) )
+  if ( !P->declareCursor( mCursorName, fetchAttributes, fetchGeometry, whereClause ) )
   {
     mClosed = true;
     return;
@@ -80,11 +80,9 @@ bool QgsPostgresFeatureIterator::nextFeature(QgsFeature& feature)
   if ( mClosed )
     return false;
 
-  QString cursorName = QString( "qgisf%1" ).arg( P->providerId );
-
   if ( mFeatureQueue.empty() )
   {
-    QString fetch = QString( "fetch forward %1 from %2" ).arg( mFeatureQueueSize ).arg( cursorName );
+    QString fetch = QString( "fetch forward %1 from %2" ).arg( mFeatureQueueSize ).arg( mCursorName );
     if ( P->connectionRO->PQsendQuery( fetch ) == 0 ) // fetch features asynchronously
     {
       QgsDebugMsg( "PQsendQuery failed" );
@@ -145,7 +143,7 @@ bool QgsPostgresFeatureIterator::rewind()
     return false;
 
   //move cursor to first record
-  P->connectionRO->PQexecNR( QString( "move 0 in qgisf%1" ).arg( P->providerId ) );
+  P->connectionRO->PQexecNR( QString( "move 0 in " ) + mCursorName );
 
   mFeatureQueue.empty();
 
@@ -157,7 +155,7 @@ bool QgsPostgresFeatureIterator::close()
   if ( mClosed )
     return false;
 
-  P->connectionRO->closeCursor( QString( "qgisf%1" ).arg( P->providerId ) );
+  P->connectionRO->closeCursor( mCursorName );
 
   P->mConnectionROMutex.unlock();
 

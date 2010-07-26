@@ -32,6 +32,8 @@ protected:
 
   int mFetched; // number of retrieved features
 
+  QString mCursorName;
+
   /**
    * Feature queue that GetNextFeature will retrieve from
    * before the next fetch from PostgreSQL
