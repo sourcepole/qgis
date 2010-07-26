@@ -76,11 +76,13 @@ class CORE_EXPORT QgsFeature
 
 
     /** returns the feature's type name
+     * @deprecated not used anymore
      */
     QString typeName() const;
 
 
     /** sets the feature's type name
+     * @deprecated not used anymore
      */
     void setTypeName( QString typeName );
 

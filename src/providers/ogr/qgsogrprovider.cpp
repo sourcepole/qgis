@@ -586,7 +586,7 @@ void QgsOgrProvider::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, in
 
   if ( OGR_F_IsFieldSet( ogrFet, attindex ) )
   {
-    switch ( mAttributeFields[attindex].type() )
+    switch ( mAttributeFields.value(attindex).type() )
     {
       case QVariant::String: value = QVariant( mEncoding->toUnicode( OGR_F_GetFieldAsString( ogrFet, attindex ) ) ); break;
       case QVariant::Int: value = QVariant( OGR_F_GetFieldAsInteger( ogrFet, attindex ) ); break;

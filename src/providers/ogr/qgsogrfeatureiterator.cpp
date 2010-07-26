@@ -84,11 +84,8 @@ bool QgsOgrFeatureIterator::nextFeature(QgsFeature& feature)
       continue;
     }
 
-    OGRFeatureDefnH featureDefinition = OGR_F_GetDefnRef( fet );
-    QString featureTypeName = featureDefinition ? QString( OGR_FD_GetName( featureDefinition ) ) : QString( "" );
     feature.setFeatureId( OGR_F_GetFID( fet ) );
     feature.clearAttributeMap();
-    feature.setTypeName( featureTypeName );
 
     /* fetch geometry */
     if ( mFetchGeometry || mUseIntersect )
