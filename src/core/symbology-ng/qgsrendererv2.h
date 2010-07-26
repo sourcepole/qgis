@@ -122,6 +122,9 @@ class CORE_EXPORT QgsFeatureRendererV2
     int mCurrentVertexMarkerType;
     /** The current size of editing marker */
     int mCurrentVertexMarkerSize;
+
+    QPolygonF mTmpPoints;
+    QList<QPolygonF> mTmpHoles;
 };
 
 

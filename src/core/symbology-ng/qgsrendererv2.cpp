@@ -60,6 +60,7 @@ unsigned char* QgsFeatureRendererV2::_getLineString( QPolygonF& pts, QgsRenderCo
   const QgsMapToPixel& mtp = context.mapToPixel();
   double z = 0; // dummy variable for coordiante transform
 
+  QPointF* data = pts.data();
   for ( unsigned int i = 0; i < nPoints; ++i )
   {
     x = *(( double * ) wkb );
@@ -75,7 +76,7 @@ unsigned char* QgsFeatureRendererV2::_getLineString( QPolygonF& pts, QgsRenderCo
       ct->transformInPlace( x, y, z );
     mtp.transformInPlace( x, y );
 
-    pts[i] = QPointF( x, y );
+    data[i] = QPointF( x, y );
 
   }
 
@@ -187,12 +188,11 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
         QgsDebugMsg( "linestring can be drawn only with line symbol!" );
         break;
       }
-      QPolygonF pts;
-      _getLineString( pts, context, geom->asWkb() );
-      (( QgsLineSymbolV2* )symbol )->renderPolyline( pts, context, layer, selected );
+      _getLineString( mTmpPoints, context, geom->asWkb() );
+      (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPoints, context, layer, selected );
 
       if ( drawVertexMarker )
-        renderVertexMarkerPolyline( pts, context );
+        renderVertexMarkerPolyline( mTmpPoints, context );
     }
     break;
 
@@ -204,13 +204,12 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
         QgsDebugMsg( "polygon can be drawn only with fill symbol!" );
         break;
       }
-      QPolygonF pts;
-      QList<QPolygonF> holes;
-      _getPolygon( pts, holes, context, geom->asWkb() );
-      (( QgsFillSymbolV2* )symbol )->renderPolygon( pts, ( holes.count() ? &holes : NULL ), context, layer, selected );
+
+      _getPolygon( mTmpPoints, mTmpHoles, context, geom->asWkb() );
+      (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
 
       if ( drawVertexMarker )
-        renderVertexMarkerPolygon( pts, ( holes.count() ? &holes : NULL ), context );
+        renderVertexMarkerPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
     }
     break;
 
@@ -251,15 +250,14 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
       unsigned char* wkb = geom->asWkb();
       unsigned int num = *(( int* )( wkb + 5 ) );
       unsigned char* ptr = wkb + 9;
-      QPolygonF pts;
 
       for ( unsigned int i = 0; i < num; ++i )
       {
-        ptr = _getLineString( pts, context, ptr );
-        (( QgsLineSymbolV2* )symbol )->renderPolyline( pts, context, layer, selected );
+        ptr = _getLineString( mTmpPoints, context, ptr );
+        (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPoints, context, layer, selected );
 
         if ( drawVertexMarker )
-          renderVertexMarkerPolyline( pts, context );
+          renderVertexMarkerPolyline( mTmpPoints, context );
       }
     }
     break;
@@ -276,16 +274,14 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
       unsigned char* wkb = geom->asWkb();
       unsigned int num = *(( int* )( wkb + 5 ) );
       unsigned char* ptr = wkb + 9;
-      QPolygonF pts;
-      QList<QPolygonF> holes;
 
       for ( unsigned int i = 0; i < num; ++i )
       {
-        ptr = _getPolygon( pts, holes, context, ptr );
-        (( QgsFillSymbolV2* )symbol )->renderPolygon( pts, ( holes.count() ? &holes : NULL ), context, layer, selected );
+        ptr = _getPolygon( mTmpPoints, mTmpHoles, context, ptr );
+        (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
 
         if ( drawVertexMarker )
-          renderVertexMarkerPolygon( pts, ( holes.count() ? &holes : NULL ), context );
+          renderVertexMarkerPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
       }
     }
     break;

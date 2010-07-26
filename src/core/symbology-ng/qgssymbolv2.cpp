@@ -424,7 +424,7 @@ void QgsLineSymbolV2::renderPolyline( const QPolygonF& points, QgsRenderContext&
     return;
   }
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsLineSymbolLayerV2* layer = ( QgsLineSymbolLayerV2* ) * it;
     layer->renderPolyline( points, symbolContext );
