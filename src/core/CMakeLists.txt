@@ -46,6 +46,7 @@ SET(QGIS_CORE_SRCS
   qgsdatasourceuri.cpp
   qgsdistancearea.cpp
   qgsfeature.cpp
+  qgsfeatureiterator.cpp
   qgsfield.cpp
   qgsgeometry.cpp
   qgshttptransaction.cpp
@@ -391,6 +392,7 @@ SET(QGIS_CORE_HDRS
   qgscsexception.h
   qgsexception.h
   qgsfeature.h
+  qgsfeatureiterator.h
   qgsfield.h
   qgsgeometry.h
   qgshttptransaction.h

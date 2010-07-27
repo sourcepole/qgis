@@ -4,7 +4,7 @@ typedef QList<int> QgsAttributeList;
 class QgsFeatureIterator
 {
 %TypeHeaderCode
-#include <qgsvectordataprovider.h>
+#include <qgsfeatureiterator.h>
 %End
 
 public:
