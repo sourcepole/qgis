@@ -40,7 +40,7 @@ QgsSymbolV2::QgsSymbolV2( SymbolType type, QgsSymbolLayerV2List layers )
 QgsSymbolV2::~QgsSymbolV2()
 {
   // delete all symbol layers (we own them, so it's okay)
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
     delete *it;
 }
 
@@ -128,20 +128,20 @@ bool QgsSymbolV2::changeSymbolLayer( int index, QgsSymbolLayerV2* layer )
 void QgsSymbolV2::startRender( QgsRenderContext& context )
 {
   QgsSymbolV2RenderContext symbolContext( context, mOutputUnit, mAlpha, false, mRenderHints );
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
     ( *it )->startRender( symbolContext );
 }
 
 void QgsSymbolV2::stopRender( QgsRenderContext& context )
 {
   QgsSymbolV2RenderContext symbolContext( context, mOutputUnit, mAlpha, false, mRenderHints );
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
     ( *it )->stopRender( symbolContext );
 }
 
 void QgsSymbolV2::setColor( const QColor& color )
 {
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     if ( !( *it )->isLocked() )
       ( *it )->setColor( color );
@@ -150,7 +150,7 @@ void QgsSymbolV2::setColor( const QColor& color )
 
 QColor QgsSymbolV2::color()
 {
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     // return color of the first unlocked layer
     if ( !( *it )->isLocked() )
@@ -163,7 +163,7 @@ void QgsSymbolV2::drawPreviewIcon( QPainter* painter, QSize size )
 {
   QgsRenderContext context = QgsSymbolLayerV2Utils::createRenderContext( painter );
   QgsSymbolV2RenderContext symbolContext( context, mOutputUnit, mAlpha, false, mRenderHints );
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     ( *it )->drawPreviewIcon( symbolContext, size );
   }
@@ -223,7 +223,7 @@ QString QgsSymbolV2::dump()
   }
   QString s = QString( "%1 SYMBOL (%2 layers) color %3" ).arg( t ).arg( mLayers.count() ).arg( QgsSymbolLayerV2Utils::encodeColor( color() ) );
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     // TODO:
   }
@@ -233,7 +233,7 @@ QString QgsSymbolV2::dump()
 QgsSymbolLayerV2List QgsSymbolV2::cloneLayers() const
 {
   QgsSymbolLayerV2List lst;
-  for ( QgsSymbolLayerV2List::const_iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsSymbolLayerV2* layer = ( *it )->clone();
     layer->setLocked(( *it )->isLocked() );
@@ -294,7 +294,7 @@ QgsMarkerSymbolV2::QgsMarkerSymbolV2( QgsSymbolLayerV2List layers )
 
 void QgsMarkerSymbolV2::setAngle( double angle )
 {
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsMarkerSymbolLayerV2* layer = ( QgsMarkerSymbolLayerV2* ) * it;
     layer->setAngle( angle );
@@ -303,7 +303,7 @@ void QgsMarkerSymbolV2::setAngle( double angle )
 
 double QgsMarkerSymbolV2::angle()
 {
-  QgsSymbolLayerV2List::const_iterator it = mLayers.begin();
+  QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin();
 
   if ( it == mLayers.end() )
     return 0;
@@ -317,7 +317,7 @@ void QgsMarkerSymbolV2::setSize( double s )
 {
   double origSize = size();
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsMarkerSymbolLayerV2* layer = static_cast<QgsMarkerSymbolLayerV2*>( *it );
     if ( layer->size() == origSize )
@@ -335,7 +335,7 @@ double QgsMarkerSymbolV2::size()
 {
   // return size of the largest symbol
   double maxSize = 0;
-  for ( QgsSymbolLayerV2List::const_iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     const QgsMarkerSymbolLayerV2* layer = static_cast<const QgsMarkerSymbolLayerV2 *>( *it );
     double lsize = layer->size();
@@ -355,7 +355,7 @@ void QgsMarkerSymbolV2::renderPoint( const QPointF& point, QgsRenderContext& con
     return;
   }
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsMarkerSymbolLayerV2* layer = ( QgsMarkerSymbolLayerV2* ) * it;
     layer->renderPoint( point, symbolContext );
@@ -385,7 +385,7 @@ void QgsLineSymbolV2::setWidth( double w )
 {
   double origWidth = width();
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsLineSymbolLayerV2* layer = ( QgsLineSymbolLayerV2* ) * it;
     if ( layer->width() == origWidth )
@@ -404,7 +404,7 @@ void QgsLineSymbolV2::setWidth( double w )
 double QgsLineSymbolV2::width()
 {
   double maxWidth = 0;
-  for ( QgsSymbolLayerV2List::const_iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     const QgsLineSymbolLayerV2* layer = ( const QgsLineSymbolLayerV2* ) * it;
     double width = layer->width();
@@ -460,7 +460,7 @@ void QgsFillSymbolV2::renderPolygon( const QPolygonF& points, QList<QPolygonF>* 
     return;
   }
 
-  for ( QgsSymbolLayerV2List::iterator it = mLayers.begin(); it != mLayers.end(); ++it )
+  for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsFillSymbolLayerV2* layer = ( QgsFillSymbolLayerV2* ) * it;
     layer->renderPolygon( points, rings, symbolContext );
