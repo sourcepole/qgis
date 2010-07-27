@@ -107,7 +107,20 @@ unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygon
     unsigned int nPoints = *(( int* )wkb );
     wkb += sizeof( unsigned int );
 
-    QPolygonF poly( nPoints );
+    if ( nPoints == 0 )
+      continue;
+
+    QPointF* data;
+    if ( idx == 0 )
+    {
+      pts.resize( nPoints );
+      data = pts.data();
+    }
+    else
+    {
+      holes.append( QPolygonF( nPoints ) );
+      data = holes.last().data();
+    }
 
     // Extract the points from the WKB and store in a pair of vectors.
     for ( unsigned int jdx = 0; jdx < nPoints; jdx++ )
@@ -120,19 +133,12 @@ unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygon
         ct->transformInPlace( x, y, z );
       mtp.transformInPlace( x, y );
 
-      poly[jdx] = QPointF( x, y );
+      data[jdx] = QPointF( x, y );
 
       if ( hasZValue )
         wkb += sizeof( double );
     }
 
-    if ( nPoints < 1 )
-      continue;
-
-    if ( idx == 0 )
-      pts = poly;
-    else
-      holes.append( poly );
   }
 
   return wkb;
