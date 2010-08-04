@@ -74,7 +74,7 @@ void QgsSimpleFillSymbolLayerV2::stopRender( QgsSymbolV2RenderContext& context )
 {
 }
 
-void QgsSimpleFillSymbolLayerV2::renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context )
+void QgsSimpleFillSymbolLayerV2::renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context )
 {
   QPainter* p = context.renderContext().painter();
   if ( !p )
@@ -88,7 +88,7 @@ void QgsSimpleFillSymbolLayerV2::renderPolygon( const QPolygonF& points, QList<Q
   if ( !mOffset.isNull() )
     p->translate( mOffset );
 
-  _renderPolygon( p, points, rings );
+  _renderPolygon( p, points, numPoints, rings );
 
   if ( !mOffset.isNull() )
     p->translate( -mOffset );
@@ -228,7 +228,7 @@ void QgsSVGFillSymbolLayer::stopRender( QgsSymbolV2RenderContext& context )
   }
 }
 
-void QgsSVGFillSymbolLayer::renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context )
+void QgsSVGFillSymbolLayer::renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context )
 {
   QPainter* p = context.renderContext().painter();
   if ( !p )
@@ -241,13 +241,13 @@ void QgsSVGFillSymbolLayer::renderPolygon( const QPolygonF& points, QList<QPolyg
     QColor selColor = context.selectionColor();
     if ( ! selectionIsOpaque ) selColor.setAlphaF( context.alpha() );
     p->setBrush( QBrush( selColor ) );
-    _renderPolygon( p, points, rings );
+    _renderPolygon( p, points, numPoints, rings );
   }
   p->setBrush( mBrush );
-  _renderPolygon( p, points, rings );
+  _renderPolygon( p, points, numPoints, rings );
   if ( mOutline )
   {
-    mOutline->renderPolyline( points, context.renderContext(), -1, selectFillBorder && context.selected() );
+    mOutline->renderPolyline( points, numPoints, context.renderContext(), -1, selectFillBorder && context.selected() );
     if ( rings )
     {
       QList<QPolygonF>::const_iterator ringIt = rings->constBegin();

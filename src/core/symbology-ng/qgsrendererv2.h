@@ -69,7 +69,7 @@ class CORE_EXPORT QgsFeatureRendererV2
 
     virtual QList<QString> usedAttributes() = 0;
 
-    virtual ~QgsFeatureRendererV2() {}
+    virtual ~QgsFeatureRendererV2();
 
     virtual QgsFeatureRendererV2* clone() = 0;
 
@@ -104,15 +104,19 @@ class CORE_EXPORT QgsFeatureRendererV2
     QgsFeatureRendererV2( QString type );
 
     //! render editing vertex marker at specified point
-    void renderVertexMarker( QPointF& pt, QgsRenderContext& context );
+    void renderVertexMarker( const QPointF& pt, QgsRenderContext& context );
     //! render editing vertex marker for a polyline
-    void renderVertexMarkerPolyline( QPolygonF& pts, QgsRenderContext& context );
+    void renderVertexMarkerPolyline( const QPolygonF& pts, QgsRenderContext& context );
+    void renderVertexMarkerPolyline( const QPointF* pts, int numPoints, QgsRenderContext& context );
     //! render editing vertex marker for a polygon
-    void renderVertexMarkerPolygon( QPolygonF& pts, QList<QPolygonF>* rings, QgsRenderContext& context );
+    void renderVertexMarkerPolygon( const QPolygonF& pts, const QList<QPolygonF>* rings, QgsRenderContext& context );
+    void renderVertexMarkerPolygon( const QPointF* pts, int numPoints, const QList<QPolygonF>* rings, QgsRenderContext& context );
 
     static unsigned char* _getPoint( QPointF& pt, QgsRenderContext& context, unsigned char* wkb );
-    static unsigned char* _getLineString( QPolygonF& pts, QgsRenderContext& context, unsigned char* wkb );
-    static unsigned char* _getPolygon( QPolygonF& pts, QList<QPolygonF>& holes, QgsRenderContext& context, unsigned char* wkb );
+    unsigned char* getLineString( QgsRenderContext& context, unsigned char* wkb );
+    //static unsigned char* _getLineString( QPolygonF& pts, QgsRenderContext& context, unsigned char* wkb );
+    unsigned char* getPolygon( QList<QPolygonF>& holes, QgsRenderContext& context, unsigned char* wkb );
+    //static unsigned char* _getPolygon( QPolygonF& pts, QList<QPolygonF>& holes, QgsRenderContext& context, unsigned char* wkb );
 
     QString mType;
 
@@ -125,6 +129,10 @@ class CORE_EXPORT QgsFeatureRendererV2
 
     QPolygonF mTmpPoints;
     QList<QPolygonF> mTmpHoles;
+
+    QPointF* mTmpPts;
+    int mTmpPtsCount;
+    int mTmpPtsCapacity;
 };
 
 

@@ -87,6 +87,7 @@ class QPolygonF;
 
 //! calculate line shifted by a specified distance
 QPolygonF offsetLine( QPolygonF polyline, double dist );
+QPolygonF offsetLine( const QPointF* points, int numPoints, double dist );
 
 
 #endif

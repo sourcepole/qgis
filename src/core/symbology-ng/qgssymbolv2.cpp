@@ -416,18 +416,23 @@ double QgsLineSymbolV2::width()
 
 void QgsLineSymbolV2::renderPolyline( const QPolygonF& points, QgsRenderContext& context, int layer, bool selected )
 {
+  renderPolyline( points.constData(), points.size(), context, layer, selected );
+}
+
+void QgsLineSymbolV2::renderPolyline( const QPointF* points, int numPoints, QgsRenderContext& context, int layer, bool selected )
+{
   QgsSymbolV2RenderContext symbolContext( context, mOutputUnit, mAlpha, selected, mRenderHints );
   if ( layer != -1 )
   {
     if ( layer >= 0 && layer < mLayers.count() )
-      (( QgsLineSymbolLayerV2* ) mLayers[layer] )->renderPolyline( points, symbolContext );
+      (( QgsLineSymbolLayerV2* ) mLayers[layer] )->renderPolyline( points, numPoints, symbolContext );
     return;
   }
 
   for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsLineSymbolLayerV2* layer = ( QgsLineSymbolLayerV2* ) * it;
-    layer->renderPolyline( points, symbolContext );
+    layer->renderPolyline( points, numPoints, symbolContext );
   }
 }
 
@@ -452,18 +457,23 @@ QgsFillSymbolV2::QgsFillSymbolV2( QgsSymbolLayerV2List layers )
 
 void QgsFillSymbolV2::renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsRenderContext& context, int layer, bool selected )
 {
+  renderPolygon( points.constData(), points.size(), rings, context, layer, selected );
+}
+
+void QgsFillSymbolV2::renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsRenderContext& context, int layer, bool selected )
+{
   QgsSymbolV2RenderContext symbolContext( context, mOutputUnit, mAlpha, selected, mRenderHints );
   if ( layer != -1 )
   {
     if ( layer >= 0 && layer < mLayers.count() )
-      (( QgsFillSymbolLayerV2* ) mLayers[layer] )->renderPolygon( points, rings, symbolContext );
+      (( QgsFillSymbolLayerV2* ) mLayers[layer] )->renderPolygon( points, numPoints, rings, symbolContext );
     return;
   }
 
   for ( QgsSymbolLayerV2List::ConstIterator it = mLayers.constBegin(); it != mLayers.constEnd(); ++it )
   {
     QgsFillSymbolLayerV2* layer = ( QgsFillSymbolLayerV2* ) * it;
-    layer->renderPolygon( points, rings, symbolContext );
+    layer->renderPolygon( points, numPoints, rings, symbolContext );
   }
 }
 

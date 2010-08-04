@@ -33,7 +33,7 @@ class CORE_EXPORT QgsSimpleLineSymbolLayerV2 : public QgsLineSymbolLayerV2
 
     void stopRender( QgsSymbolV2RenderContext& context );
 
-    void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+    void renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context );
 
     QgsStringMap properties() const;
 
@@ -97,7 +97,7 @@ class CORE_EXPORT QgsMarkerLineSymbolLayerV2 : public QgsLineSymbolLayerV2
 
     void stopRender( QgsSymbolV2RenderContext& context );
 
-    void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+    void renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context );
 
     QgsStringMap properties() const;
 
@@ -124,7 +124,7 @@ class CORE_EXPORT QgsMarkerLineSymbolLayerV2 : public QgsLineSymbolLayerV2
 
   protected:
 
-    void renderPolylineNoOffset( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+    void renderPolylineNoOffset( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context );
 
     bool mRotateMarker;
     double mInterval;
@@ -155,7 +155,7 @@ class CORE_EXPORT QgsLineDecorationSymbolLayerV2 : public QgsLineSymbolLayerV2
 
     void stopRender( QgsSymbolV2RenderContext& context );
 
-    void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+    void renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context );
 
     QgsStringMap properties() const;
 

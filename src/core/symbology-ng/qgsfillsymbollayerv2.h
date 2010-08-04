@@ -34,7 +34,7 @@ class CORE_EXPORT QgsSimpleFillSymbolLayerV2 : public QgsFillSymbolLayerV2
 
     void stopRender( QgsSymbolV2RenderContext& context );
 
-    void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
+    void renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
 
     QgsStringMap properties() const;
 
@@ -85,7 +85,7 @@ class CORE_EXPORT QgsSVGFillSymbolLayer: public QgsFillSymbolLayerV2
     void startRender( QgsSymbolV2RenderContext& context );
     void stopRender( QgsSymbolV2RenderContext& context );
 
-    void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
+    void renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
 
     QgsStringMap properties() const;
 

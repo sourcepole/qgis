@@ -97,7 +97,8 @@ class CORE_EXPORT QgsMarkerSymbolLayerV2 : public QgsSymbolLayerV2
 class CORE_EXPORT QgsLineSymbolLayerV2 : public QgsSymbolLayerV2
 {
   public:
-    virtual void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context ) = 0;
+    virtual void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+    virtual void renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context ) = 0;
 
     virtual void setWidth( double width ) { mWidth = width; }
     virtual double width() const { return mWidth; }
@@ -113,7 +114,8 @@ class CORE_EXPORT QgsLineSymbolLayerV2 : public QgsSymbolLayerV2
 class CORE_EXPORT QgsFillSymbolLayerV2 : public QgsSymbolLayerV2
 {
   public:
-    virtual void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context ) = 0;
+    virtual void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
+    virtual void renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context ) = 0;
 
     void drawPreviewIcon( QgsSymbolV2RenderContext& context, QSize size );
 
@@ -121,6 +123,7 @@ class CORE_EXPORT QgsFillSymbolLayerV2 : public QgsSymbolLayerV2
     QgsFillSymbolLayerV2( bool locked = false );
     /**Default method to render polygon*/
     void _renderPolygon( QPainter* p, const QPolygonF& points, const QList<QPolygonF>* rings );
+    void _renderPolygon( QPainter* p, const QPointF* points, int numPoints, const QList<QPolygonF>* rings );
 };
 
 class QgsSymbolLayerV2Widget;

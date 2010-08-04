@@ -340,19 +340,24 @@ static QPointF linesIntersection( QPointF p1, double t1, QPointF p2, double t2 )
 
 QPolygonF offsetLine( QPolygonF polyline, double dist )
 {
+  return offsetLine( polyline.constData(), polyline.count(), dist );
+}
+
+QPolygonF offsetLine( const QPointF* points, int numPoints, double dist )
+{
   QPolygonF newLine;
 
-  if ( polyline.count() < 2 )
+  if ( numPoints < 2 )
     return newLine;
 
   double angle = 0.0, t_new, t_old = 0;
   QPointF pt_old, pt_new;
-  QPointF p1 = polyline[0], p2;
+  QPointF p1 = points[0], p2;
   bool first_point = true;
 
-  for ( int i = 1; i < polyline.count(); i++ )
+  for ( int i = 1; i < numPoints; i++ )
   {
-    p2 = polyline[i];
+    p2 = points[i];
 
     if ( !lineInfo( p1, p2, angle, t_new ) )
       continue; // not a line...

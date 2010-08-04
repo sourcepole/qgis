@@ -435,7 +435,8 @@ class QgsLineSymbolLayerV2 : QgsSymbolLayerV2
 %End
 
 public:
-  virtual void renderPolyline(const QPolygonF& points, QgsSymbolV2RenderContext& context) = 0;
+  virtual void renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context );
+  virtual void renderPolyline( const QPointF* points /Array/, int numPoints /ArraySize/, QgsSymbolV2RenderContext& context ) = 0;
 
   void setWidth(double width);
   double width() const;
@@ -454,7 +455,8 @@ class QgsFillSymbolLayerV2 : QgsSymbolLayerV2
 %End
 
 public:
-  virtual void renderPolygon(const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context) = 0;
+  virtual void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context );
+  virtual void renderPolygon( const QPointF* points /Array/, int numPoints /ArraySize/, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context ) = 0;
 
   void drawPreviewIcon(QgsSymbolV2RenderContext& context, QSize size);
 

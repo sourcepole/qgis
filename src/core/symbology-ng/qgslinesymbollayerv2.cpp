@@ -94,7 +94,8 @@ void QgsSimpleLineSymbolLayerV2::stopRender( QgsSymbolV2RenderContext& context )
 {
 }
 
-void QgsSimpleLineSymbolLayerV2::renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context )
+
+void QgsSimpleLineSymbolLayerV2::renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context )
 {
   QPainter* p = context.renderContext().painter();
   if ( !p )
@@ -105,11 +106,11 @@ void QgsSimpleLineSymbolLayerV2::renderPolyline( const QPolygonF& points, QgsSym
   p->setPen( context.selected() ? mSelPen : mPen );
   if ( mOffset == 0 )
   {
-    p->drawPolyline( points );
+    p->drawPolyline( points, numPoints );
   }
   else
   {
-    p->drawPolyline( ::offsetLine( points, mOffset ) );
+    p->drawPolyline( ::offsetLine( points, numPoints, mOffset ) );
   }
 }
 
@@ -261,20 +262,21 @@ void QgsMarkerLineSymbolLayerV2::stopRender( QgsSymbolV2RenderContext& context )
   mMarker->stopRender( context.renderContext() );
 }
 
-void QgsMarkerLineSymbolLayerV2::renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context )
+
+void QgsMarkerLineSymbolLayerV2::renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context )
 {
   if ( mOffset == 0 )
   {
-    renderPolylineNoOffset( points, context );
+    renderPolylineNoOffset( points, numPoints, context );
   }
   else
   {
-    QPolygonF points2 = ::offsetLine( points, context.outputLineWidth( mOffset ) );
-    renderPolylineNoOffset( points2, context );
+    QPolygonF points2 = ::offsetLine( points, numPoints, context.outputLineWidth( mOffset ) );
+    renderPolylineNoOffset( points2.constData(), points2.size(), context );
   }
 }
 
-void QgsMarkerLineSymbolLayerV2::renderPolylineNoOffset( const QPolygonF& points, QgsSymbolV2RenderContext& context )
+void QgsMarkerLineSymbolLayerV2::renderPolylineNoOffset( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context )
 {
   QPointF lastPt = points[0];
   double lengthLeft = 0; // how much is left until next marker
@@ -285,9 +287,9 @@ void QgsMarkerLineSymbolLayerV2::renderPolylineNoOffset( const QPolygonF& points
 
   QgsRenderContext& rc = context.renderContext();
 
-  for ( int i = 1; i < points.count(); ++i )
+  for ( int i = 1; i < numPoints; ++i )
   {
-    const QPointF& pt = points[i];
+    QPointF pt(points[i]);
 
     if ( lastPt == pt ) // must not be equal!
       continue;
@@ -432,7 +434,7 @@ static double _calculateAngle( double x1, double y1, double x2, double y2 )
     return atan( t ) + ( y2 >= y1 ? M_PI : 0 ); // atan is positive / negative
 }
 
-void QgsLineDecorationSymbolLayerV2::renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context )
+void QgsLineDecorationSymbolLayerV2::renderPolyline( const QPointF* points, int numPoints, QgsSymbolV2RenderContext& context )
 {
   // draw arrow at the end of line
 
@@ -442,9 +444,8 @@ void QgsLineDecorationSymbolLayerV2::renderPolyline( const QPolygonF& points, Qg
     return;
   }
 
-  int cnt = points.count();
-  QPointF p1 = points.at( cnt - 2 );
-  QPointF p2 = points.at( cnt - 1 );
+  QPointF p1 = points[ numPoints - 2 ];
+  QPointF p2 = points[ numPoints - 1 ];
   double angle = _calculateAngle( p1.x(), p1.y(), p2.x(), p2.y() );
 
   double size = 6;

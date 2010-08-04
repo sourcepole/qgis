@@ -43,7 +43,7 @@ unsigned char* QgsFeatureRendererV2::_getPoint( QPointF& pt, QgsRenderContext& c
   return wkb;
 }
 
-unsigned char* QgsFeatureRendererV2::_getLineString( QPolygonF& pts, QgsRenderContext& context, unsigned char* wkb )
+unsigned char* QgsFeatureRendererV2::getLineString( QgsRenderContext& context, unsigned char* wkb )
 {
   wkb++; // jump over endian info
   unsigned int wkbType = *(( int* ) wkb );
@@ -54,13 +54,19 @@ unsigned char* QgsFeatureRendererV2::_getLineString( QPolygonF& pts, QgsRenderCo
   bool hasZValue = ( wkbType == QGis::WKBLineString25D );
   double x, y;
 
-  pts.resize( nPoints );
+  if ( nPoints > mTmpPtsCapacity )
+  {
+    delete mTmpPts;
+    mTmpPts = new QPointF[nPoints];
+    mTmpPtsCapacity = nPoints;
+  }
+
+  mTmpPtsCount = nPoints;
 
   const QgsCoordinateTransform* ct = context.coordinateTransform();
   const QgsMapToPixel& mtp = context.mapToPixel();
   double z = 0; // dummy variable for coordiante transform
 
-  QPointF* data = pts.data();
   for ( unsigned int i = 0; i < nPoints; ++i )
   {
     x = *(( double * ) wkb );
@@ -76,14 +82,40 @@ unsigned char* QgsFeatureRendererV2::_getLineString( QPolygonF& pts, QgsRenderCo
       ct->transformInPlace( x, y, z );
     mtp.transformInPlace( x, y );
 
-    data[i] = QPointF( x, y );
-
+    mTmpPts[i] = QPointF( x, y );
   }
 
   return wkb;
 }
 
-unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygonF>& holes, QgsRenderContext& context, unsigned char* wkb )
+static unsigned char* getLinearRing( QPointF* data, int nPoints, QgsRenderContext& context, unsigned char* wkb, bool hasZValue )
+{
+  double x, y;
+  double z = 0; // dummy variable for coordiante transform
+  const QgsCoordinateTransform* ct = context.coordinateTransform();
+  const QgsMapToPixel& mtp = context.mapToPixel();
+
+  // Extract the points from the WKB and store in a pair of vectors.
+  for ( unsigned int jdx = 0; jdx < nPoints; jdx++ )
+  {
+    x = *(( double * ) wkb ); wkb += sizeof( double );
+    y = *(( double * ) wkb ); wkb += sizeof( double );
+
+    // TODO: maybe to the transform at once (faster?)
+    if ( ct )
+      ct->transformInPlace( x, y, z );
+    mtp.transformInPlace( x, y );
+
+    data[jdx] = QPointF( x, y );
+
+    if ( hasZValue )
+      wkb += sizeof( double );
+  }
+
+  return wkb;
+}
+
+unsigned char* QgsFeatureRendererV2::getPolygon( QList<QPolygonF>& holes, QgsRenderContext& context, unsigned char* wkb )
 {
   wkb++; // jump over endian info
   unsigned int wkbType = *(( int* ) wkb );
@@ -95,12 +127,7 @@ unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygon
     return wkb;
 
   bool hasZValue = ( wkbType == QGis::WKBPolygon25D );
-  double x, y;
   holes.clear();
-
-  const QgsCoordinateTransform* ct = context.coordinateTransform();
-  const QgsMapToPixel& mtp = context.mapToPixel();
-  double z = 0; // dummy variable for coordiante transform
 
   for ( unsigned int idx = 0; idx < numRings; idx++ )
   {
@@ -113,8 +140,16 @@ unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygon
     QPointF* data;
     if ( idx == 0 )
     {
-      pts.resize( nPoints );
-      data = pts.data();
+      // first ring: use temporary points array
+      if ( nPoints > mTmpPtsCapacity )
+      {
+        delete mTmpPts;
+        mTmpPts = new QPointF[nPoints];
+        mTmpPtsCapacity = nPoints;
+      }
+      mTmpPtsCount = nPoints;
+
+      data = mTmpPts;
     }
     else
     {
@@ -122,23 +157,7 @@ unsigned char* QgsFeatureRendererV2::_getPolygon( QPolygonF& pts, QList<QPolygon
       data = holes.last().data();
     }
 
-    // Extract the points from the WKB and store in a pair of vectors.
-    for ( unsigned int jdx = 0; jdx < nPoints; jdx++ )
-    {
-      x = *(( double * ) wkb ); wkb += sizeof( double );
-      y = *(( double * ) wkb ); wkb += sizeof( double );
-
-      // TODO: maybe to the transform at once (faster?)
-      if ( ct )
-        ct->transformInPlace( x, y, z );
-      mtp.transformInPlace( x, y );
-
-      data[jdx] = QPointF( x, y );
-
-      if ( hasZValue )
-        wkb += sizeof( double );
-    }
-
+    wkb = getLinearRing(data, nPoints, context, wkb, hasZValue);
   }
 
   return wkb;
@@ -150,6 +169,14 @@ QgsFeatureRendererV2::QgsFeatureRendererV2( QString type )
     mCurrentVertexMarkerType( QgsVectorLayer::Cross ),
     mCurrentVertexMarkerSize( 3 )
 {
+  mTmpPtsCapacity = 0;
+  mTmpPts = NULL;
+  mTmpPtsCount = 0;
+}
+
+QgsFeatureRendererV2::~QgsFeatureRendererV2()
+{
+  delete mTmpPts;
 }
 
 QgsFeatureRendererV2* QgsFeatureRendererV2::defaultRenderer( QGis::GeometryType geomType )
@@ -194,11 +221,11 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
         QgsDebugMsg( "linestring can be drawn only with line symbol!" );
         break;
       }
-      _getLineString( mTmpPoints, context, geom->asWkb() );
-      (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPoints, context, layer, selected );
+      getLineString( context, geom->asWkb() );
+      (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPts, mTmpPtsCount, context, layer, selected );
 
       if ( drawVertexMarker )
-        renderVertexMarkerPolyline( mTmpPoints, context );
+        renderVertexMarkerPolyline( mTmpPts, mTmpPtsCount, context );
     }
     break;
 
@@ -211,11 +238,11 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
         break;
       }
 
-      _getPolygon( mTmpPoints, mTmpHoles, context, geom->asWkb() );
-      (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
+      getPolygon( mTmpHoles, context, geom->asWkb() );
+      (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPts, mTmpPtsCount, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
 
       if ( drawVertexMarker )
-        renderVertexMarkerPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
+        renderVertexMarkerPolygon( mTmpPts, mTmpPtsCount, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
     }
     break;
 
@@ -259,11 +286,11 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
 
       for ( unsigned int i = 0; i < num; ++i )
       {
-        ptr = _getLineString( mTmpPoints, context, ptr );
-        (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPoints, context, layer, selected );
+        ptr = getLineString( context, ptr );
+        (( QgsLineSymbolV2* )symbol )->renderPolyline( mTmpPts, mTmpPtsCount, context, layer, selected );
 
         if ( drawVertexMarker )
-          renderVertexMarkerPolyline( mTmpPoints, context );
+          renderVertexMarkerPolyline( mTmpPts, mTmpPtsCount, context );
       }
     }
     break;
@@ -283,11 +310,11 @@ void QgsFeatureRendererV2::renderFeature( QgsFeature& feature, QgsRenderContext&
 
       for ( unsigned int i = 0; i < num; ++i )
       {
-        ptr = _getPolygon( mTmpPoints, mTmpHoles, context, ptr );
-        (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
+        ptr = getPolygon( mTmpHoles, context, ptr );
+        (( QgsFillSymbolV2* )symbol )->renderPolygon( mTmpPts, mTmpPtsCount, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context, layer, selected );
 
         if ( drawVertexMarker )
-          renderVertexMarkerPolygon( mTmpPoints, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
+          renderVertexMarkerPolygon( mTmpPts, mTmpPtsCount, ( mTmpHoles.count() ? &mTmpHoles : NULL ), context );
       }
     }
     break;
@@ -347,30 +374,40 @@ void QgsFeatureRendererV2::setVertexMarkerAppearance( int type, int size )
   mCurrentVertexMarkerSize = size;
 }
 
-void QgsFeatureRendererV2::renderVertexMarker( QPointF& pt, QgsRenderContext& context )
+void QgsFeatureRendererV2::renderVertexMarker( const QPointF& pt, QgsRenderContext& context )
 {
   QgsVectorLayer::drawVertexMarker( pt.x(), pt.y(), *context.painter(),
                                     ( QgsVectorLayer::VertexMarkerType ) mCurrentVertexMarkerType,
                                     mCurrentVertexMarkerSize );
 }
 
-void QgsFeatureRendererV2::renderVertexMarkerPolyline( QPolygonF& pts, QgsRenderContext& context )
+void QgsFeatureRendererV2::renderVertexMarkerPolyline( const QPolygonF& pts, QgsRenderContext& context )
 {
-  foreach( QPointF pt, pts )
-  renderVertexMarker( pt, context );
+  renderVertexMarkerPolyline( pts.constData(), pts.size(), context );
 }
 
-void QgsFeatureRendererV2::renderVertexMarkerPolygon( QPolygonF& pts, QList<QPolygonF>* rings, QgsRenderContext& context )
+void QgsFeatureRendererV2::renderVertexMarkerPolyline( const QPointF* pts, int numPoints, QgsRenderContext& context )
 {
-  foreach( QPointF pt, pts )
-  renderVertexMarker( pt, context );
+  for (int i = 0; i < numPoints; i++)
+    renderVertexMarker( pts[i], context );
+}
+
+void QgsFeatureRendererV2::renderVertexMarkerPolygon( const QPolygonF& pts, const QList<QPolygonF>* rings, QgsRenderContext& context )
+{
+  renderVertexMarkerPolygon( pts.constData(), pts.size(), rings, context );
+}
+
+void QgsFeatureRendererV2::renderVertexMarkerPolygon( const QPointF* pts, int numPoints, const QList<QPolygonF>* rings, QgsRenderContext& context )
+{
+  for (int i = 0; i < numPoints; i++)
+    renderVertexMarker( pts[i], context );
 
   if ( rings )
   {
-    foreach( QPolygonF ring, *rings )
+    foreach( const QPolygonF& ring, *rings )
     {
-      foreach( QPointF pt, ring )
-      renderVertexMarker( pt, context );
+      foreach( const QPointF& pt, ring )
+        renderVertexMarker( pt, context );
     }
   }
 }

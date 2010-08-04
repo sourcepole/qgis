@@ -177,7 +177,6 @@ class CORE_EXPORT QgsMarkerSymbolV2 : public QgsSymbolV2
 };
 
 
-
 class CORE_EXPORT QgsLineSymbolV2 : public QgsSymbolV2
 {
   public:
@@ -187,6 +186,7 @@ class CORE_EXPORT QgsLineSymbolV2 : public QgsSymbolV2
     double width();
 
     void renderPolyline( const QPolygonF& points, QgsRenderContext& context, int layer = -1, bool selected = false );
+    void renderPolyline( const QPointF* points, int numPoints, QgsRenderContext& context, int layer = -1, bool selected = false );
 
     virtual QgsSymbolV2* clone() const;
 };
@@ -199,6 +199,7 @@ class CORE_EXPORT QgsFillSymbolV2 : public QgsSymbolV2
     QgsFillSymbolV2( QgsSymbolLayerV2List layers = QgsSymbolLayerV2List() );
 
     void renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsRenderContext& context, int layer = -1, bool selected = false );
+    void renderPolygon( const QPointF* points, int numPoints, QList<QPolygonF>* rings, QgsRenderContext& context, int layer = -1, bool selected = false );
 
     virtual QgsSymbolV2* clone() const;
 };

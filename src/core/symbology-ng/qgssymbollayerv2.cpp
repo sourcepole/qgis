@@ -45,6 +45,12 @@ void QgsLineSymbolLayerV2::drawPreviewIcon( QgsSymbolV2RenderContext& context, Q
   stopRender( context );
 }
 
+void QgsLineSymbolLayerV2::renderPolyline( const QPolygonF& points, QgsSymbolV2RenderContext& context )
+{
+  renderPolyline( points.constData(), points.size(), context );
+}
+
+
 void QgsFillSymbolLayerV2::drawPreviewIcon( QgsSymbolV2RenderContext& context, QSize size )
 {
   QPolygonF poly = QRectF( QPointF( 0, 0 ), QPointF( size.width() - 1, size.height() - 1 ) );
@@ -53,7 +59,17 @@ void QgsFillSymbolLayerV2::drawPreviewIcon( QgsSymbolV2RenderContext& context, Q
   stopRender( context );
 }
 
+void QgsFillSymbolLayerV2::renderPolygon( const QPolygonF& points, QList<QPolygonF>* rings, QgsSymbolV2RenderContext& context )
+{
+  renderPolygon( points.constData(), points.size(), rings, context );
+}
+
 void QgsFillSymbolLayerV2::_renderPolygon( QPainter* p, const QPolygonF& points, const QList<QPolygonF>* rings )
+{
+  _renderPolygon( p, points.constData(), points.size(), rings );
+}
+
+void QgsFillSymbolLayerV2::_renderPolygon( QPainter* p, const QPointF* points, int numPoints, const QList<QPolygonF>* rings )
 {
   if ( !p )
   {
@@ -63,13 +79,16 @@ void QgsFillSymbolLayerV2::_renderPolygon( QPainter* p, const QPolygonF& points,
   if ( rings == NULL )
   {
     // simple polygon without holes
-    p->drawPolygon( points );
+    p->drawPolygon( points, numPoints );
   }
   else
   {
     // polygon with holes must be drawn using painter path
     QPainterPath path;
-    path.addPolygon( points );
+    QPolygonF outer_ring( numPoints );
+    memcpy( outer_ring.data(), points, sizeof(QPointF) * numPoints );
+    path.addPolygon( outer_ring );
+
     QList<QPolygonF>::const_iterator it = rings->constBegin();
     for ( ; it != rings->constEnd(); ++it )
     {
