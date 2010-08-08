@@ -58,6 +58,8 @@ class CORE_EXPORT QgsContrastEnhancementFunction
 
     /** \brief Data type of the band */
     QgsContrastEnhancement::QgsRasterDataType mQgsRasterDataType;
+
+    double mMinimumValuePossible, mMaximumValuePossible;
 };
 
 #endif
