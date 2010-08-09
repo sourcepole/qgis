@@ -63,7 +63,7 @@ bool QgsDelimitedTextFeatureIterator::nextFeature(QgsFeature& feature)
     bool yOk = false;
 
     // Skip indexing malformed lines.
-    if ( P->attributeFields.size() == tokens.size() )
+    if ( P->mAttributeVector.size() == tokens.size() )
     {
       x = tokens[P->mXFieldIndex].toDouble( &xOk );
       y = tokens[P->mYFieldIndex].toDouble( &yOk );
@@ -125,30 +125,27 @@ bool QgsDelimitedTextFeatureIterator::nextFeature(QgsFeature& feature)
 
     feature.setGeometryAndOwnership( geometry, buffer.size() );
 
+    QVariant* attrs = feature.resizeAttributeVector( P->fieldCount() );
+
     for ( QgsAttributeList::const_iterator i = mFetchAttributes.begin();
           i != mFetchAttributes.end();
           ++i )
     {
-      QVariant val;
-      switch ( P->attributeFields[*i].type() )
+      int index = *i;
+      switch ( P->mAttributeVector[index].type() )
       {
         case QVariant::Int:
-          if( !tokens[*i].isEmpty() )
-            val = QVariant( tokens[*i].toInt() );
-          else
-            val = QVariant( P->attributeFields[*i].type() );
+          if( !tokens[index].isEmpty() )
+            attrs[index] = tokens[index].toInt();
           break;
         case QVariant::Double:
-          if( !tokens[*i].isEmpty() )
-            val = QVariant( tokens[*i].toDouble() );
-          else
-            val = QVariant( P->attributeFields[*i].type() );
+          if( !tokens[index].isEmpty() )
+            attrs[index] = tokens[index].toDouble();
           break;
         default:
-          val = QVariant( tokens[*i] );
+          attrs[index] = tokens[index];
           break;
       }
-      feature.addAttribute( *i, val );
     }
 
     // We have a good line, so return

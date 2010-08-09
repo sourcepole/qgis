@@ -456,7 +456,7 @@ bool QgsPostgresProvider::getFeature( PGresult *queryResult, int row, bool fetch
     }
 
     feature.setFeatureId( oid );
-    feature.clearAttributeMap();
+    //feature.clearAttributeVector();
 
     int col;  // first attribute column after geometry
 
@@ -483,25 +483,42 @@ bool QgsPostgresProvider::getFeature( PGresult *queryResult, int row, bool fetch
       col = 1;
     }
 
+    QVariant* attrs = feature.resizeAttributeVector( mAttributeVector.count() );
+
     // iterate attributes
     for ( QgsAttributeList::const_iterator it = fetchAttributes.constBegin(); it != fetchAttributes.constEnd(); it++ )
     {
-      const QgsField &fld = field( *it );
+      int idx = *it;
+      const QgsField &fld = field( idx );
 
       if ( fld.name() == primaryKey )
       {
         // primary key was already processed
-        feature.addAttribute( *it, convertValue( fld.type(), QString::number( oid ) ) );
+        attrs[idx] = oid;
         continue;
       }
 
       if ( !PQgetisnull( queryResult, row, col ) )
       {
-        feature.addAttribute( *it, convertValue( fld.type(), QString::fromUtf8( PQgetvalue( queryResult, row, col ) ) ) );
+        switch ( fld.type() )
+        {
+          case QVariant::Int:
+            attrs[idx] = atoi( PQgetvalue( queryResult, row, col ) );
+            break;
+          case QVariant::Double:
+            attrs[idx] = atof( PQgetvalue( queryResult, row, col ) );
+            break;
+          case QVariant::String:
+            attrs[idx] = QString::fromUtf8( PQgetvalue( queryResult, row, col ) );
+            break;
+          default:
+            attrs[idx] = convertValue( fld.type(), QString::fromUtf8( PQgetvalue( queryResult, row, col ) ) );
+        }
+
       }
       else
       {
-        feature.addAttribute( *it, QVariant( QString::null ) );
+        attrs[idx].clear();
       }
 
       col++;
@@ -516,11 +533,11 @@ bool QgsPostgresProvider::getFeature( PGresult *queryResult, int row, bool fetch
 }
 
 QgsFeatureIterator QgsPostgresProvider::getFeatures( QgsAttributeList fetchAttributes,
-                                                     QgsRectangle rect,
-                                                     bool fetchGeometry,
-                                                     bool useIntersect )
+                                                      QgsRectangle rect,
+                                                      bool fetchGeometry,
+                                                      bool useIntersect )
 {
-  return QgsFeatureIterator( new QgsPostgresFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
+  return QgsFeatureIterator( new QgsPostgresFeatureIterator( this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
 }
 
 
@@ -550,7 +567,7 @@ QString QgsPostgresProvider::whereClause( int featureId ) const
 
 bool QgsPostgresProvider::featureAtId( int featureId, QgsFeature& feature, bool fetchGeometry, QgsAttributeList fetchAttributes )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   feature.setValid( false );
   QString cursorName = QString( "qgisfid%1" ).arg( providerId );
@@ -604,25 +621,12 @@ QGis::WkbType QgsPostgresProvider::geometryType() const
   return geomType;
 }
 
-const QgsField &QgsPostgresProvider::field( int index ) const
-{
-  QgsFieldMap::const_iterator it = attributeFields.find( index );
-
-  if ( it == attributeFields.constEnd() )
-  {
-    QgsDebugMsg( "Field " + QString::number( index ) + " not found." );
-    throw PGFieldNotFound();
-  }
-
-  return it.value();
-}
-
 /**
  * Return the number of fields
  */
 uint QgsPostgresProvider::fieldCount() const
 {
-  return attributeFields.size();
+  return mAttributeVector.size();
 }
 
 const QgsFieldMap & QgsPostgresProvider::fields() const
@@ -679,7 +683,7 @@ bool QgsPostgresProvider::loadFields()
 
   // The queries inside this loop could possibly be combined into one
   // single query - this would make the code run faster.
-  attributeFields.clear();
+  mAttributeVector.clear();
   for ( int i = 0; i < PQnfields( result ); i++ )
   {
     QString fieldName = QString::fromUtf8( PQfname( result, i ) );
@@ -797,8 +801,13 @@ bool QgsPostgresProvider::loadFields()
 
     fields << fieldName;
 
-    attributeFields.insert( i, QgsField( fieldName, fieldType, fieldTypeName, fieldSize, fieldModifier, fieldComment ) );
+    mAttributeVector.append( QgsField( fieldName, fieldType, fieldTypeName, fieldSize, fieldModifier, fieldComment ) );
   }
+
+  // construct QgsFieldMap (for compatibility)
+  attributeFields.clear();
+  for ( int i = 0; i < mAttributeVector.count(); i++ )
+    attributeFields.insert( i, mAttributeVector.at( i ) );
 
   return true;
 }
@@ -1454,7 +1463,7 @@ QString QgsPostgresProvider::chooseViewColumn( const tableCols &cols )
 
 bool QgsPostgresProvider::uniqueData( QString query, QString colName )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   // Check to see if the given column contains unique data
 
@@ -1725,7 +1734,7 @@ void QgsPostgresProvider::findColumns( tableCols& cols )
 // Returns the minimum value of an attribute
 QVariant QgsPostgresProvider::minimumValue( int index )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   try
   {
@@ -1752,7 +1761,7 @@ QVariant QgsPostgresProvider::minimumValue( int index )
 // Returns the list of unique values of an attribute
 void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int limit )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   uniqueValues.clear();
 
@@ -1791,21 +1800,16 @@ void QgsPostgresProvider::uniqueValues( int index, QList<QVariant> &uniqueValues
 
 void QgsPostgresProvider::enumValues( int index, QStringList& enumList )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   enumList.clear();
 
-  QString typeName;
-  //find out type of index
-  QgsFieldMap::const_iterator f_it = attributeFields.find( index );
-  if ( f_it != attributeFields.constEnd() )
-  {
-    typeName = f_it.value().typeName();
-  }
-  else
-  {
+  if ( index < 0 || index >= mAttributeVector.count() )
     return;
-  }
+
+  //find out type of index
+  QString typeName = mAttributeVector[index].typeName();
+  QString fldName = mAttributeVector[index].name();
 
   //is type an enum?
   QString typeSql = QString( "SELECT typtype FROM pg_type where typname = %1" ).arg( quotedValue( typeName ) );
@@ -1820,7 +1824,7 @@ void QgsPostgresProvider::enumValues( int index, QStringList& enumList )
   if ( typtype.compare( "e", Qt::CaseInsensitive ) == 0 )
   {
     //try to read enum_range of attribute
-    if ( !parseEnumRange( enumList, f_it->name() ) )
+    if ( !parseEnumRange( enumList, fldName ) )
     {
       enumList.clear();
     }
@@ -1828,7 +1832,7 @@ void QgsPostgresProvider::enumValues( int index, QStringList& enumList )
   else
   {
     //is there a domain check constraint for the attribute?
-    if ( !parseDomainCheckConstraint( enumList, f_it->name() ) )
+    if ( !parseDomainCheckConstraint( enumList, fldName ) )
     {
       enumList.clear();
     }
@@ -1924,7 +1928,7 @@ bool QgsPostgresProvider::parseDomainCheckConstraint( QStringList& enumValues, c
 // Returns the maximum value of an attribute
 QVariant QgsPostgresProvider::maximumValue( int index )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   try
   {
@@ -1986,7 +1990,7 @@ QVariant QgsPostgresProvider::defaultValue( QString fieldName, QString tableName
 
 QVariant QgsPostgresProvider::defaultValue( int fieldId )
 {
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   try
   {
@@ -2140,11 +2144,11 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
     // e.g. for defaults
     for ( QgsAttributeMap::const_iterator it = attributevec.begin(); it != attributevec.end(); it++ )
     {
-      QgsFieldMap::const_iterator fit = attributeFields.find( it.key() );
-      if ( fit == attributeFields.end() )
+      int index = it.key();
+      if ( index < 0 || index >= mAttributeVector.count() )
         continue;
 
-      QString fieldname = fit->name();
+      QString fieldname = mAttributeVector[index].name();
 
       QgsDebugMsg( "Checking field against: " + fieldname );
 
@@ -2156,7 +2160,7 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
       {
         const QgsAttributeMap &attributevec = flist[i].attributeMap();
 
-        QgsAttributeMap::const_iterator thisit = attributevec.find( it.key() );
+        QgsAttributeMap::const_iterator thisit = attributevec.find( index );
         if ( thisit == attributevec.end() )
           break;
 
@@ -2166,7 +2170,7 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
 
       insert += "," + quotedIdentifier( fieldname );
 
-      QString defVal = defaultValue( it.key() ).toString();
+      QString defVal = defaultValue( index ).toString();
 
       if ( i == flist.size() )
       {
@@ -2181,7 +2185,7 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
             values += "," + defVal;
           }
         }
-        else if ( fit->typeName() == "geometry" )
+        else if ( mAttributeVector[index].typeName() == "geometry" )
         {
           values += QString( ",geomfromewkt(%1)" ).arg( quotedValue( it->toString() ) );
         }
@@ -2193,7 +2197,7 @@ bool QgsPostgresProvider::addFeatures( QgsFeatureList &flist )
       else
       {
         // value is not unique => add parameter
-        if ( fit->typeName() == "geometry" )
+        if ( mAttributeVector[index].typeName() == "geometry" )
         {
           values += QString( ",geomfromewkt($%1)" ).arg( defaultValues.size() + offset );
         }
@@ -2364,7 +2368,7 @@ bool QgsPostgresProvider::addAttributes( const QList<QgsField> &attributes )
     returnvalue = false;
   }
 
-  rewind();
+  loadFields();
   return returnvalue;
 }
 
@@ -2384,11 +2388,11 @@ bool QgsPostgresProvider::deleteAttributes( const QgsAttributeIds& ids )
 
     for ( QgsAttributeIds::const_iterator iter = ids.begin(); iter != ids.end(); ++iter )
     {
-      QgsFieldMap::const_iterator field_it = attributeFields.find( *iter );
-      if ( field_it == attributeFields.constEnd() )
+      int index = *iter;
+      if ( index < 0 || index >= mAttributeVector.count() )
         continue;
 
-      QString column = field_it->name();
+      QString column = mAttributeVector[index].name();
       QString sql = QString( "ALTER TABLE %1 DROP COLUMN %2" )
                     .arg( mQuery )
                     .arg( quotedIdentifier( column ) );
@@ -2398,9 +2402,6 @@ bool QgsPostgresProvider::deleteAttributes( const QgsAttributeIds& ids )
       if ( result == 0 || PQresultStatus( result ) == PGRES_FATAL_ERROR )
         throw PGException( result );
       PQclear( result );
-
-      //delete the attribute from attributeFields
-      attributeFields.remove( *iter );
     }
 
     connectionRW->PQexecNR( "COMMIT" );
@@ -2412,7 +2413,7 @@ bool QgsPostgresProvider::deleteAttributes( const QgsAttributeIds& ids )
     returnvalue = false;
   }
 
-  rewind();
+  loadFields();
   return returnvalue;
 }
 
@@ -2583,9 +2584,9 @@ bool QgsPostgresProvider::changeGeometryValues( QgsGeometryMap & geometry_map )
 QgsAttributeList QgsPostgresProvider::attributeIndexes()
 {
   QgsAttributeList attributes;
-  for ( QgsFieldMap::const_iterator it = attributeFields.constBegin(); it != attributeFields.constEnd(); ++it )
+  for ( int i = 0; i < mAttributeVector.count(); i++ )
   {
-    attributes.push_back( it.key() );
+    attributes.push_back( i );
   }
   return attributes;
 }
@@ -2628,7 +2629,7 @@ long QgsPostgresProvider::featureCount() const
   if ( featuresCounted >= 0 )
     return featuresCounted;
 
-  QMutexLocker connectionROLocker(&mConnectionROMutex);
+  QMutexLocker connectionROLocker( &mConnectionROMutex );
 
   // get total number of features
   QString sql;
@@ -2663,7 +2664,7 @@ QgsRectangle QgsPostgresProvider::extent()
 {
   if ( layerExtent.isEmpty() )
   {
-    QMutexLocker connectionROLocker(&mConnectionROMutex);
+    QMutexLocker connectionROLocker( &mConnectionROMutex );
 
     QString sql;
     Result result;

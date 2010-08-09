@@ -325,7 +325,7 @@ class QgsPostgresProvider : public QgsVectorDataProvider
 
     bool hasSufficientPermsAndCapabilities();
 
-    const QgsField &field( int index ) const;
+    inline const QgsField &field( int index ) const;
 
     /** Double quote a PostgreSQL identifier for placement in a SQL string.
      */
@@ -358,6 +358,7 @@ class QgsPostgresProvider : public QgsVectorDataProvider
 
     std::vector < QgsFeature > features;
     QgsFieldMap attributeFields;
+    QVector<QgsField> mAttributeVector;
     QString mDataComment;
 
     friend class QgsPostgresFeatureIterator;
@@ -690,6 +691,13 @@ class QgsPostgresProvider : public QgsVectorDataProvider
     QString mPrimaryKeyDefault;
 
     mutable QMutex mConnectionROMutex;
-  };
+};
+
+
+const QgsField &QgsPostgresProvider::field( int index ) const
+{
+  return mAttributeVector.at( index );
+}
+
 
 #endif

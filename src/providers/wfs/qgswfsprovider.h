@@ -99,7 +99,8 @@ class QgsWFSProvider: public QgsVectorDataProvider
 
 
   protected:
-    QgsFieldMap mFields;
+    QgsFieldMap mFieldMap;
+    QgsFieldVector mFields;
     /**The encoding used for request/response. Can be GET, POST or SOAP*/
     REQUEST_ENCODING mEncoding;
     /**Bounding box for the layer*/
@@ -122,7 +123,7 @@ class QgsWFSProvider: public QgsVectorDataProvider
 
 
     /**Collects information about the field types. Is called internally from QgsWFSProvider::getFeature. The method delegates the work to request specific ones and gives back the name of the geometry attribute and the thematic attributes with their types*/
-    int describeFeatureType( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields );
+    int describeFeatureType( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields );
 
     //encoding specific methods of getFeature
     int getFeatureGET( const QString& uri, const QString& geometryAttribute );
@@ -130,13 +131,13 @@ class QgsWFSProvider: public QgsVectorDataProvider
     int getFeatureSOAP( const QString& uri, const QString& geometryAttribute );
     int getFeatureFILE( const QString& uri, const QString& geometryAttribute );
     //encoding specific methods of describeFeatureType
-    int describeFeatureTypeGET( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields );
-    int describeFeatureTypePOST( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields );
-    int describeFeatureTypeSOAP( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields );
-    int describeFeatureTypeFile( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields );
+    int describeFeatureTypeGET( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields );
+    int describeFeatureTypePOST( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields );
+    int describeFeatureTypeSOAP( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields );
+    int describeFeatureTypeFile( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields );
 
     /**Reads the name of the geometry attribute, the thematic attributes and their types from a dom document. Returns 0 in case of success*/
-    int readAttributesFromSchema( QDomDocument& schemaDoc, QString& geometryAttribute, QgsFieldMap& fields ) const;
+    int readAttributesFromSchema( QDomDocument& schemaDoc, QString& geometryAttribute, QgsFieldVector& fields ) const;
     /**This method tries to guess the geometry attribute and the other attribute names from the .gml file if no schema is present. Returns 0 in case of success*/
     int guessAttributesFromFile( const QString& uri, QString& geometryAttribute, std::list<QString>& thematicAttributes ) const;
 

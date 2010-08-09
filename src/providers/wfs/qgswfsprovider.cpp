@@ -80,7 +80,7 @@ uint QgsWFSProvider::fieldCount() const
 
 const QgsFieldMap & QgsWFSProvider::fields() const
 {
-  return mFields;
+  return mFieldMap;
 }
 
 QgsCoordinateReferenceSystem QgsWFSProvider::crs()
@@ -140,6 +140,10 @@ int QgsWFSProvider::getFeature( const QString& uri )
     }
   }
 
+  // copy field vector to field map (legacy)
+  for ( int i = 0; i < mFields.size(); i++ )
+    mFieldMap.insert( i, mFields[i] );
+
   if ( mEncoding == QgsWFSProvider::GET )
   {
     return getFeatureGET( uri, geometryAttribute );
@@ -150,7 +154,7 @@ int QgsWFSProvider::getFeature( const QString& uri )
   }
 }
 
-int QgsWFSProvider::describeFeatureType( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields )
+int QgsWFSProvider::describeFeatureType( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields )
 {
   switch ( mEncoding )
   {
@@ -203,9 +207,9 @@ int QgsWFSProvider::getFeatureGET( const QString& uri, const QString& geometryAt
 
   //allows fast searchings with attribute name. Also needed is attribute Index and type infos
   QMap<QString, QPair<int, QgsField> > thematicAttributes;
-  for ( QgsFieldMap::const_iterator it = mFields.begin(); it != mFields.end(); ++it )
+  for ( int i = 0; i < mFields.size(); i++ )
   {
-    thematicAttributes.insert( it.value().name(), qMakePair( it.key(), it.value() ) );
+    thematicAttributes.insert( mFields[i].name(), qMakePair( i, mFields[i] ) );
   }
 
   QgsWFSData dataReader( uri, &mExtent, &mSourceCRS, mFeatures, geometryAttribute, thematicAttributes, &mWKBType );
@@ -294,7 +298,7 @@ int QgsWFSProvider::getFeatureFILE( const QString& uri, const QString& geometryA
   return 0;
 }
 
-int QgsWFSProvider::describeFeatureTypeGET( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields )
+int QgsWFSProvider::describeFeatureTypeGET( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields )
 {
   QByteArray result;
   QgsHttpTransaction http( uri );
@@ -317,17 +321,17 @@ int QgsWFSProvider::describeFeatureTypeGET( const QString& uri, QString& geometr
   return 0;
 }
 
-int QgsWFSProvider::describeFeatureTypePOST( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields )
+int QgsWFSProvider::describeFeatureTypePOST( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields )
 {
   return 1; //soon...
 }
 
-int QgsWFSProvider::describeFeatureTypeSOAP( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields )
+int QgsWFSProvider::describeFeatureTypeSOAP( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields )
 {
   return 1; //soon...
 }
 
-int QgsWFSProvider::describeFeatureTypeFile( const QString& uri, QString& geometryAttribute, QgsFieldMap& fields )
+int QgsWFSProvider::describeFeatureTypeFile( const QString& uri, QString& geometryAttribute, QgsFieldVector& fields )
 {
   //first look in the schema file
   QString noExtension = uri;
@@ -362,13 +366,12 @@ int QgsWFSProvider::describeFeatureTypeFile( const QString& uri, QString& geomet
   int i = 0;
   for ( std::list<QString>::const_iterator it = thematicAttributes.begin(); it != thematicAttributes.end(); ++it, ++i )
   {
-    // TODO: is this correct?
-    fields[i] = QgsField( *it, QVariant::String, "unknown" );
+    fields.append( QgsField( *it, QVariant::String, "unknown" ) );
   }
   return 0;
 }
 
-int QgsWFSProvider::readAttributesFromSchema( QDomDocument& schemaDoc, QString& geometryAttribute, QgsFieldMap& fields ) const
+int QgsWFSProvider::readAttributesFromSchema( QDomDocument& schemaDoc, QString& geometryAttribute, QgsFieldVector& fields ) const
 {
   //get the <schema> root element
   QDomNodeList schemaNodeList = schemaDoc.elementsByTagNameNS( "http://www.w3.org/2001/XMLSchema", "schema" );
@@ -432,6 +435,7 @@ int QgsWFSProvider::readAttributesFromSchema( QDomDocument& schemaDoc, QString& 
     return 5;
   }
 
+  fields.clear();
   for ( uint i = 0; i < attributeNodeList.length(); ++i )
   {
     QDomElement attributeElement = attributeNodeList.at( i ).toElement();
@@ -461,7 +465,7 @@ int QgsWFSProvider::readAttributesFromSchema( QDomDocument& schemaDoc, QString& 
       {
         attributeType = QVariant::LongLong;
       }
-      fields[fields.size()] = QgsField( name, attributeType, type );
+      fields.append( QgsField( name, attributeType, type ) );
     }
   }
   return 0;

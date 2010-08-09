@@ -290,8 +290,8 @@ long QgsGrassProvider::featureCount() const
 */
 uint QgsGrassProvider::fieldCount() const
 {
-  QgsDebugMsg( QString( "return: %1" ).arg( mLayers[mLayerId].fields.size() ) );
-  return mLayers[mLayerId].fields.size();
+  QgsDebugMsg( QString( "return: %1" ).arg( mLayers[mLayerId].fieldVector.size() ) );
+  return mLayers[mLayerId].fieldVector.size();
 }
 
 /**
@@ -419,6 +419,7 @@ void QgsGrassProvider::loadLayerSourcesFromMap( GLAYER &layer )
 
   // Reset and free
   layer.fields.clear();
+  layer.fieldVector.clear();
   if ( layer.attributes )
   {
     for ( int i = 0; i < layer.nAttributes; i ++ )
@@ -451,6 +452,7 @@ void QgsGrassProvider::loadAttributes( GLAYER &layer )
   layer.nAttributes = 0;
   layer.attributes = 0;
   layer.fields.clear();
+  layer.fieldVector.clear();
   layer.keyColumn = -1;
   if ( layer.fieldInfo == NULL )
   {
@@ -525,8 +527,8 @@ void QgsGrassProvider::loadAttributes( GLAYER &layer )
               qtype = QVariant::String;
               break;
           }
-          layer.fields[i] = QgsField( db_get_column_name( column ), qtype, ctypeStr,
-                                      db_get_column_length( column ), db_get_column_precision( column ) );
+          layer.fieldVector.append( QgsField( db_get_column_name( column ), qtype, ctypeStr,
+                                      db_get_column_length( column ), db_get_column_precision( column ) ) );
 
           if ( G_strcasecmp( db_get_column_name( column ), layer.fieldInfo->key ) == 0 )
           {
@@ -534,9 +536,14 @@ void QgsGrassProvider::loadAttributes( GLAYER &layer )
           }
         }
 
+        // make a copy of field vector - field map (legacy)
+        for ( int i = 0; i < layer.fieldVector.size(); i++ )
+          layer.fields.insert( i, layer.fieldVector[i] );
+
         if ( layer.keyColumn < 0 )
         {
           layer.fields.clear();
+          layer.fieldVector.clear();
           layer.nColumns = 0;
 
           QMessageBox::warning( 0, "Warning", "Key column '" + QString( layer.fieldInfo->key ) +
@@ -616,7 +623,7 @@ void QgsGrassProvider::loadAttributes( GLAYER &layer )
         db_close_database_shutdown_driver( databaseDriver );
         db_free_string( &dbstr );
 
-        QgsDebugMsg( QString( "fields.size = %1" ).arg( layer.fields.size() ) );
+        QgsDebugMsg( QString( "fieldVector.size = %1" ).arg( layer.fieldVector.size() ) );
         QgsDebugMsg( QString( "number of attributes = %1" ).arg( layer.nAttributes ) );
 
       }
@@ -627,7 +634,8 @@ void QgsGrassProvider::loadAttributes( GLAYER &layer )
   if ( layer.nColumns == 0 )
   {
     layer.keyColumn = 0;
-    layer.fields[0] = ( QgsField( "cat", QVariant::Int, "integer" ) );
+    layer.fieldVector.append( QgsField( "cat", QVariant::Int, "integer" ) );
+    layer.fields[0] = layer.fieldVector[0]; // legacy
     layer.minmax = new double[1][2];
     layer.minmax[0][0] = 0;
     layer.minmax[0][1] = 0;
@@ -671,6 +679,7 @@ void QgsGrassProvider::closeLayer( int layerId )
 
     // Column names/types
     mLayers[layerId].fields.clear();
+    mLayers[layerId].fieldVector.clear();
 
     // Attributes
     QgsDebugMsg( "Delete attribute values" );
@@ -961,6 +970,9 @@ void QgsGrassProvider::setFeatureAttributes( int layerId, int cat, QgsFeature *f
 #if QGISDEBUG > 3
   QgsDebugMsg( QString( "setFeatureAttributes cat = %1" ).arg( cat ) );
 #endif
+
+  QVariant* attrs = feature->resizeAttributeVector( fieldCount() );
+
   if ( mLayers[layerId].nColumns > 0 )
   {
     // find cat
@@ -975,17 +987,17 @@ void QgsGrassProvider::setFeatureAttributes( int layerId, int cat, QgsFeature *f
       if ( att != NULL )
       {
         QByteArray cstr( att->values[i] );
-        feature->addAttribute( i, convertValue( mLayers[mLayerId].fields[i].type(), mEncoding->toUnicode( cstr ) ) );
+        attrs[i] = convertValue( mLayers[mLayerId].fieldVector[i].type(), mEncoding->toUnicode( cstr ) );
       }
       else   /* it may happen that attributes are missing -> set to empty string */
       {
-        feature->addAttribute( i, QVariant() );
+        attrs[i].clear();
       }
     }
   }
   else
   {
-    feature->addAttribute( 0, QVariant( cat ) );
+    attrs[0] = cat;
   }
 }
 
@@ -994,6 +1006,9 @@ void QgsGrassProvider::setFeatureAttributes( int layerId, int cat, QgsFeature *f
 #if QGISDEBUG > 3
   QgsDebugMsg( QString( "setFeatureAttributes cat = %1" ).arg( cat ) );
 #endif
+
+  QVariant* attrs = feature->resizeAttributeVector( fieldCount() );
+
   if ( mLayers[layerId].nColumns > 0 )
   {
     // find cat
@@ -1004,20 +1019,21 @@ void QgsGrassProvider::setFeatureAttributes( int layerId, int cat, QgsFeature *f
 
     for ( QgsAttributeList::const_iterator iter = attlist.begin(); iter != attlist.end(); ++iter )
     {
+      int i = *iter;
       if ( att != NULL )
       {
-        QByteArray cstr( att->values[*iter] );
-        feature->addAttribute( *iter, convertValue( mLayers[mLayerId].fields[*iter].type(), mEncoding->toUnicode( cstr ) ) );
+        QByteArray cstr( att->values[i] );
+        attrs[i] = convertValue( mLayers[mLayerId].fieldVector[i].type(), mEncoding->toUnicode( cstr ) );
       }
       else   /* it may happen that attributes are missing -> set to empty string */
       {
-        feature->addAttribute( *iter, QVariant() );
+        attrs[i].clear();
       }
     }
   }
   else
   {
-    feature->addAttribute( 0, QVariant( cat ) );
+    attrs[0] = cat;
   }
 }
 

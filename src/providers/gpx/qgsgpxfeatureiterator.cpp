@@ -89,36 +89,17 @@ bool QgsGPXFeatureIterator::nextWaypoint(QgsFeature& feature)
       feature.setGeometryAndOwnership(( unsigned char * )geo, 1+4+8+8 );
     }
 
+    QVariant* attrs = feature.resizeAttributeVector( P->fieldCount() );
+
     // add attributes if they are wanted
     for ( QgsAttributeList::const_iterator iter = mFetchAttributes.begin(); iter != mFetchAttributes.end(); ++iter )
     {
-      switch ( *iter )
+      if ( !setCommonAttribute( wpt, attrs, *iter ) )
       {
-        case QgsGPXProvider::NameAttr:
-          feature.addAttribute( QgsGPXProvider::NameAttr, QVariant( wpt->name ) );
-          break;
-        case QgsGPXProvider::EleAttr:
-          if ( wpt->ele != -std::numeric_limits<double>::max() )
-            feature.addAttribute( QgsGPXProvider::EleAttr, QVariant( wpt->ele ) );
-          break;
-        case QgsGPXProvider::SymAttr:
-          feature.addAttribute( QgsGPXProvider::SymAttr, QVariant( wpt->sym ) );
-          break;
-        case QgsGPXProvider::CmtAttr:
-          feature.addAttribute( QgsGPXProvider::CmtAttr, QVariant( wpt->cmt ) );
-          break;
-        case QgsGPXProvider::DscAttr:
-          feature.addAttribute( QgsGPXProvider::DscAttr, QVariant( wpt->desc ) );
-          break;
-        case QgsGPXProvider::SrcAttr:
-          feature.addAttribute( QgsGPXProvider::SrcAttr, QVariant( wpt->src ) );
-          break;
-        case QgsGPXProvider::URLAttr:
-          feature.addAttribute( QgsGPXProvider::URLAttr, QVariant( wpt->url ) );
-          break;
-        case QgsGPXProvider::URLNameAttr:
-          feature.addAttribute( QgsGPXProvider::URLNameAttr, QVariant( wpt->urlname ) );
-          break;
+        if ( *iter == QgsGPXProvider::EleAttr && wpt->ele != -std::numeric_limits<double>::max() )
+          attrs[ QgsGPXProvider::EleAttr ] = wpt->ele;
+        else if ( *iter == QgsGPXProvider::SymAttr )
+          attrs[ QgsGPXProvider::SymAttr ] = wpt->sym;
       }
     }
 
@@ -181,33 +162,15 @@ bool QgsGPXFeatureIterator::nextRoute(QgsFeature& feature)
     feature.setFeatureId( rte->id );
     feature.setValid( true );
 
+    QVariant* attrs = feature.resizeAttributeVector( P->fieldCount() );
+
     // add attributes if they are wanted
     for ( QgsAttributeList::const_iterator iter = mFetchAttributes.begin(); iter != mFetchAttributes.end(); ++iter )
     {
-      switch ( *iter )
+      if ( !setCommonAttribute( rte, attrs, *iter ) )
       {
-        case QgsGPXProvider::NameAttr:
-          feature.addAttribute( QgsGPXProvider::NameAttr, QVariant( rte->name ) );
-          break;
-        case QgsGPXProvider::NumAttr:
-          if ( rte->number != std::numeric_limits<int>::max() )
-            feature.addAttribute( QgsGPXProvider::NumAttr, QVariant( rte->number ) );
-          break;
-        case QgsGPXProvider::CmtAttr:
-          feature.addAttribute( QgsGPXProvider::CmtAttr, QVariant( rte->cmt ) );
-          break;
-        case QgsGPXProvider::DscAttr:
-          feature.addAttribute( QgsGPXProvider::DscAttr, QVariant( rte->desc ) );
-          break;
-        case QgsGPXProvider::SrcAttr:
-          feature.addAttribute( QgsGPXProvider::SrcAttr, QVariant( rte->src ) );
-          break;
-        case QgsGPXProvider::URLAttr:
-          feature.addAttribute( QgsGPXProvider::URLAttr, QVariant( rte->url ) );
-          break;
-        case QgsGPXProvider::URLNameAttr:
-          feature.addAttribute( QgsGPXProvider::URLNameAttr, QVariant( rte->urlname ) );
-          break;
+        if ( *iter == QgsGPXProvider::NumAttr && rte->number != std::numeric_limits<int>::max() )
+          attrs[ QgsGPXProvider::NumAttr ] = rte->number;
       }
     }
 
@@ -291,33 +254,15 @@ bool QgsGPXFeatureIterator::nextTrack(QgsFeature& feature)
     feature.setFeatureId( trk->id );
     feature.setValid( true );
 
+    QVariant* attrs = feature.resizeAttributeVector( P->fieldCount() );
+
     // add attributes if they are wanted
     for ( QgsAttributeList::const_iterator iter = mFetchAttributes.begin(); iter != mFetchAttributes.end(); ++iter )
     {
-      switch ( *iter )
+      if ( !setCommonAttribute( trk, attrs, *iter ) )
       {
-        case QgsGPXProvider::NameAttr:
-          feature.addAttribute( QgsGPXProvider::NameAttr, QVariant( trk->name ) );
-          break;
-        case QgsGPXProvider::NumAttr:
-          if ( trk->number != std::numeric_limits<int>::max() )
-            feature.addAttribute( QgsGPXProvider::NumAttr, QVariant( trk->number ) );
-          break;
-        case QgsGPXProvider::CmtAttr:
-          feature.addAttribute( QgsGPXProvider::CmtAttr, QVariant( trk->cmt ) );
-          break;
-        case QgsGPXProvider::DscAttr:
-          feature.addAttribute( QgsGPXProvider::DscAttr, QVariant( trk->desc ) );
-          break;
-        case QgsGPXProvider::SrcAttr:
-          feature.addAttribute( QgsGPXProvider::SrcAttr, QVariant( trk->src ) );
-          break;
-        case QgsGPXProvider::URLAttr:
-          feature.addAttribute( QgsGPXProvider::URLAttr, QVariant( trk->url ) );
-          break;
-        case QgsGPXProvider::URLNameAttr:
-          feature.addAttribute( QgsGPXProvider::URLNameAttr, QVariant( trk->urlname ) );
-          break;
+        if ( *iter == QgsGPXProvider::NumAttr && trk->number != std::numeric_limits<int>::max() )
+          attrs[ QgsGPXProvider::NumAttr ] = trk->number;
       }
     }
 
@@ -327,6 +272,31 @@ bool QgsGPXFeatureIterator::nextTrack(QgsFeature& feature)
   return false;
 }
 
+bool QgsGPXFeatureIterator::setCommonAttribute( const QgsGPSObject* obj, QVariant* attrs, int index )
+{
+  switch ( index )
+  {
+    case QgsGPXProvider::NameAttr:
+      attrs[ QgsGPXProvider::NameAttr ] = obj->name;
+      return true;
+    case QgsGPXProvider::CmtAttr:
+      attrs[ QgsGPXProvider::CmtAttr ] = obj->cmt;
+      return true;
+    case QgsGPXProvider::DscAttr:
+      attrs[ QgsGPXProvider::DscAttr ] = obj->desc;
+      return true;
+    case QgsGPXProvider::SrcAttr:
+      attrs[ QgsGPXProvider::SrcAttr ] = obj->src;
+      return true;
+    case QgsGPXProvider::URLAttr:
+      attrs[ QgsGPXProvider::URLAttr ] = obj->url;
+      return true;
+    case QgsGPXProvider::URLNameAttr:
+      attrs[ QgsGPXProvider::URLNameAttr ] = obj->urlname;
+      return true;
+  }
+  return false;
+}
 
 bool QgsGPXFeatureIterator::boundsCheck( double x, double y )
 {

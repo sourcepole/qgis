@@ -24,7 +24,10 @@ QgsSpatiaLiteFeatureIterator::QgsSpatiaLiteFeatureIterator( QgsSpatiaLiteProvide
 {
   P->mHandleMutex.lock();
 
-  // preparing the SQL statement
+  // prepare the SQL statement:
+  // - first column is always ROWID
+  // - next columns are attributes (if required)
+  // - last column is geometry (if required)
 
   QString sql = "SELECT ROWID";
   for ( QgsAttributeList::const_iterator it = fetchAttributes.constBegin(); it != fetchAttributes.constEnd(); ++it )
@@ -151,89 +154,7 @@ bool QgsSpatiaLiteFeatureIterator::nextFeature(QgsFeature& feature)
   if ( ret == SQLITE_ROW )
   {
     // one valid row has been fetched from the result set
-    if ( !mFetchGeometry )
-    {
-      // no geometry was required
-      feature.setGeometryAndOwnership( 0, 0 );
-    }
-
-    feature.clearAttributeMap();
-
-    int ic;
-    int n_columns = sqlite3_column_count( sqliteStatement );
-    for ( ic = 0; ic < n_columns; ic++ )
-    {
-      if ( ic == 0 )
-      {
-        // first column always contains the ROWID
-        feature.setFeatureId( sqlite3_column_int( sqliteStatement, ic ) );
-      }
-      else
-      {
-        // iterate attributes
-        bool fetched = false;
-        int nAttr = 1;
-        for ( QgsAttributeList::const_iterator it = mFetchAttributes.constBegin(); it != mFetchAttributes.constEnd(); it++ )
-        {
-          if ( nAttr == ic )
-          {
-            // ok, this one is the corresponding attribure
-            if ( sqlite3_column_type( sqliteStatement, ic ) == SQLITE_INTEGER )
-            {
-              // INTEGER value
-              feature.addAttribute( *it, sqlite3_column_int( sqliteStatement, ic ) );
-              fetched = true;
-            }
-            else if ( sqlite3_column_type( sqliteStatement, ic ) == SQLITE_FLOAT )
-            {
-              // DOUBLE value
-              feature.addAttribute( *it, sqlite3_column_double( sqliteStatement, ic ) );
-              fetched = true;
-            }
-            else if ( sqlite3_column_type( sqliteStatement, ic ) == SQLITE_TEXT )
-            {
-              // TEXT value
-              const char *txt = ( const char * ) sqlite3_column_text( sqliteStatement, ic );
-              QString str = QString::fromUtf8( txt );
-              feature.addAttribute( *it, str );
-              fetched = true;
-            }
-            else
-            {
-              // assuming NULL
-              feature.addAttribute( *it, QVariant( QString::null ) );
-              fetched = true;
-            }
-          }
-          nAttr++;
-        }
-        if ( fetched )
-        {
-          continue;
-        }
-        if ( mFetchGeometry )
-        {
-          QString geoCol = QString( "AsBinary(%1)" ).arg( QgsSpatiaLiteProvider::quotedIdentifier( P->mGeometryColumn ) );
-          if ( strcasecmp( geoCol.toUtf8().constData(), sqlite3_column_name( sqliteStatement, ic ) ) == 0 )
-          {
-            if ( sqlite3_column_type( sqliteStatement, ic ) == SQLITE_BLOB )
-            {
-              const void *blob = sqlite3_column_blob( sqliteStatement, ic );
-              size_t blob_size = sqlite3_column_bytes( sqliteStatement, ic );
-              unsigned char *featureGeom = new unsigned char[blob_size + 1];
-              memset( featureGeom, '\0', blob_size + 1 );
-              memcpy( featureGeom, blob, blob_size );
-              feature.setGeometryAndOwnership( featureGeom, blob_size + 1 );
-            }
-            else
-            {
-              // NULL geometry
-              feature.setGeometryAndOwnership( 0, 0 );
-            }
-          }
-        }
-      }
-    }
+    P->getFeature( feature, sqliteStatement, mFetchAttributes, mFetchGeometry );
   }
   else
   {

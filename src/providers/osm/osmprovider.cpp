@@ -126,15 +126,19 @@ QgsOSMDataProvider::QgsOSMDataProvider( QString uri )
   }
 
   // set up attributes depending on the feature type - same attributes for both point and way type so far
-  mAttributeFields[TimestampAttr] = QgsField( attr[TimestampAttr], QVariant::String, "string" );
-  mAttributeFields[UserAttr] = QgsField( attr[UserAttr], QVariant::String, "string" );
-  mAttributeFields[TagAttr] = QgsField( attr[TagAttr], QVariant::String, "string" );
+  mAttributeVector.append( QgsField( attr[TimestampAttr], QVariant::String, "string" ) );
+  mAttributeVector.append( QgsField( attr[UserAttr], QVariant::String, "string" ) );
+  mAttributeVector.append( QgsField( attr[TagAttr], QVariant::String, "string" ) );
 
   // add custom attributes - these were chosen by user through OSM plugin
   for ( int tagId = 0; tagId < mCustomTagsList.count(); ++tagId )
   {
-    mAttributeFields[CustomTagAttr+tagId] = QgsField( mCustomTagsList[tagId], QVariant::String, "string" );
+    mAttributeVector.append( QgsField( mCustomTagsList[tagId], QVariant::String, "string" ) );
   }
+
+  // copy the vector to field map (legacy)
+  for ( int i = 0; i < mAttributeVector.size(); i++ )
+    mAttributeFields.insert( i, mAttributeVector[i] );
 
   // get source file name and database file name
   mFileName = uri.left( fileNameEnd );
@@ -520,6 +524,8 @@ bool QgsOSMDataProvider::fetchNode( QgsFeature& feature, sqlite3_stmt* stmt, boo
     feature.setGeometryAndOwnership(( unsigned char * )geo, 24 );    // 24 is size of wkb point structure!
   }
 
+  QVariant* attrs = feature.resizeAttributeVector( fieldCount() );
+
   // fetch attributes
   QgsAttributeList::const_iterator iter;
   for ( iter = fetchAttrs.begin(); iter != fetchAttrs.end(); ++iter )
@@ -527,16 +533,16 @@ bool QgsOSMDataProvider::fetchNode( QgsFeature& feature, sqlite3_stmt* stmt, boo
     switch ( *iter )
     {
       case TimestampAttr:
-        feature.addAttribute( TimestampAttr, QString::fromUtf8( selTimestamp ) ); break;
+        attrs[*iter] = QString::fromUtf8( selTimestamp ); break;
       case UserAttr:
-        feature.addAttribute( UserAttr, QString::fromUtf8( selUser ) ); break;
+        attrs[*iter] = QString::fromUtf8( selUser ); break;
       case TagAttr:
-        feature.addAttribute( TagAttr, tagsForObject( "node", selId ) ); break;
+        attrs[*iter] = tagsForObject( "node", selId ); break;
 
       default: // suppose it's a custom tag
         if ( *iter >= CustomTagAttr && *iter < CustomTagAttr + mCustomTagsList.count() )
         {
-          feature.addAttribute( *iter, tagForObject( "node", selId, mCustomTagsList[*iter-CustomTagAttr] ) );
+          attrs[*iter] = tagForObject( "node", selId, mCustomTagsList[*iter-CustomTagAttr] );
         }
     }
   }
@@ -631,6 +637,8 @@ bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool
     delete theGeometry; // make sure it's deleted
   }
 
+  QVariant* attrs = feature.resizeAttributeVector( fieldCount() );
+
   // fetch attributes
   QgsAttributeList::const_iterator iter;
   for ( iter = fetchAttrs.begin(); iter != fetchAttrs.end(); ++iter )
@@ -638,18 +646,18 @@ bool QgsOSMDataProvider::fetchWay( QgsFeature& feature, sqlite3_stmt* stmt, bool
     switch ( *iter )
     {
       case TimestampAttr:
-        feature.addAttribute( TimestampAttr, QString::fromUtf8( selTimestamp ) );
+        attrs[*iter] = QString::fromUtf8( selTimestamp );
         break;
       case UserAttr:
-        feature.addAttribute( UserAttr, QString::fromUtf8( selUser ) );
+        attrs[*iter] = QString::fromUtf8( selUser );
         break;
       case TagAttr:
-        feature.addAttribute( TagAttr, tagsForObject( "way", selId ) );
+        attrs[*iter] = tagsForObject( "way", selId );
         break;
       default: // suppose it's a custom tag
         if ( *iter >= CustomTagAttr && *iter < CustomTagAttr + mCustomTagsList.count() )
         {
-          feature.addAttribute( *iter, tagForObject( "way", selId, mCustomTagsList[*iter-CustomTagAttr] ) );
+          attrs[*iter] = tagForObject( "way", selId, mCustomTagsList[*iter-CustomTagAttr] );
         }
     }
   }
@@ -778,7 +786,7 @@ long QgsOSMDataProvider::featureCount() const
 
 uint QgsOSMDataProvider::fieldCount() const
 {
-  return mAttributeFields.size();
+  return mAttributeVector.size();
 }
 
 

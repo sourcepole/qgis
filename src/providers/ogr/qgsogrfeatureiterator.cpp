@@ -16,11 +16,11 @@ QgsOgrFeatureIterator::QgsOgrFeatureIterator( QgsOgrProvider* p,
                                               QgsRectangle rect,
                                               bool fetchGeometry,
                                               bool useIntersect )
- : QgsVectorDataProviderIterator(fetchAttributes, rect, fetchGeometry, useIntersect),
-   P(p)
+ : QgsVectorDataProviderIterator( fetchAttributes, rect, fetchGeometry, useIntersect ),
+   P( p )
 {
   // first of all, lock the OGR layer!
-  QgsDebugMsg("trying to lock OGR layer");
+  QgsDebugMsg( "trying to lock OGR layer" );
   P->mLayerMutex.lock();
 
   // set the selection rectangle pointer to 0
@@ -67,7 +67,7 @@ QgsOgrFeatureIterator::~QgsOgrFeatureIterator()
 }
 
 
-bool QgsOgrFeatureIterator::nextFeature(QgsFeature& feature)
+bool QgsOgrFeatureIterator::nextFeature( QgsFeature& feature )
 {
 
   feature.setValid( false );
@@ -85,7 +85,6 @@ bool QgsOgrFeatureIterator::nextFeature(QgsFeature& feature)
     }
 
     feature.setFeatureId( OGR_F_GetFID( fet ) );
-    feature.clearAttributeMap();
 
     /* fetch geometry */
     if ( mFetchGeometry || mUseIntersect )
@@ -102,7 +101,13 @@ bool QgsOgrFeatureIterator::nextFeature(QgsFeature& feature)
       unsigned char *wkb = new unsigned char[OGR_G_WkbSize( geom )];
       OGR_G_ExportToWkb( geom, ( OGRwkbByteOrder ) QgsApplication::endian(), wkb );
 
-      feature.setGeometryAndOwnership( wkb, OGR_G_WkbSize( geom ) );
+      QgsGeometry* g = feature.geometry();
+      if ( !g )
+        feature.setGeometryAndOwnership( wkb, OGR_G_WkbSize( geom ) );
+      else
+      {
+        g->fromWkb( wkb, OGR_G_WkbSize( geom ) );
+      }
 
       if ( mUseIntersect )
       {
@@ -125,10 +130,12 @@ bool QgsOgrFeatureIterator::nextFeature(QgsFeature& feature)
       }
     }
 
+    QVariant* attrs = feature.resizeAttributeVector( P->fieldCount() );
+
     /* fetch attributes */
     for ( QgsAttributeList::iterator it = mFetchAttributes.begin(); it != mFetchAttributes.end(); ++it )
     {
-      P->getFeatureAttribute( fet, feature, *it );
+      P->getFeatureAttribute( fet, feature, *it, attrs );
     }
 
     /* we have a feature, end this cycle */
@@ -168,7 +175,7 @@ bool QgsOgrFeatureIterator::rewind()
 
 bool QgsOgrFeatureIterator::close()
 {
-  if (mClosed)
+  if ( mClosed )
     return false;
 
   if ( mSelectionRectangle )
@@ -178,7 +185,7 @@ bool QgsOgrFeatureIterator::close()
   }
 
   // we're done - unlock the mutex
-  QgsDebugMsg("unlocking OGR layer");
+  QgsDebugMsg( "unlocking OGR layer" );
   P->mLayerMutex.unlock();
 
   mClosed = true;

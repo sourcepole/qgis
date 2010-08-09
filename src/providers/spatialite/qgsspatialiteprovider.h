@@ -258,6 +258,8 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     /** loads fields from input file to member attributeFields */
     void loadFields();
 
+    void getFeature( QgsFeature& feature, sqlite3_stmt* stmt, const QgsAttributeList& fetchAttributes, bool fetchGeometry );
+
     QgsFieldMap attributeFields;
     /**
        * Flag indicating if the layer data source is a valid SpatiaLite layer

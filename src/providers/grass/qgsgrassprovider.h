@@ -74,7 +74,8 @@ struct GLAYER
   int     nColumns;              // number of columns in database table, if 0, attributes are not available
   // and category (column name 'cat') is used instead
   int     keyColumn;             // number of key column
-  QgsFieldMap fields;  // description of layer fields
+  QgsFieldMap fields;            // description of layer fields (legacy)
+  QVector<QgsField> fieldVector; // description of layer fields
   int     nAttributes;           // number of attributes read to the memory (may be < nRecords)
   GATT    *attributes;           // vector of attributes
   double( *minmax )[2];          // minimum and maximum values of attributes

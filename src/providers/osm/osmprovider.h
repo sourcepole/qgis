@@ -93,6 +93,8 @@ class QgsOSMDataProvider: public QgsVectorDataProvider
     //! list of supported attribute fields
     QgsFieldMap mAttributeFields;
 
+    QVector<QgsField> mAttributeVector;
+
     friend class QgsOSMFeatureIterator;
 
     mutable QMutex mDatabaseMutex;

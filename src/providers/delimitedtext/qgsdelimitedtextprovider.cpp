@@ -200,34 +200,33 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( QString uri )
       // than its name. All fields are assumed to be text
       int fieldPos = 0;
       for ( QStringList::Iterator it = fieldList.begin();
-            it != fieldList.end(); ++it )
+            it != fieldList.end(); ++it, ++fieldPos )
       {
         QString field = *it;
-        if ( field.length() > 0 )
+        if ( field.length() == 0 )
+          continue; // ignore
+
+        // for now, let's set field type as text
+        mAttributeVector.append( QgsField( *it, QVariant::String, "Text" ) );
+
+        // check to see if this field matches either the x or y field
+        if ( xField == *it )
         {
-          // for now, let's set field type as text
-          attributeFields[fieldPos] = QgsField( *it, QVariant::String, "Text" );
-
-          // check to see if this field matches either the x or y field
-          if ( xField == *it )
-          {
-            QgsDebugMsg( "Found x field: " + ( *it ) );
-            mXFieldIndex = fieldPos;
-          }
-          else if ( yField == *it )
-          {
-            QgsDebugMsg( "Found y field: " + ( *it ) );
-            mYFieldIndex = fieldPos;
-          }
-
-          QgsDebugMsg( "Adding field: " + ( *it ) );
-          // assume that the field could be integer or double
-          couldBeInt.insert( fieldPos, true );
-          couldBeDouble.insert( fieldPos, true );
-          fieldPos++;
+          QgsDebugMsg( "Found x field: " + ( *it ) );
+          mXFieldIndex = fieldPos;
         }
+        else if ( yField == *it )
+        {
+          QgsDebugMsg( "Found y field: " + ( *it ) );
+          mYFieldIndex = fieldPos;
+        }
+
+        QgsDebugMsg( "Adding field: " + ( *it ) );
+        // assume that the field could be integer or double
+        couldBeInt.insert( fieldPos, true );
+        couldBeDouble.insert( fieldPos, true );
       }
-      QgsDebugMsg( "Field count for the delimited text file is " + QString::number( attributeFields.size() ) );
+      QgsDebugMsg( "Field count for the delimited text file is " + QString::number( mAttributeVector.size() ) );
       hasFields = true;
     }
     else if ( mXFieldIndex != -1 && mYFieldIndex != -1 )
@@ -238,7 +237,7 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( QString uri )
       QStringList parts = splitLine( line );
 
       // Skip malformed lines silently. Report line number with nextFeature()
-      if ( attributeFields.size() != parts.size() )
+      if ( mAttributeVector.size() != parts.size() )
       {
         continue;
       }
@@ -283,18 +282,21 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( QString uri )
   }
 
   // now it's time to decide the types for the fields
-  for ( QgsFieldMap::iterator it = attributeFields.begin(); it != attributeFields.end(); ++it )
+  for ( int i = 0; i < mAttributeVector.size(); i++ )
   {
-    if ( couldBeInt[it.key()] )
+    if ( couldBeInt[i] )
     {
-      it->setType( QVariant::Int );
-      it->setTypeName( "integer" );
+      mAttributeVector[i].setType( QVariant::Int );
+      mAttributeVector[i].setTypeName( "integer" );
     }
-    else if ( couldBeDouble[it.key()] )
+    else if ( couldBeDouble[i] )
     {
-      it->setType( QVariant::Double );
-      it->setTypeName( "double" );
+      mAttributeVector[i].setType( QVariant::Double );
+      mAttributeVector[i].setTypeName( "double" );
     }
+
+    // convert mAttributeVector items to field map (legacy)
+    mAttributeFields[i] = mAttributeVector[i];
   }
 
   if ( mXFieldIndex != -1 && mYFieldIndex != -1 )
@@ -391,13 +393,13 @@ long QgsDelimitedTextProvider::featureCount() const
  */
 uint QgsDelimitedTextProvider::fieldCount() const
 {
-  return attributeFields.size();
+  return mAttributeVector.size();
 }
 
 
 const QgsFieldMap & QgsDelimitedTextProvider::fields() const
 {
-  return attributeFields;
+  return mAttributeFields;
 }
 
 bool QgsDelimitedTextProvider::isValid()

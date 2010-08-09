@@ -341,6 +341,7 @@ void QgsOgrProvider::loadFields()
 {
   //the attribute fields need to be read again when the encoding changes
   mAttributeFields.clear();
+  mAttributeVector.clear();
   OGRFeatureDefnH fdef = OGR_L_GetLayerDefn( ogrLayer );
   if ( fdef )
   {
@@ -381,12 +382,10 @@ void QgsOgrProvider::loadFields()
         default: varType = QVariant::String; // other unsupported, leave it as a string
       }
 
-      mAttributeFields.insert(
-        i, QgsField(
-          mEncoding->toUnicode( OGR_Fld_GetNameRef( fldDef ) ), varType,
-          mEncoding->toUnicode( OGR_GetFieldTypeName( ogrType ) ),
-          OGR_Fld_GetWidth( fldDef ),
-          OGR_Fld_GetPrecision( fldDef ) ) );
+      QString fldName = mEncoding->toUnicode( OGR_Fld_GetNameRef( fldDef ) );
+      QString fldTypeName = mEncoding->toUnicode( OGR_GetFieldTypeName( ogrType ) );
+      mAttributeFields.insert( i, QgsField( fldName, varType, fldTypeName, OGR_Fld_GetWidth( fldDef ), OGR_Fld_GetPrecision( fldDef ) ) );
+      mAttributeVector.append( QgsField( fldName, varType, fldTypeName, OGR_Fld_GetWidth( fldDef ), OGR_Fld_GetPrecision( fldDef ) ) );
     }
   }
 }
@@ -411,7 +410,7 @@ QgsFeatureIterator QgsOgrProvider::getFeatures( QgsAttributeList fetchAttributes
     return QgsFeatureIterator();
   }
 
-  return QgsFeatureIterator( new QgsOgrFeatureIterator(this, fetchAttributes, rect, fetchGeometry, useIntersect) );
+  return QgsFeatureIterator( new QgsOgrFeatureIterator( this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
 }
 
 
@@ -421,14 +420,14 @@ bool QgsOgrProvider::featureAtId( int featureId,
                                   QgsAttributeList fetchAttributes )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   OGRFeatureH fet = OGR_L_GetFeature( ogrLayer, featureId );
   if ( fet == NULL )
     return false;
 
   feature.setFeatureId( OGR_F_GetFID( fet ) );
-  feature.clearAttributeMap();
+  //feature.clearAttributeVector();
   // skip features without geometry
   if ( OGR_F_GetGeometryRef( fet ) == NULL && !mFetchFeaturesWithoutGeom )
   {
@@ -450,10 +449,12 @@ bool QgsOgrProvider::featureAtId( int featureId,
     feature.setGeometryAndOwnership( wkb, OGR_G_WkbSize( geom ) );
   }
 
+  QVariant* attrs = feature.resizeAttributeVector( mAttributeVector.count() );
+
   /* fetch attributes */
   for ( QgsAttributeList::iterator it = fetchAttributes.begin(); it != fetchAttributes.end(); ++it )
   {
-    getFeatureAttribute( fet, feature, *it );
+    getFeatureAttribute( fet, feature, *it, attrs );
   }
 
   if ( OGR_F_GetGeometryRef( fet ) != NULL )
@@ -490,7 +491,7 @@ QgsRectangle QgsOgrProvider::extent()
   if ( !extent_ )
   {
     // make sure no other thread is accessing the layer right now
-    QMutexLocker layerLocker(&mLayerMutex);
+    QMutexLocker layerLocker( &mLayerMutex );
 
     extent_ = calloc( sizeof( OGREnvelope ), 1 );
 
@@ -572,7 +573,7 @@ uint QgsOgrProvider::fieldCount() const
   return mAttributeFields.size();
 }
 
-void QgsOgrProvider::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, int attindex )
+void QgsOgrProvider::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, int attindex, QVariant* attrs )
 {
   OGRFieldDefnH fldDef = OGR_F_GetFieldDefnRef( ogrFet, attindex );
 
@@ -582,25 +583,22 @@ void QgsOgrProvider::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, in
     return;
   }
 
-  QVariant value;
-
   if ( OGR_F_IsFieldSet( ogrFet, attindex ) )
   {
-    switch ( mAttributeFields.value(attindex).type() )
+    switch ( mAttributeVector.at( attindex ).type() )
     {
-      case QVariant::String: value = QVariant( mEncoding->toUnicode( OGR_F_GetFieldAsString( ogrFet, attindex ) ) ); break;
-      case QVariant::Int: value = QVariant( OGR_F_GetFieldAsInteger( ogrFet, attindex ) ); break;
-      case QVariant::Double: value = QVariant( OGR_F_GetFieldAsDouble( ogrFet, attindex ) ); break;
+      case QVariant::String: attrs[attindex].setValue( mEncoding->toUnicode( OGR_F_GetFieldAsString( ogrFet, attindex ) ) ); break;
+      case QVariant::Int: attrs[attindex].setValue( OGR_F_GetFieldAsInteger( ogrFet, attindex ) ); break;
+      case QVariant::Double: attrs[attindex].setValue( OGR_F_GetFieldAsDouble( ogrFet, attindex ) ); break;
         //case QVariant::DateTime: value = QVariant(QDateTime::fromString(str)); break;
       default: assert( NULL && "unsupported field type" );
     }
   }
   else
   {
-    value = QVariant( QString::null );
+    attrs[attindex].clear();
   }
 
-  f.addAttribute( attindex, value );
 }
 
 
@@ -621,7 +619,7 @@ bool QgsOgrProvider::isValid()
 bool QgsOgrProvider::addFeature( QgsFeature& f )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   bool returnValue = true;
   OGRFeatureDefnH fdef = OGR_L_GetLayerDefn( ogrLayer );
@@ -726,7 +724,7 @@ bool QgsOgrProvider::addFeatures( QgsFeatureList & flist )
 bool QgsOgrProvider::addAttributes( const QList<QgsField> &attributes )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   bool returnvalue = true;
 
@@ -769,7 +767,7 @@ bool QgsOgrProvider::addAttributes( const QList<QgsField> &attributes )
 bool QgsOgrProvider::changeAttributeValues( const QgsChangedAttributesMap & attr_map )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   for ( QgsChangedAttributesMap::const_iterator it = attr_map.begin(); it != attr_map.end(); ++it )
   {
@@ -837,7 +835,7 @@ bool QgsOgrProvider::changeAttributeValues( const QgsChangedAttributesMap & attr
 bool QgsOgrProvider::changeGeometryValues( QgsGeometryMap & geometry_map )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   OGRErr res;
   OGRFeatureH theOGRFeature = 0;
@@ -947,7 +945,7 @@ bool QgsOgrProvider::deleteFeatures( const QgsFeatureIds & id )
 bool QgsOgrProvider::deleteFeature( int id )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   return OGR_L_DeleteFeature( ogrLayer, id ) == OGRERR_NONE;
 }
@@ -1674,7 +1672,7 @@ QgsCoordinateReferenceSystem QgsOgrProvider::crs()
 void QgsOgrProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int limit )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
@@ -1713,7 +1711,7 @@ void QgsOgrProvider::uniqueValues( int index, QList<QVariant> &uniqueValues, int
 QVariant QgsOgrProvider::minimumValue( int index )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
@@ -1750,7 +1748,7 @@ QVariant QgsOgrProvider::minimumValue( int index )
 QVariant QgsOgrProvider::maximumValue( int index )
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   QgsField fld = mAttributeFields[index];
   QString theLayerName = OGR_FD_GetName( OGR_L_GetLayerDefn( ogrLayer ) );
@@ -1794,7 +1792,7 @@ QString QgsOgrProvider::quotedIdentifier( QString field )
 bool QgsOgrProvider::syncToDisc()
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   OGR_L_SyncToDisk( ogrLayer );
 
@@ -1825,7 +1823,7 @@ bool QgsOgrProvider::syncToDisc()
 void QgsOgrProvider::recalculateFeatureCount()
 {
   // make sure no other thread is accessing the layer right now
-  QMutexLocker layerLocker(&mLayerMutex);
+  QMutexLocker layerLocker( &mLayerMutex );
 
   OGRGeometryH filter = OGR_L_GetSpatialFilter( ogrLayer );
   if ( filter )

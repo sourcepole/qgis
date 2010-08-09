@@ -152,7 +152,9 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
   private:
 
     //! Fields
-    QgsFieldMap attributeFields;
+    QgsFieldMap mAttributeFields;
+
+    QVector<QgsField> mAttributeVector;
 
     QgsAttributeList mAttributesToFetch;
 

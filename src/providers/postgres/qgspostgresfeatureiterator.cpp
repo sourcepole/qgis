@@ -20,9 +20,8 @@ QgsPostgresFeatureIterator::QgsPostgresFeatureIterator( QgsPostgresProvider* p,
                             QgsRectangle rect,
                             bool fetchGeometry,
                             bool useIntersect )
-: QgsVectorDataProviderIterator(fetchAttributes, rect, fetchGeometry, useIntersect),
-  P(p)
-  , mFeatureQueueSize( 200 )
+: QgsVectorDataProviderIterator( fetchAttributes, rect, fetchGeometry, useIntersect ),
+  P( p ), mFeatureQueueSize( 200 )
 {
   P->mConnectionROMutex.lock();
 
@@ -73,7 +72,7 @@ QgsPostgresFeatureIterator::~QgsPostgresFeatureIterator()
 }
 
 
-bool QgsPostgresFeatureIterator::nextFeature(QgsFeature& feature)
+bool QgsPostgresFeatureIterator::nextFeature( QgsFeature& feature )
 {
   feature.setValid( false );
 
@@ -118,22 +117,10 @@ bool QgsPostgresFeatureIterator::nextFeature(QgsFeature& feature)
   }
 
   // Now return the next feature from the queue
-  if ( mFetchGeometry )
-  {
-    QgsGeometry* featureGeom = mFeatureQueue.front().geometryAndOwnership();
-    feature.setGeometry( featureGeom );
-  }
-  else
-  {
-    feature.setGeometryAndOwnership( 0, 0 );
-  }
-  feature.setFeatureId( mFeatureQueue.front().id() );
-  feature.setAttributeMap( mFeatureQueue.front().attributeMap() );
-
+  feature = mFeatureQueue.front();
   mFeatureQueue.pop();
   mFetched++;
 
-  feature.setValid( true );
   return true;
 }
 

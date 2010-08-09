@@ -239,7 +239,7 @@ class QgsOgrProvider : public QgsVectorDataProvider
     void loadFields();
 
     /**Get an attribute associated with a feature*/
-    void getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, int attindex );
+    void getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, int attindex, QVariant* attrs );
 
     /** find out the number of features of the whole layer */
     void recalculateFeatureCount();
@@ -247,6 +247,7 @@ class QgsOgrProvider : public QgsVectorDataProvider
   private:
     unsigned char *getGeometryPointer( OGRFeatureH fet );
     QgsFieldMap mAttributeFields;
+    QVector<QgsField> mAttributeVector;
     OGRDataSourceH ogrDataSource;
     void *extent_;
 

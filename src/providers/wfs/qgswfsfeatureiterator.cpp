@@ -38,37 +38,24 @@ bool QgsWFSFeatureIterator::nextFeature(QgsFeature& feature)
   if (mClosed)
     return false;
 
-  feature.setValid( false );
-
   //go through the loop until we find a feature in the filter
   while ( mSelectedFeatures.size() != 0 && mFeatureIterator != mSelectedFeatures.end() )
   {
     QgsFeature* origFeature = P->mFeatures[*mFeatureIterator];
 
-    feature.setFeatureId( origFeature->id() );
-
-    //we need geometry anyway, e.g. for intersection tests
-    QgsGeometry* geometry = origFeature->geometry();
-    unsigned char *geom = geometry->asWkb();
-    int geomSize = geometry->wkbSize();
-    unsigned char* copiedGeom = new unsigned char[geomSize];
-    memcpy( copiedGeom, geom, geomSize );
-    feature.setGeometryAndOwnership( copiedGeom, geomSize );
-
-    const QgsAttributeMap& attributes = origFeature->attributeMap();
-    for ( QgsAttributeList::const_iterator it = mFetchAttributes.begin(); it != mFetchAttributes.end(); ++it )
-    {
-      feature.addAttribute( *it, attributes[*it] );
-    }
-    ++mFeatureIterator;
-
     if ( mUseIntersect && feature.geometry() && !feature.geometry()->intersects( mRect ) )
+    {
+      ++mFeatureIterator;
       continue;
+    }
 
-    feature.setValid( true );
+    feature = *origFeature; // copy feature
+
+    ++mFeatureIterator;
     return true;
   }
 
+  feature.setValid( false );
   return false;
 }
 

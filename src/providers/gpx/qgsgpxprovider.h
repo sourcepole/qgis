@@ -151,14 +151,27 @@ class QgsGPXProvider : public QgsVectorDataProvider
     QgsGPSData* data;
 
     //! Fields
-    QgsFieldMap attributeFields;
+    QgsFieldMap mAttributeFields;
+
+    QVector<QgsField> mAttributeVector;
 
     QString mFileName;
 
     enum { WaypointType, RouteType, TrackType } mFeatureType;
-    enum Attribute { NameAttr = 0, EleAttr, SymAttr, NumAttr,
-                     CmtAttr, DscAttr, SrcAttr, URLAttr, URLNameAttr
-                 };
+    enum Attribute {
+      /* common attributes */
+      NameAttr = 0,
+      CmtAttr,
+      DscAttr,
+      SrcAttr,
+      URLAttr,
+      URLNameAttr,
+      /* waypoint attributes */
+      EleAttr = 6,
+      SymAttr = 7,
+      /* route/track attributes */
+      NumAttr = 6
+    };
     static const char* attr[];
 
     bool mValid;

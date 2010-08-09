@@ -35,6 +35,8 @@ protected:
   bool nextRoute(QgsFeature& feature);
   bool nextTrack(QgsFeature& feature);
 
+  bool setCommonAttribute( const QgsGPSObject* obj, QVariant* attrs, int index );
+
   /**
    * Check to see if the point is withn the selection
    * rectangle

@@ -46,11 +46,6 @@
 #include "gpsdata.h"
 #include "qgslogger.h"
 
-const char* QgsGPXProvider::attr[] = { "name", "elevation", "symbol", "number",
-                                       "comment", "description", "source",
-                                       "url", "url name"
-                                     };
-
 
 const QString GPX_KEY = "gpx";
 
@@ -78,21 +73,27 @@ QgsGPXProvider::QgsGPXProvider( QString uri ) :
                    ( typeStr == "route" ? RouteType : TrackType ) );
 
   // set up the attributes and the geometry type depending on the feature type
-  attributeFields[NameAttr] = QgsField( attr[NameAttr], QVariant::String, "text" );
+  mAttributeVector.append( QgsField( "name", QVariant::String, "text" ) );
+  mAttributeVector.append( QgsField( "comment", QVariant::String, "text" ) );
+  mAttributeVector.append( QgsField( "description", QVariant::String, "text" ) );
+  mAttributeVector.append( QgsField( "source", QVariant::String, "text" ) );
+  mAttributeVector.append( QgsField( "url", QVariant::String, "text" ) );
+  mAttributeVector.append( QgsField( "url name", QVariant::String, "text" ) );
+
   if ( mFeatureType == WaypointType )
   {
-    attributeFields[EleAttr] = QgsField( attr[EleAttr], QVariant::Double, "double" );
-    attributeFields[SymAttr] = QgsField( attr[SymAttr], QVariant::String, "text" );
+    mAttributeVector.append( QgsField( "elevation", QVariant::Double, "double" ) );
+    mAttributeVector.append( QgsField( "symbol", QVariant::String, "text" ) );
   }
   else if ( mFeatureType == RouteType || mFeatureType == TrackType )
   {
-    attributeFields[NumAttr] = QgsField( attr[NumAttr], QVariant::Int, "int" );
+    mAttributeVector.append( QgsField( "number", QVariant::Int, "int" ) );
   }
-  attributeFields[CmtAttr] = QgsField( attr[CmtAttr], QVariant::String, "text" );
-  attributeFields[DscAttr] = QgsField( attr[DscAttr], QVariant::String, "text" );
-  attributeFields[SrcAttr] = QgsField( attr[SrcAttr], QVariant::String, "text" );
-  attributeFields[URLAttr] = QgsField( attr[URLAttr], QVariant::String, "text" );
-  attributeFields[URLNameAttr] = QgsField( attr[URLNameAttr], QVariant::String, "text" );
+
+  // construct QgsFieldMap from the field vector (legacy)
+  for (int i = 0; i < mAttributeVector.count(); i++)
+    mAttributeFields.insert(i, mAttributeVector[i]);
+
   mFileName = uri.left( fileNameEnd );
 
   // parse the file
@@ -177,13 +178,13 @@ long QgsGPXProvider::featureCount() const
  */
 uint QgsGPXProvider::fieldCount() const
 {
-  return attributeFields.size();
+  return mAttributeVector.size();
 }
 
 
 const QgsFieldMap& QgsGPXProvider::fields() const
 {
-  return attributeFields;
+  return mAttributeFields;
 }
 
 
