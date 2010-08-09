@@ -201,12 +201,14 @@ void QgsAttributeTableModel::loadLayer()
 
   if ( behaviour == 1 )
   {
-    const QgsFeatureList &features = mLayer->selectedFeatures();
-
-    for ( int i = 0; i < features.size(); ++i )
+    int i = 0;
+    const QgsFeatureIds& fids = mLayer->selectedFeaturesIds();
+    for ( QgsFeatureIds::const_iterator it = fids.constBegin(); it != fids.constEnd(); ++it, ++i )
     {
-      mRowIdMap.insert( i, features[i].id() );
-      mIdRowMap.insert( features[i].id(), i );
+      mLayer->featureAtId( *it, f, false, false );
+
+      mRowIdMap.insert( i, f.id() );
+      mIdRowMap.insert( f.id(), i );
     }
   }
   else
@@ -291,14 +293,15 @@ int QgsAttributeTableModel::idToRow( const int id ) const
 
 int QgsAttributeTableModel::rowToId( const int id ) const
 {
-  if ( !mRowIdMap.contains( id ) )
+  const QHash<int, int>::const_iterator it = mRowIdMap.constFind( id );
+  if ( it == mRowIdMap.constEnd() )
   {
     QgsDebugMsg( QString( "rowToId: row %1 not in the map" ).arg( id ) );
     // return negative infinite (to avoid collision with newly added features)
     return std::numeric_limits<int>::min();
   }
 
-  return mRowIdMap[id];
+  return *it;
 }
 
 int QgsAttributeTableModel::fieldIdx( int col ) const
@@ -412,7 +415,7 @@ QVariant QgsAttributeTableModel::data( const QModelIndex &index, int role ) cons
   if ( mFeat.id() != rowId )
     return QVariant( "ERROR" );
 
-  const QVariant &val = mFeat.attributeMap()[ fieldId ];
+  const QVariant &val = mFeat.attributeVector()[ fieldId ];
 
   if ( val.isNull() )
   {
