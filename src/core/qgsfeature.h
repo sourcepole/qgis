@@ -21,10 +21,16 @@ email                : sherman at mrcc.com
 #include <QString>
 #include <QVariant>
 #include <QList>
+#include <QVector>
+
+#include <QSharedDataPointer>
 
 class QgsGeometry;
 class QgsRectangle;
 class QgsFeature;
+
+
+typedef QVector<QVariant> QgsAttributeVector;
 
 // key = field index, value = field value
 typedef QMap<int, QVariant> QgsAttributeMap;
@@ -40,6 +46,54 @@ typedef QMap<int, QString> QgsFieldNameMap;
 
 typedef QList<QgsFeature> QgsFeatureList;
 
+
+#include <QSharedData>
+
+class QgsFeatureData : public QSharedData
+{
+  public:
+
+    QgsFeatureData( int id );
+    QgsFeatureData( const QgsFeatureData & rhs );
+
+    ~QgsFeatureData();
+
+    void setGeometry( QgsGeometry* geom );
+
+    void clearAttributes();
+    void setAttributes( const QgsAttributeMap& attributes );
+    void setAttributes( const QgsAttributeVector& attributes );
+    void addAttribute( int field, QVariant attr );
+    void deleteAttribute( int field );
+    void changeAttribute( int field, QVariant attr );
+
+    void convertVectorToMap() const;
+    void convertMapToVector();
+
+    //! feature id
+    int mFid;
+
+    /** map of attributes accessed by field index */
+    mutable QgsAttributeMap mAttributes;
+    mutable bool mAttributeMapDirty;
+
+    /** vector of attributes */
+    QgsAttributeVector mAttributeVector;
+
+    /** pointer to geometry */
+    QgsGeometry *mGeometry;
+
+    /** Indicator if the mGeometry is owned by this QgsFeature.
+        If so, this QgsFeature takes responsibility for the mGeometry's destruction.
+     */
+    bool mOwnsGeometry;
+
+    //! Flag to indicate if this feature is valid
+    bool mValid;
+};
+
+
+
 /** \ingroup core
  * The feature class encapsulates a single feature including its id,
  * geometry and a list of field/values attributes.
@@ -50,13 +104,10 @@ class CORE_EXPORT QgsFeature
 {
   public:
     //! Constructor
-    QgsFeature( int id = 0, QString typeName = "" );
+    QgsFeature( int id = 0, QString typeName = QString() );
 
     /** copy ctor needed due to internal pointer */
-    QgsFeature( QgsFeature const & rhs );
-
-    /** assignment operator needed due to internal pointer */
-    QgsFeature & operator=( QgsFeature const & rhs );
+    QgsFeature( const QgsFeature & rhs );
 
     //! Destructor
     ~QgsFeature();
@@ -74,21 +125,9 @@ class CORE_EXPORT QgsFeature
      */
     void setFeatureId( int id );
 
-
-    /** returns the feature's type name
-     * @deprecated not used anymore
-     */
-    QString typeName() const;
-
-
-    /** sets the feature's type name
-     * @deprecated not used anymore
-     */
-    void setTypeName( QString typeName );
-
     /**
      * Get the attributes for this feature.
-     * @return A std::map containing the field name/value mapping
+     * @return A QMap containing the field name/value mapping
      */
     const QgsAttributeMap& attributeMap() const;
 
@@ -113,6 +152,10 @@ class CORE_EXPORT QgsFeature
        @param attr attribute name and value to be set */
     void changeAttribute( int field, QVariant attr );
 
+    QVariant* resizeAttributeVector( int fieldCount );
+    void setAttributeVector( const QgsAttributeVector& attrList );
+    const QgsAttributeVector& attributeVector() const;
+
     /**
      * Return the validity of this feature. This is normally set by
      * the provider to indicate some problem that makes the feature
@@ -125,16 +168,13 @@ class CORE_EXPORT QgsFeature
      */
     void setValid( bool validity );
 
-    /**
-     * Return the dirty state of this feature.
-     * Dirty is set if (e.g.) the feature's geometry has been modified in-memory.
-     */
+    /** @deprecated not used anymore */
+    QString typeName() const;
+    /** @deprecated not used anymore */
+    void setTypeName( QString typeName );
+    /** @deprecated not used anymore */
     bool isDirty() const;
-
-    /**
-     * Reset the dirtiness of the feature.  (i.e. make clean)
-     * You would normally do this after it's saved to permanent storage (e.g. disk, an ACID-compliant database)
-     */
+    /** @deprecated not used anymore */
     void clean();
 
     /**
@@ -165,34 +205,7 @@ class CORE_EXPORT QgsFeature
 
   private:
 
-    //! feature id
-    int mFid;
-
-    /** map of attributes accessed by field index */
-    QgsAttributeMap mAttributes;
-
-    /** pointer to geometry in binary WKB format
-
-       This is usually set by a call to OGRGeometry::exportToWkb()
-     */
-    QgsGeometry *mGeometry;
-
-    /** Indicator if the mGeometry is owned by this QgsFeature.
-        If so, this QgsFeature takes responsibility for the mGeometry's destruction.
-     */
-    bool mOwnsGeometry;
-
-    //! Flag to indicate if this feature is valid
-    // TODO: still applies? [MD]
-    bool mValid;
-
-    //! Flag to indicate if this feature is dirty (e.g. geometry has been modified in-memory)
-    // TODO: still applies? [MD]
-    bool mDirty;
-
-    /// feature type name
-    QString mTypeName;
-
+    QSharedDataPointer<QgsFeatureData> d;
 
 }; // class QgsFeature
 

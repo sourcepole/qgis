@@ -145,5 +145,6 @@ class CORE_EXPORT QgsField
 
 // key = field index, value=field data
 typedef QMap<int, QgsField> QgsFieldMap;
+typedef QVector<QgsField> QgsFieldVector;
 
 #endif
