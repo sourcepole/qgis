@@ -62,7 +62,9 @@ void addToTmpNodes(QgsSearchTreeNode* node);
 %token <number> NUMBER
 %token <op> COMPARISON
 %token <op> FUNCTION
+%token CONCAT
 %token IS
+%token ROWNUM
 %token AREA
 %token LENGTH
 %token NULLVALUE
@@ -94,6 +96,8 @@ void addToTmpNodes(QgsSearchTreeNode* node);
 %left NOT
 
 %left COMPARISON
+
+%left CONCAT
 
 %left '+' '-'
 %left '*' '/'
@@ -136,6 +140,8 @@ scalar_exp:
     | '(' scalar_exp ')'          { $$ = $2; }
     | '+' scalar_exp %prec UMINUS { $$ = $2; }
     | '-' scalar_exp %prec UMINUS { $$ = $2; if ($$->type() == QgsSearchTreeNode::tNumber) $$->setNumber(- $$->number()); }
+    | scalar_exp CONCAT scalar_exp { $$ = new QgsSearchTreeNode(QgsSearchTreeNode::opCONCAT, $1, $3); joinTmpNodes($$, $1, $3); }
+    | ROWNUM                      { $$ = new QgsSearchTreeNode(QgsSearchTreeNode::opROWNUM, 0, 0); addToTmpNodes($$); }
     | AREA                        { $$ = new QgsSearchTreeNode(QgsSearchTreeNode::opAREA, 0, 0); addToTmpNodes($$); }
     | LENGTH                      { $$ = new QgsSearchTreeNode(QgsSearchTreeNode::opLENGTH, 0, 0); addToTmpNodes($$); }
     | NUMBER                      { $$ = new QgsSearchTreeNode($1); addToTmpNodes($$); }

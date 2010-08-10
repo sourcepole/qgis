@@ -1243,6 +1243,14 @@ void QgsRasterLayer::computeMinimumMaximumEstimates( QString theBand, double* th
   computeMinimumMaximumEstimates( bandNumber( theBand ), theMinMax );
 }
 
+void QgsRasterLayer::computeMinimumMaximumEstimates( int theBand, double& theMin, double& theMax )
+{
+  double theMinMax[2];
+  computeMinimumMaximumEstimates( theBand, theMinMax );
+  theMin = theMinMax[0];
+  theMax = theMinMax[1];
+}
+
 /**
  * @param theBand The band (number) for which to calculate the min max values
  * @param theMinMax Pointer to a double[2] which hold the estimated min max
@@ -1291,6 +1299,14 @@ void QgsRasterLayer::computeMinimumMaximumFromLastExtent( int theBand, double* t
 void QgsRasterLayer::computeMinimumMaximumFromLastExtent( QString theBand, double* theMinMax )
 {
   computeMinimumMaximumFromLastExtent( bandNumber( theBand ), theMinMax );
+}
+
+void QgsRasterLayer::computeMinimumMaximumFromLastExtent( int theBand, double& theMin, double& theMax )
+{
+  double theMinMax[2];
+  computeMinimumMaximumFromLastExtent( theBand, theMinMax );
+  theMin = theMinMax[0];
+  theMax = theMinMax[1];
 }
 
 /**
@@ -3474,6 +3490,35 @@ void QgsRasterLayer::setMaximumValue( QString theBand, double theValue, bool the
   }
 }
 
+void QgsRasterLayer::setMinimumMaximumUsingLastExtent()
+{
+  double myMinMax[2];
+  if ( rasterType() == QgsRasterLayer::GrayOrUndefined || drawingStyle() == QgsRasterLayer::SingleBandGray || drawingStyle() == QgsRasterLayer::MultiBandSingleGandGray )
+  {
+    computeMinimumMaximumFromLastExtent( grayBandName(), myMinMax );
+    setMinimumValue( grayBandName(), myMinMax[0] );
+    setMaximumValue( grayBandName(), myMinMax[1] );
+
+    setUserDefinedGrayMinimumMaximum( true );
+  }
+  else if ( rasterType() == QgsRasterLayer::Multiband )
+  {
+    computeMinimumMaximumFromLastExtent( redBandName(), myMinMax );
+    setMinimumValue( redBandName(), myMinMax[0], false );
+    setMaximumValue( redBandName(), myMinMax[1], false );
+
+    computeMinimumMaximumFromLastExtent( greenBandName(), myMinMax );
+    setMinimumValue( greenBandName(), myMinMax[0], false );
+    setMaximumValue( greenBandName(), myMinMax[1], false );
+
+    computeMinimumMaximumFromLastExtent( blueBandName(), myMinMax );
+    setMinimumValue( blueBandName(), myMinMax[0], false );
+    setMaximumValue( blueBandName(), myMinMax[1], false );
+
+    setUserDefinedRGBMinimumMaximum( true );
+  }
+}
+
 void QgsRasterLayer::setMinimumValue( unsigned int theBand, double theValue, bool theGenerateLookupTableFlag )
 {
   if ( 0 < theBand && theBand <= bandCount() )
@@ -3509,12 +3554,6 @@ void QgsRasterLayer::setNoDataValue( double theNoDataValue )
 
 void QgsRasterLayer::setRasterShaderFunction( QgsRasterShaderFunction* theFunction )
 {
-  //Free old shader if it is not a userdefined shader
-  if ( mColorShadingAlgorithm != QgsRasterLayer::UserDefinedShader && 0 != mRasterShader->rasterShaderFunction() )
-  {
-    delete( mRasterShader->rasterShaderFunction() );
-  }
-
   if ( theFunction )
   {
     mRasterShader->setRasterShaderFunction( theFunction );
@@ -5373,15 +5412,36 @@ bool QgsRasterLayer::readFile( QString const &theFilename )
     //we know we have at least 2 layers...
     mRedBandName = bandName( myQSettings.value( "/Raster/defaultRedBand", 1 ).toInt() );  // sensible default
     mGreenBandName = bandName( myQSettings.value( "/Raster/defaultGreenBand", 2 ).toInt() );  // sensible default
+
+    //Check to make sure preferred bands combinations are valid
+    if ( mRedBandName.isEmpty() )
+    {
+      mRedBandName = bandName( 1 );
+    }
+
+    if ( mGreenBandName.isEmpty() )
+    {
+      mGreenBandName = bandName( 2 );
+    }
+
     //for the third layer we cant be sure so..
     if ( GDALGetRasterCount( mGdalDataset ) > 2 )
     {
       mBlueBandName = bandName( myQSettings.value( "/Raster/defaultBlueBand", 3 ).toInt() ); // sensible default
+      if ( mBlueBandName.isEmpty() )
+      {
+        mBlueBandName = bandName( 3 );
+      }
     }
     else
     {
       mBlueBandName = bandName( myQSettings.value( "/Raster/defaultBlueBand", 2 ).toInt() );  // sensible default
+      if ( mBlueBandName.isEmpty() )
+      {
+        mBlueBandName = bandName( 2 );
+      }
     }
+
 
     mTransparencyBandName = TRSTRING_NOT_SET;
     mGrayBandName = TRSTRING_NOT_SET;  //sensible default

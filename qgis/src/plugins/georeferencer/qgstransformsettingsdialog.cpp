@@ -36,6 +36,7 @@ QgsTransformSettingsDialog::QgsTransformSettingsDialog( const QString &raster, c
 
   cmbTransformType->addItem( tr( "Linear" ) , ( int )QgsGeorefTransform::Linear ) ;
   cmbTransformType->addItem( tr( "Helmert" ), ( int )QgsGeorefTransform::Helmert );
+  cmbTransformType->addItem( tr( "Projective" ), ( int )QgsGeorefTransform::Projective );
   cmbTransformType->addItem( tr( "Polynomial 1" ), ( int )QgsGeorefTransform::PolynomialOrder1 );
   cmbTransformType->addItem( tr( "Polynomial 2" ), ( int )QgsGeorefTransform::PolynomialOrder2 );
   cmbTransformType->addItem( tr( "Polynomial 3" ), ( int )QgsGeorefTransform::PolynomialOrder3 );
@@ -45,6 +46,19 @@ QgsTransformSettingsDialog::QgsTransformSettingsDialog( const QString &raster, c
 
   mRegExpValidator = new QRegExpValidator( QRegExp( "(^epsg:{1}\\s*\\d+)|(^\\+proj.*)", Qt::CaseInsensitive ), leTargetSRS );
   leTargetSRS->setValidator( mRegExpValidator );
+
+  // Populate CompressionComboBox
+  mListCompression.append("NONE");
+  mListCompression.append("LZW");
+  mListCompression.append("PACKBITS");
+  mListCompression.append("DEFLATE");
+  QStringList listCompressionTr;
+  foreach ( QString item, mListCompression)
+  {
+    listCompressionTr.append(tr(item.toAscii().data()));
+  }
+  cmbCompressionComboBox->addItems(listCompressionTr);
+
 
   QSettings s;
   cmbTransformType->setCurrentIndex( s.value( "/Plugin-GeoReferencer/lasttransformation", -1 ).toInt() );
@@ -83,10 +97,10 @@ void QgsTransformSettingsDialog::getTransformSettings( QgsGeorefTransform::Trans
   if ( cmbTransformType->currentIndex() == -1 )
     tp = QgsGeorefTransform::InvalidTransform;
   else
-    tp = ( QgsGeorefTransform::TransformParametrisation )cmbTransformType->currentIndex();
+    tp = ( QgsGeorefTransform::TransformParametrisation )cmbTransformType->itemData( cmbTransformType->currentIndex() ).toInt();
 
   rm = ( QgsImageWarper::ResamplingMethod )cmbResampling->currentIndex();
-  comprMethod = cmbCompressionComboBox->currentText();
+  comprMethod = mListCompression.at( cmbCompressionComboBox->currentIndex() );
   if ( mWorldFileCheckBox->isChecked() )
   {
     raster = "";

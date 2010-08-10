@@ -22,6 +22,7 @@
 #include <qgsuniquevaluerenderer.h>
 #include <qgscategorizedsymbolrendererv2.h>
 #include <qgssymbol.h>
+#include <qgslonglongvalidator.h>
 
 #include <QPushButton>
 #include <QLineEdit>
@@ -358,6 +359,10 @@ QWidget *QgsAttributeEditor::createAttributeEditor( QWidget *parent, QWidget *ed
         {
           le->setValidator( new QIntValidator( le ) );
         }
+        else if ( myFieldType == QVariant::LongLong )
+        {
+          le->setValidator( new QgsLongLongValidator( le ) );
+        }
         else if ( myFieldType == QVariant::Double )
         {
           le->setValidator( new QDoubleValidator( le ) );
@@ -545,6 +550,20 @@ bool QgsAttributeEditor::retrieveValue( QWidget *widget, QgsVectorLayer *vl, int
       }
     }
     break;
+    case QVariant::LongLong:
+    {
+      bool ok;
+      qlonglong myLongValue = text.toLong( &ok );
+      if ( ok && !text.isEmpty() )
+      {
+        value = QVariant( myLongValue );
+        modified = true;
+      }
+      else if ( modified )
+      {
+        value = QVariant( theField.type() );
+      }
+    }
     case QVariant::Double:
     {
       bool ok;
@@ -668,7 +687,7 @@ bool QgsAttributeEditor::setValue( QWidget *editor, QgsVectorLayer *vl, int idx,
 
       QString text;
       if ( value.isNull() )
-        if ( myFieldType == QVariant::Int || myFieldType == QVariant::Double )
+        if ( myFieldType == QVariant::Int || myFieldType == QVariant::Double || myFieldType == QVariant::LongLong )
           text = "";
         else
           text = "NULL";

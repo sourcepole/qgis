@@ -159,6 +159,7 @@
 #include "qgscredentialdialog.h"
 #include "qgstilescalewidget.h"
 #include "qgsquerybuilder.h"
+#include "qgsattributeaction.h"
 
 #ifdef HAVE_QWT
 #include "qgsgpsinformationwidget.h"
@@ -611,7 +612,7 @@ void QgisApp::dropEvent( QDropEvent *event )
       else
       {
         QgsDebugMsg( "Adding " + fileName + " to the map canvas" );
-        openLayer( fileName );
+        openLayer( fileName, true );
       }
     }
   }
@@ -3403,17 +3404,28 @@ void QgisApp::openProject( const QString & fileName )
   Used to process a commandline argument or OpenDocument AppleEvent.
   @returns true if the file is successfully opened
   */
-bool QgisApp::openLayer( const QString & fileName )
+bool QgisApp::openLayer( const QString & fileName, bool allowInteractive )
 {
   QFileInfo fileInfo( fileName );
 
   // try to load it as raster
-  QgsMapLayer* ok = NULL;
+  bool ok( false );
   CPLPushErrorHandler( CPLQuietErrorHandler );
   if ( QgsRasterLayer::isValidRasterFileName( fileName ) )
-    ok = addRasterLayer( fileName, fileInfo.completeBaseName() );
+  {
+    ok  = addRasterLayer( fileName, fileInfo.completeBaseName() );
+  }
   else // nope - try to load it as a shape/ogr
-    ok = addVectorLayer( fileName, fileInfo.completeBaseName(), "ogr" );
+  {
+    if ( allowInteractive )
+    {
+      ok = addVectorLayers( QStringList( fileName ), "System", "file" );
+    }
+    else
+    {
+      ok = addVectorLayer( fileName, fileInfo.completeBaseName(), "ogr" );
+    }
+  }
 
   CPLPopErrorHandler();
 
@@ -3451,7 +3463,7 @@ void QgisApp::saveMapAsImage()
 
   //find out the last used filter
   QSettings myQSettings;  // where we keep last used filter in persistent state
-  QString myLastUsedFilter = myQSettings.value( "/UI/saveAsImageFilter" ).toString();
+  QString myLastUsedFilter = myQSettings.value( "/UI/lastSaveAsImageFilter" ).toString();
   QString myLastUsedDir = myQSettings.value( "/UI/lastSaveAsImageDir", "." ).toString();
 
   // get a list of supported output image types
@@ -4928,11 +4940,16 @@ void QgisApp::showPluginManager()
   }
 }
 
+static void _runPythonString( const QString &expr )
+{
+  QgisApp::instance()->runPythonString( expr );
+}
+
 void QgisApp::loadPythonSupport()
 {
   QString pythonlibName( "qgispython" );
 #if defined(Q_WS_MAC) || defined(Q_OS_LINUX)
-  pythonlibName.prepend( QgsApplication::prefixPath() + "/lib/" );
+  pythonlibName.prepend( QgsApplication::prefixPath() + "/" + QGIS_LIB_SUBDIR + "/" );
 #endif
 #ifdef __MINGW32__
   pythonlibName.prepend( "lib" );
@@ -4972,6 +4989,7 @@ void QgisApp::loadPythonSupport()
   if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
     QgsPluginRegistry::instance()->setPythonUtils( mPythonUtils );
+    QgsAttributeAction::setPythonExecute( _runPythonString );
 
     mActionShowPythonDialog = new QAction( tr( "Python Console" ), this );
     QgsShortcutsManager::instance()->registerAction( mActionShowPythonDialog );
@@ -6840,4 +6858,9 @@ void QgisApp::namUpdate()
 #else
   QgsNetworkAccessManager::instance()->setProxy( proxy );
 #endif
+}
+
+void QgisApp::completeInitialization()
+{
+  emit initializationCompleted();
 }

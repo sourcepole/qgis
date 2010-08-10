@@ -65,6 +65,7 @@ symbology-ng/qgssinglesymbolrendererv2widget.h
 symbology-ng/qgscategorizedsymbolrendererv2widget.h
 symbology-ng/qgsgraduatedsymbolrendererv2widget.h
 symbology-ng/qgsrulebasedrendererv2widget.h
+symbology-ng/qgsrendererv2widget.h
 symbology-ng/qgsrendererv2propertiesdialog.h
 symbology-ng/qgsstylev2managerdialog.h
 symbology-ng/qgssymbollevelsv2dialog.h
@@ -94,6 +95,7 @@ qgsprojectionselector.h
 qgsquickprint.h
 qgsludialog.h
 qgsprojectbadlayerguihandler.h
+qgslonglongvalidator.h
 )
 
 QT4_WRAP_CPP(QGIS_GUI_MOC_SRCS ${QGIS_GUI_MOC_HDRS})

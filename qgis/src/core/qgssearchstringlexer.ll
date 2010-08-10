@@ -92,6 +92,8 @@ string      "'"{str_char}*"'"
 "to real" { yylval.op = QgsSearchTreeNode::opTOREAL; return FUNCTION;}
 "to string" { yylval.op = QgsSearchTreeNode::opTOSTRING; return FUNCTION;}
 
+"||"   { return CONCAT; }
+
 [+-/*^]    { return yytext[0]; }
 
 [()]      { return yytext[0]; }
@@ -99,6 +101,8 @@ string      "'"{str_char}*"'"
 {number}  { yylval.number  = atof(yytext); return NUMBER; }
 
 {string}  { return STRING; }
+
+"$rownum" { return ROWNUM; }
 
 "$area" { return AREA; }
 "$length" { return LENGTH; }

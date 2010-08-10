@@ -440,11 +440,19 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
     /** \brief Wrapper for GDALComputeRasterMinMax with the estimate option */
     void computeMinimumMaximumEstimates( QString theBand, double* theMinMax );
 
+    /** \brief Wrapper for GDALComputeRasterMinMax with the estimate option
+      \note added in v1.6 */
+    void computeMinimumMaximumEstimates( int theBand, double& theMin, double& theMax );
+
     /** \brief Compute the actual minimum maximum pixel values based on the current (last) display extent */
     void computeMinimumMaximumFromLastExtent( int theBand, double* theMinMax );
 
     /** \brief Compute the actual minimum maximum pixel values based on the current (last) display extent */
     void computeMinimumMaximumFromLastExtent( QString theBand, double* theMinMax );
+
+    /**  \brief Compute the actual minimum maximum pixel values based on the current (last) display extent
+      \note added in v1.6 */
+    void computeMinimumMaximumFromLastExtent( int theBand, double& theMin, double& theMax );
 
     /** \brief Get a pointer to the contrast enhancement for the selected band */
     QgsContrastEnhancement* contrastEnhancement( unsigned int theBand );
@@ -575,6 +583,9 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
     /** \brief Mutator for setting the maximum value for contrast enhancement */
     void setMaximumValue( QString theBand, double theValue, bool theGenerateLookupTableFlag = true );
 
+    /** \brief Sets the minimum and maximum values for the band(s) currently being displayed using the only pixel values from the last/current extent */
+    void setMinimumMaximumUsingLastExtent();
+
     /** \brief Mutator for setting the minimum value for contrast enhancement */
     void setMinimumValue( unsigned int theBand, double theValue, bool theGenerateLookupTableFlag = true );
 
@@ -584,7 +595,8 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
     /** \brief Mutator that allows the  NO_DATA entry for this raster to be overridden */
     void setNoDataValue( double theNoData );
 
-    /** \brief Set the raster shader function to a user defined function */
+    /** \brief Set the raster shader function to a user defined function
+      \note ownership of the shader function is transfered to raster shader */
     void setRasterShaderFunction( QgsRasterShaderFunction* theFunction );
 
     /** \brief Mutator for red band name (allows alternate mappings e.g. map blue as red color) */

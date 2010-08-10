@@ -51,7 +51,8 @@ class QgsLabelingEngineInterface
     //! called to find out whether the layer is used for labeling
     virtual bool willUseLayer( QgsVectorLayer* layer ) = 0;
     //! called when starting rendering of a layer
-    virtual int prepareLayer( QgsVectorLayer* layer, int& attrIndex, QgsRenderContext& ctx ) = 0;
+    //! @note: this method was added in version 1.6
+    virtual int prepareLayer( QgsVectorLayer* layer, QSet<int>& attrIndices, QgsRenderContext& ctx ) = 0;
     //! called for every feature
     virtual void registerFeature( QgsVectorLayer* layer, QgsFeature& feat, const QgsRenderContext& context = QgsRenderContext() ) = 0;
     //! called when the map is drawn and labels should be placed
@@ -121,11 +122,13 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void enableOverviewMode( bool isOverview = true ) { mOverview = isOverview; }
 
     void setOutputSize( QSize size, int dpi );
+    void setOutputSize( QSizeF size, double dpi );
 
     //!accessor for output dpi
-    int outputDpi();
+    double outputDpi();
     //!accessor for output size
     QSize outputSize();
+    QSizeF outputSizeF();
 
     //! transform extent in layer's CRS to extent in output CRS
     QgsRectangle layerExtentToOutputExtent( QgsMapLayer* theLayer, QgsRectangle extent );
@@ -249,7 +252,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! indicates whether it's map image for overview
     bool mOverview;
 
-    QSize mSize;
+    QSizeF mSize;
 
     //! detemines whether on the fly projection support is enabled
     bool mProjectionsEnabled;

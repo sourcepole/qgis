@@ -125,6 +125,8 @@ QgsSearchTreeNode::~QgsSearchTreeNode()
 
 void QgsSearchTreeNode::init()
 {
+  mCalc = NULL;
+
   if ( mType == tOperator && ( mOp == opLENGTH || mOp == opAREA ) )
   {
     //initialize QgsDistanceArea
@@ -134,9 +136,10 @@ void QgsSearchTreeNode::init()
     QString ellipsoid = settings.value( "/qgis/measure/ellipsoid", "WGS84" ).toString();
     mCalc->setEllipsoid( ellipsoid );
   }
-  else
+  else if ( mType == tOperator && mOp == opROWNUM )
   {
-    mCalc = NULL;
+    // initialize row number to a sane value
+    mNumber = 0;
   }
 }
 
@@ -187,9 +190,48 @@ QString QgsSearchTreeNode::makeSearchString()
   QString str;
   if ( mType == tOperator )
   {
-    str += "(";
-    if ( mOp != opNOT )
+    if ( mOp == opSQRT || mOp == opSIN || mOp == opCOS || mOp == opTAN ||
+         mOp == opASIN || mOp == opACOS || mOp == opATAN ||
+         mOp == opTOINT || mOp == opTOREAL || mOp == opTOSTRING )
     {
+      // functions
+      switch ( mOp )
+      {
+        case opSQRT: str += "sqrt"; break;
+        case opSIN: str += "sin"; break;
+        case opCOS: str += "cos"; break;
+        case opTAN: str += "tan"; break;
+        case opASIN: str += "asin"; break;
+        case opACOS: str += "acos"; break;
+        case opATAN: str += "atan"; break;
+        case opTOINT: str += "to int"; break;
+        case opTOREAL: str += "to real"; break;
+        case opTOSTRING: str += "to string"; break;
+        default: str += "?";
+      }
+      // currently all functions take one parameter
+      str += QString( "(%1)" ).arg( mLeft->makeSearchString() );
+    }
+    else if ( mOp == opLENGTH || mOp == opAREA || mOp == opROWNUM )
+    {
+      // special nullary opeators
+      switch ( mOp )
+      {
+        case opLENGTH: str += "$length"; break;
+        case opAREA: str += "$area"; break;
+        case opROWNUM: str += "$rownum"; break;
+        default: str += "?";
+      }
+    }
+    else if ( mOp == opNOT )
+    {
+      // unary NOT operator
+      str += "(NOT " + mLeft->makeSearchString() + ")";
+    }
+    else
+    {
+      // the rest of operator using infix notation
+      str += "(";
       if ( mLeft )
       {
         str += mLeft->makeSearchString();
@@ -203,6 +245,7 @@ QString QgsSearchTreeNode::makeSearchString()
         case opMINUS: str += "-"; break;
         case opMUL:   str += "*"; break;
         case opDIV:   str += "/"; break;
+        case opPOW:   str += "^"; break;
 
         case opEQ: str += " = "; break;
         case opNE: str += " != "; break;
@@ -211,8 +254,13 @@ QString QgsSearchTreeNode::makeSearchString()
         case opGE: str += " >= "; break;
         case opLE: str += " <= "; break;
 
+        case opISNULL: str += " IS NULL"; break;
+        case opISNOTNULL: str += " IS NOT NULL"; break;
+
         case opRegexp: str += " ~ "; break;
         case opLike: str += " LIKE "; break;
+
+        case opCONCAT: str += " || "; break;
 
         default: str += " ? ";
       }
@@ -221,13 +269,8 @@ QString QgsSearchTreeNode::makeSearchString()
       {
         str += mRight->makeSearchString();
       }
+      str += ")";
     }
-    else
-    {
-      str += "NOT ";
-      str += mLeft->makeSearchString();
-    }
-    str += ")";
   }
   else if ( mType == tNumber )
   {
@@ -532,6 +575,12 @@ QgsSearchTreeValue QgsSearchTreeNode::valueAgainst( const QgsFieldMap& fields, c
         return QgsSearchTreeValue( mCalc->measure( geom ) );
       }
 
+      if ( mOp == opROWNUM )
+      {
+        // the row number has to be previously set by the caller using setCurrentRowNumber
+        return QgsSearchTreeValue( mNumber );
+      }
+
       //string operations with one argument
       if ( !mRight && !value1.isNumeric() )
       {
@@ -548,9 +597,26 @@ QgsSearchTreeValue QgsSearchTreeNode::valueAgainst( const QgsFieldMap& fields, c
       //don't convert to numbers in case of string concatenation
       if ( mLeft && mRight && !value1.isNumeric() && !value2.isNumeric() )
       {
+        // TODO: concatenation using '+' operator should be removed in favor of '||' operator
+        // because it may lead to surprising behavior if numbers are stored in a string
         if ( mOp == opPLUS )
         {
           return QgsSearchTreeValue( value1.string() + value2.string() );
+        }
+      }
+
+      // string concatenation ||
+      if ( mLeft && mRight && mOp == opCONCAT )
+      {
+        if ( value1.isNumeric() && value2.isNumeric() )
+        {
+          return QgsSearchTreeValue( 5, "Operator doesn't match the argument types." );
+        }
+        else
+        {
+          QString arg1 = value1.isNumeric() ? QString::number( value1.number() ) : value1.string();
+          QString arg2 = value2.isNumeric() ? QString::number( value2.number() ) : value2.string();
+          return QgsSearchTreeValue( arg1 + arg2 );
         }
       }
 
@@ -613,6 +679,25 @@ QgsSearchTreeValue QgsSearchTreeNode::valueAgainst( const QgsFieldMap& fields, c
       return QgsSearchTreeValue( 4, QString::number( mType ) ); // unknown token
   }
 }
+
+
+void QgsSearchTreeNode::setCurrentRowNumber( int rownum )
+{
+  if ( mType == tOperator )
+  {
+    if ( mOp == opROWNUM )
+      mNumber = rownum;
+    else
+    {
+      // propagate the new row number to children
+      if ( mLeft )
+        mLeft->setCurrentRowNumber( rownum );
+      if ( mRight )
+        mRight->setCurrentRowNumber( rownum );
+    }
+  }
+}
+
 
 
 int QgsSearchTreeValue::compare( QgsSearchTreeValue& value1, QgsSearchTreeValue& value2, Qt::CaseSensitivity cs )

@@ -72,9 +72,13 @@ class CORE_EXPORT QgsSearchTreeNode
       opASIN,
       opACOS,
       opATAN,
+
+      // conversion
       opTOINT,
       opTOREAL,
       opTOSTRING,
+
+      // measuring
       opLENGTH,
       opAREA,
 
@@ -88,7 +92,12 @@ class CORE_EXPORT QgsSearchTreeNode
       opGE,   // >=
       opLE,   // <=
       opRegexp, // ~
-      opLike  // LIKE
+      opLike,  // LIKE
+
+      // string handling
+      opCONCAT,
+
+      opROWNUM
     };
 
     //! constructors
@@ -156,6 +165,11 @@ class CORE_EXPORT QgsSearchTreeNode
     //! return quoted column reference (in double quotes)
     //! @note added in 1.5
     static QString quotedColumnRef( QString name );
+
+    //! Set current row number within this tree.
+    //! This value is stored only in the nodes being $rownum operator - in mNumber
+    //! @note added in 1.6
+    void setCurrentRowNumber( int rownum );
 
   protected:
 

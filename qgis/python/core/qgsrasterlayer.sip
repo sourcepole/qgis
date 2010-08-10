@@ -269,16 +269,24 @@ public:
     QString colorShadingAlgorithmAsString() const;
 
     /** \brief Wrapper for GDALComputeRasterMinMax with the estimate option */
-    void computeMinimumMaximumEstimates( int theBand, double* theMinMax );
+    // (would need MethodCode directive) void computeMinimumMaximumEstimates( int theBand, double* theMinMax );
 
     /** \brief Wrapper for GDALComputeRasterMinMax with the estimate option */
-    void computeMinimumMaximumEstimates( QString theBand, double* theMinMax );
+    // (would need MethodCode directive) void computeMinimumMaximumEstimates( QString theBand, double* theMinMax );
+
+    /** \brief Wrapper for GDALComputeRasterMinMax with the estimate option
+      \note added in v1.6 */
+    void computeMinimumMaximumEstimates( int theBand, double& theMin /Out/, double& theMax /Out/ );
+    
+    /** \brief Compute the actual minimum maximum pixel values based on the current (last) display extent */
+    // (would need MethodCode directive) void computeMinimumMaximumFromLastExtent( int theBand, double* theMinMax );
 
     /** \brief Compute the actual minimum maximum pixel values based on the current (last) display extent */
-    void computeMinimumMaximumFromLastExtent( int theBand, double* theMinMax );
+    // (would need MethodCode directive) void computeMinimumMaximumFromLastExtent( QString theBand, double* theMinMax );
 
-    /** \brief Compute the actual minimum maximum pixel values based on the current (last) display extent */
-    void computeMinimumMaximumFromLastExtent( QString theBand, double* theMinMax );
+    /**  \brief Compute the actual minimum maximum pixel values based on the current (last) display extent 
+      \note added in v1.6 */
+    void computeMinimumMaximumFromLastExtent( int theBand, double& theMin /Out/, double& theMax /Out/ );
 
     /** \brief Get a pointer to the contrast enhancement for the selected band */
     QgsContrastEnhancement* contrastEnhancement( unsigned int theBand );
@@ -409,6 +417,9 @@ public:
     /** \brief Mutator for setting the maximum value for contrast enhancement */
     void setMaximumValue( QString theBand, double theValue, bool theGenerateLookupTableFlag = true );
 
+    /** \brief Sets the minimum and maximum values for the band(s) currently being displayed using the only pixel values from the last/current extent */
+    void setMinimumMaximumUsingLastExtent();
+
     /** \brief Mutator for setting the minimum value for contrast enhancement */
     void setMinimumValue( unsigned int theBand, double theValue, bool theGenerateLookupTableFlag = true );
 
@@ -418,8 +429,9 @@ public:
     /** \brief Mutator that allows the  NO_DATA entry for this raster to be overridden */
     void setNoDataValue( double theNoData );
 
-    /** \brief Set the raster shader function to a user defined function */
-    void setRasterShaderFunction( QgsRasterShaderFunction* theFunction );
+    /** \brief Set the raster shader function to a user defined function
+      \note ownership of the shader function is transfered to raster shader */
+    void setRasterShaderFunction( QgsRasterShaderFunction* theFunction /Transfer/ );
 
     /** \brief Mutator for red band name (allows alternate mappings e.g. map blue as red color) */
     void setRedBandName( const QString & theBandName );
