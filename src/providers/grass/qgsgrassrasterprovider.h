@@ -61,7 +61,7 @@ class QgsGrassRasterProvider : public QgsRasterDataProvider
 
     /** \brief   Renders the layer as an image
      */
-    QImage* draw( QgsRectangle  const & viewExtent, int pixelWidth, int pixelHeight );
+    QImage* draw( QgsRenderContext& context, QgsRectangle  const & viewExtent, int pixelWidth, int pixelHeight );
 
     /** return a provider name
 

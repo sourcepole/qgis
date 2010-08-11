@@ -26,6 +26,7 @@
 
 class QImage;
 class QgsPoint;
+class QgsRenderContext;
 
 /** \ingroup core
  * Base class for raster data providers.
@@ -86,7 +87,7 @@ class CORE_EXPORT QgsRasterDataProvider : public QgsDataProvider
     // TODO: Document this better.
     /** \brief   Renders the layer as an image
      */
-    virtual QImage* draw( QgsRectangle  const & viewExtent, int pixelWidth, int pixelHeight ) = 0;
+    virtual QImage* draw( QgsRenderContext& context, QgsRectangle  const & viewExtent, int pixelWidth, int pixelHeight ) = 0;
 
     /** Returns a bitmask containing the supported capabilities
         Note, some capabilities may change depending on whether

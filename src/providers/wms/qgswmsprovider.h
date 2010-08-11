@@ -457,7 +457,7 @@ class QgsWmsProvider : public QgsRasterDataProvider
      *  \warning A pointer to an QImage is used, as a plain QImage seems to have difficulty being
      *           shared across library boundaries
      */
-    QImage *draw( QgsRectangle const &  viewExtent, int pixelWidth, int pixelHeight );
+    QImage *draw( QgsRenderContext& context, QgsRectangle const &  viewExtent, int pixelWidth, int pixelHeight );
 
     /** Return the extent for this data layer
     */
@@ -926,6 +926,8 @@ class QgsWmsProvider : public QgsRasterDataProvider
 
     //! supported formats for GetFeatureInfo in order of preference
     QStringList mSupportedGetFeatureFormats;
+
+    QNetworkAccessManager* networkAccessManager;
 };
 
 #endif

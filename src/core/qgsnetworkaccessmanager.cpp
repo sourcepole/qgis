@@ -77,6 +77,12 @@ QgsNetworkAccessManager *QgsNetworkAccessManager::instance()
   return smNAM;
 }
 
+QgsNetworkAccessManager *QgsNetworkAccessManager::instanceForWorkerThread()
+{
+  return new QgsNetworkAccessManager();
+}
+
+
 QgsNetworkAccessManager::QgsNetworkAccessManager( QObject *parent )
     : QNetworkAccessManager( parent )
 {

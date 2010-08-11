@@ -21,7 +21,7 @@
 
 /* $Id$ */
 
-#define WMS_THRESHOLD 200  // time to wait for an answer without emitting dataChanged() 
+#define WMS_THRESHOLD 100  // time to wait for an answer without emitting dataChanged()
 
 #include "qgslogger.h"
 #include "qgswmsprovider.h"
@@ -32,6 +32,7 @@
 #include "qgsrectangle.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsnetworkaccessmanager.h"
+#include "qgsrendercontext.h"
 
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -363,7 +364,7 @@ void QgsWmsProvider::setImageCrs( QString const & crs )
   }
 }
 
-QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, int pixelHeight )
+QImage *QgsWmsProvider::draw( QgsRenderContext& context, QgsRectangle  const &viewExtent, int pixelWidth, int pixelHeight )
 {
   QgsDebugMsg( "Entering." );
 
@@ -381,14 +382,6 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
   {
     delete cachedImage;
     cachedImage = 0;
-  }
-
-  // abort running (untiled) request
-  if ( cacheReply )
-  {
-    cacheReply->abort();
-    delete cacheReply;
-    cacheReply = 0;
   }
 
   // Bounding box in WMS format
@@ -420,6 +413,8 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
   cachedViewExtent = viewExtent;
   cachedViewWidth = pixelWidth;
   cachedViewHeight = pixelHeight;
+
+  networkAccessManager = QgsNetworkAccessManager::instanceForWorkerThread();
 
   QSettings s;
   bool bkLayerCaching = s.value( "/qgis/enable_render_caching", false ).toBool(); // TODO: move this into render context
@@ -514,7 +509,7 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
     QgsDebugMsg( QString( "getmap: %1" ).arg( url ) );
     QNetworkRequest request( url );
     request.setAttribute( QNetworkRequest::CacheSaveControlAttribute, true );
-    cacheReply = QgsNetworkAccessManager::instance()->get( request );
+    cacheReply = networkAccessManager->get( request );
     connect( cacheReply, SIGNAL( finished() ), this, SLOT( cacheReplyFinished() ) );
     connect( cacheReply, SIGNAL( downloadProgress( qint64, qint64 ) ), this, SLOT( cacheReplyProgress( qint64, qint64 ) ) );
 
@@ -523,12 +518,21 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
     QTime t;
     t.start();
 
-    while ( cacheReply && ( !bkLayerCaching || t.elapsed() < WMS_THRESHOLD ) )
+    while ( cacheReply && !context.renderingStopped() /*&& ( !bkLayerCaching || t.elapsed() < WMS_THRESHOLD )*/ )
     {
       QCoreApplication::processEvents( QEventLoop::ExcludeUserInputEvents, WMS_THRESHOLD );
     }
 
     mWaiting = false;
+
+    // abort running request if still running
+    if ( cacheReply )
+    {
+      cacheReply->abort();
+      cacheReply->deleteLater();
+      cacheReply = 0;
+    }
+
   }
   else
   {
@@ -637,7 +641,7 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
         request.setAttribute( static_cast<QNetworkRequest::Attribute>( QNetworkRequest::User + 2 ), QRectF( x, y, mTileWidth * tres, mTileHeight * tres ) );
 
         QgsDebugMsg( QString( "gettile: %1" ).arg( turl ) );
-        QNetworkReply *reply = QgsNetworkAccessManager::instance()->get( request );
+        QNetworkReply *reply = networkAccessManager->get( request );
         tileReplies << reply;
         connect( reply, SIGNAL( finished() ), this, SLOT( tileReplyFinished() ) );
 
@@ -653,7 +657,7 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
 
     // draw everything that is retrieved within a second
     // and the rest asynchronously
-    while ( !tileReplies.isEmpty() && ( !bkLayerCaching || t.elapsed() < WMS_THRESHOLD ) )
+    while ( !tileReplies.isEmpty() && !context.renderingStopped()  /*&& ( !bkLayerCaching || t.elapsed() < WMS_THRESHOLD )*/ )
     {
       QCoreApplication::processEvents( QEventLoop::ExcludeUserInputEvents, WMS_THRESHOLD );
     }
@@ -668,6 +672,9 @@ QImage *QgsWmsProvider::draw( QgsRectangle  const &viewExtent, int pixelWidth, i
                       );
 #endif
   }
+
+  delete networkAccessManager;
+  networkAccessManager = NULL;
 
   return cachedImage;
 }
@@ -711,7 +718,7 @@ void QgsWmsProvider::tileReplyFinished()
       reply->deleteLater();
 
       QgsDebugMsg( QString( "redirected gettile: %1" ).arg( redirect.toString() ) );
-      reply = QgsNetworkAccessManager::instance()->get( request );
+      reply = networkAccessManager->get( request );
       tileReplies << reply;
 
       connect( reply, SIGNAL( finished() ), this, SLOT( tileReplyFinished() ) );
@@ -781,6 +788,13 @@ void QgsWmsProvider::tileReplyFinished()
 
 void QgsWmsProvider::cacheReplyFinished()
 {
+  QgsDebugMsg( "entered." );
+  if ( cacheReply == 0 )
+  {
+    QgsDebugMsg( "cacheReply has been already deleted." );
+    return;
+  }
+
   if ( cacheReply->error() == QNetworkReply::NoError )
   {
     QVariant redirect = cacheReply->attribute( QNetworkRequest::RedirectionTargetAttribute );
@@ -789,7 +803,7 @@ void QgsWmsProvider::cacheReplyFinished()
       cacheReply->deleteLater();
 
       QgsDebugMsg( QString( "redirected getmap: %1" ).arg( redirect.toString() ) );
-      cacheReply = QgsNetworkAccessManager::instance()->get( QNetworkRequest( redirect.toUrl() ) );
+      cacheReply = networkAccessManager->get( QNetworkRequest( redirect.toUrl() ) );
       connect( cacheReply, SIGNAL( finished() ), this, SLOT( cacheReplyFinished() ) );
       return;
     }

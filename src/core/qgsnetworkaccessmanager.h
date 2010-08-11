@@ -50,6 +50,10 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
     // and creates that instance on the first call.
     static QgsNetworkAccessManager *instance();
 
+    //! return a new instance of the access manager for use in a worker thread
+    //! the thread is responsible for deleting the object when finished with it
+    static QgsNetworkAccessManager *instanceForWorkerThread();
+
     //! destructor
     ~QgsNetworkAccessManager();
 

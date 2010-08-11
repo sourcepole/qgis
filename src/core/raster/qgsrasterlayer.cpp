@@ -1634,7 +1634,7 @@ bool QgsRasterLayer::draw( QgsRenderContext& rendererContext )
       QgsDebugMsg( "mapHeight: " + QString::number( rasterPartRect.height(), 'f', 8 ) );
       QgsDebugMsg( "mapUnitsPerPixel: " + QString::number( theQgsMapToPixel.mapUnitsPerPixel() ) );*/
 
-      QImage* image = mDataProvider->draw( rasterPartRect, pixelWidth, pixelHeight );
+      QImage* image = mDataProvider->draw( rendererContext, rasterPartRect, pixelWidth, pixelHeight );
 
       if ( !image )
       {
