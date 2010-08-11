@@ -354,7 +354,7 @@ void QgsMapRenderer::renderLayers()
     if ( !ml )
     {
       QgsDebugMsg( "Layer not found in registry!" );
-      return;
+      continue;
     }
 
     //QgsDebugMsg( "  Layer minscale " + QString( "%1" ).arg( ml->minimumScale() ) );
@@ -366,7 +366,7 @@ void QgsMapRenderer::renderLayers()
     {
       QgsDebugMsg( "Layer not rendered because it is not within the defined "
                    "visibility scale range" );
-      return;
+      continue;
     }
 
     QgsCoordinateTransform* ct = NULL;
