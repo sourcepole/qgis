@@ -3716,11 +3716,6 @@ void QgisApp::labeling()
 
 void QgisApp::attributeTable()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsVectorLayer *myLayer = qobject_cast<QgsVectorLayer *>( activeLayer() );
   if ( !myLayer )
   {

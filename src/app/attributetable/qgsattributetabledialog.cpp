@@ -571,10 +571,10 @@ void QgsAttributeTableDialog::doSearch( QString searchString )
   }
   else
   {
-    mLayer->select( mLayer->pendingAllAttributesList(), QgsRectangle(), fetchGeom );
+    QgsFeatureIterator fi = mLayer->getFeatures( mLayer->pendingAllAttributesList(), QgsRectangle(), fetchGeom );
     QgsFeature f;
 
-    while ( mLayer->nextFeature( f ) )
+    while ( fi.nextFeature( f ) )
     {
       if ( searchTree->checkAgainst( mLayer->pendingFields(), f.attributeMap(), f.geometry() ) )
         mSelectedFeatures << f.id();

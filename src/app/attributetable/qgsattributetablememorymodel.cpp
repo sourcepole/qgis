@@ -30,12 +30,12 @@
 void QgsAttributeTableMemoryModel::loadLayer()
 {
   QgsAttributeTableModel::loadLayer();
-  mLayer->select( mLayer->pendingAllAttributesList(), QgsRectangle(), false );
+  QgsFeatureIterator fi = mLayer->getFeatures( mLayer->pendingAllAttributesList(), QgsRectangle(), false );
 
   mFeatureMap.reserve( mLayer->pendingFeatureCount() + 50 );
 
   QgsFeature f;
-  while ( mLayer->nextFeature( f ) )
+  while ( fi.nextFeature( f ) )
     mFeatureMap.insert( f.id(), f );
 }
 

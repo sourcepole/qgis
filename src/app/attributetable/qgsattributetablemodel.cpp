@@ -220,9 +220,9 @@ void QgsAttributeTableModel::loadLayer()
       rect = QgisApp::instance()->mapCanvas()->extent();
     }
 
-    mLayer->select( mAttributes, rect, false );
+    QgsFeatureIterator fi = mLayer->getFeatures( mAttributes, rect, false );
 
-    for ( int i = 0; mLayer->nextFeature( f ); ++i )
+    for ( int i = 0; fi.nextFeature( f ); ++i )
     {
       mRowIdMap.insert( i, f.id() );
       mIdRowMap.insert( f.id(), i );
@@ -356,8 +356,8 @@ void QgsAttributeTableModel::sort( int column, Qt::SortOrder order )
 // QgsDebugMsg("SORTing");
 
   mSortList.clear();
-  mLayer->select( attrs, QgsRectangle(), false );
-  while ( mLayer->nextFeature( f ) )
+  QgsFeatureIterator fi = mLayer->getFeatures( attrs, QgsRectangle(), false );
+  while ( fi.nextFeature( f ) )
   {
     row = f.attributeMap();
     mSortList.append( QgsAttributeTableIdColumnPair( f.id(), row[ mAttributes[column] ] ) );
