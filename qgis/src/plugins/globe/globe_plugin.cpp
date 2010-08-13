@@ -37,6 +37,11 @@
 #include <osgEarth/MapNode>
 #include <osgEarthUtil/EarthManipulator>
 #include <osgEarthUtil/Viewpoint>
+#include <osgEarth/TileSource>
+#include <osgEarthDrivers/gdal/GDALOptions>
+#include <osgEarthDrivers/tms/TMSOptions>
+
+using namespace osgEarth::Drivers;
 
 // some preset viewpoints.
 static osgEarthUtil::Viewpoint VPs[] = {
@@ -64,6 +69,33 @@ struct FlyToViewpointHandler : public osgGA::GUIEventHandler
 
     osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
 };
+
+namespace osgEarth { namespace Drivers
+{
+    class QGISOptions : public TileSourceOptions // NO EXPORT; header only
+    {
+    public:
+        optional<std::string>& project() { return _project; }
+        const optional<std::string>& project() const { return _project; }
+
+    public:
+        QGISOptions( const PluginOptions* opt =0L ) : TileSourceOptions( opt )
+        {
+            driver() = "qgis";
+            config().getIfSet( "project", _project );
+        }
+
+    protected:
+        Config toConfig() const {
+            Config conf = TileSourceOptions::toConfig();
+            conf.updateIfSet("project", _project);
+            return conf;
+        }
+
+        optional<std::string> _project;
+    };
+
+} } // namespace osgEarth::Drivers
 
 //static const char * const sIdent = "$Id: plugin.cpp 9327 2008-09-14 11:18:44Z jef $";
 static const QString sName = QObject::tr( "Globe" );
@@ -108,31 +140,24 @@ void GlobePlugin::run()
 
   // Add an image layer to the map.
   {
-    osgEarth::Config conf;
-    conf.add( "url", "http://demo.pelicanmapping.com/rmweb/data/bluemarble-tms/tms.xml" );
-    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "NASA", osgEarth::MapLayer::TYPE_IMAGE, "tms", conf );
-    map->addMapLayer( layer );
+    osg::ref_ptr<GDALOptions> cfg = new GDALOptions();
+    cfg->url() = "/home/pi/devel/gis/osgearth/data/world.tif";
+    map->addMapLayer( new ImageMapLayer( "World", cfg.get() ) );
   }
 
-  // Add transparent WMS layer to the map.
+  // Add QGIS layer to the map.
   {
-    osgEarth::Config conf;
-    conf.add( "url", "http://geoserver.sourcepole.ch/cgi-bin/benchmark_2010/qgis_mapserv.fcgi?transparent=true" );
-    conf.add( "layers", "motorway" );
-    conf.add( "tile_size", "512" );
-    conf.add( "srs", "EPSG:4326" );
-    conf.add( "format", "png" );
-    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "qgis_mapserv", osgEarth::MapLayer::TYPE_IMAGE, "wms", conf );
-    map->addMapLayer( layer );
+    osg::ref_ptr<QGISOptions> cfg = new QGISOptions();
+    cfg->project() = "/home/pi/devel/gis/osgearth/src/osgEarthDrivers/qgis/world.qgs";
+    map->addMapLayer( new ImageMapLayer( "QGIS", cfg.get() ) );
   }
 
   // Add a heightfield layer to the map. You can add any number of heightfields and
   // osgEarth will composite them automatically.
   {
-    osgEarth::Config conf;
-    conf.add( "url", "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml" );
-    osgEarth::MapLayer* layer = new osgEarth::MapLayer( "SRTM", osgEarth::MapLayer::TYPE_HEIGHTFIELD, "tms", conf );
-    map->addMapLayer( layer );
+    osg::ref_ptr<TMSOptions> cfg = new TMSOptions();
+    cfg->url() = "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml";
+    map->addMapLayer( new HeightFieldMapLayer( "SRTM", cfg.get() ) );
   }
 
   // The MapNode will render the Map object in the scene graph.
