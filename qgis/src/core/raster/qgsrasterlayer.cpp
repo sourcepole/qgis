@@ -444,10 +444,8 @@ void QgsRasterLayer::buildSupportedRasterFileFilter( QString & theFileFiltersStr
 /**
  * This helper checks to see whether the file name appears to be a valid raster file name
  */
-bool QgsRasterLayer::isValidRasterFileName( QString const & theFileNameQString,
-    QString & retErrMsg )
+bool QgsRasterLayer::isValidRasterFileName( QString const & theFileNameQString, QString & retErrMsg )
 {
-
   GDALDatasetH myDataset;
   registerGdalDrivers();
 
@@ -463,10 +461,15 @@ bool QgsRasterLayer::isValidRasterFileName( QString const & theFileNameQString,
   }
   else if ( GDALGetRasterCount( myDataset ) == 0 )
   {
-    GDALClose( myDataset );
-    myDataset = NULL;
-    retErrMsg = tr( "This raster file has no bands and is invalid as a raster layer." );
-    return false;
+    QStringList layers = subLayers( myDataset );
+    if ( layers.size() == 0 )
+    {
+      GDALClose( myDataset );
+      myDataset = NULL;
+      retErrMsg = tr( "This raster file has no bands and is invalid as a raster layer." );
+      return false;
+    }
+    return true;
   }
   else
   {
@@ -476,10 +479,8 @@ bool QgsRasterLayer::isValidRasterFileName( QString const & theFileNameQString,
 }
 
 bool QgsRasterLayer::isValidRasterFileName( QString const & theFileNameQString )
-
 {
   QString retErrMsg;
-
   return isValidRasterFileName( theFileNameQString, retErrMsg );
 }
 
@@ -823,6 +824,8 @@ const QgsRasterBandStats QgsRasterLayer::bandStatistics( int theBandNo )
             continue; // NULL
           }
 
+          myRasterBandStats.sum += myValue;          
+          ++myRasterBandStats.elementCount;
           //only use this element if we have a non null element
           if ( myFirstIterationFlag )
           {
@@ -830,7 +833,6 @@ const QgsRasterBandStats QgsRasterLayer::bandStatistics( int theBandNo )
             myFirstIterationFlag = false;
             myRasterBandStats.minimumValue = myValue;
             myRasterBandStats.maximumValue = myValue;
-            ++myRasterBandStats.elementCount;
           }               //end of true part for first iteration check
           else
           {
@@ -843,9 +845,6 @@ const QgsRasterBandStats QgsRasterLayer::bandStatistics( int theBandNo )
             {
               myRasterBandStats.maximumValue = myValue;
             }
-
-            myRasterBandStats.sum += myValue;
-            ++myRasterBandStats.elementCount;
           }               //end of false part for first iteration check
         }
       }
@@ -1766,12 +1765,12 @@ void QgsRasterLayer::draw( QPainter * theQPainter,
                                   theQgsMapToPixel, 1 );
       break;
       // a layer containing 2 or more bands, but using only one band to produce a grayscale image
-    case MultiBandSingleGandGray:
-      QgsDebugMsg( "MultiBandSingleGandGray drawing type detected..." );
+    case MultiBandSingleBandGray:
+      QgsDebugMsg( "MultiBandSingleBandGray drawing type detected..." );
       //check the band is set!
       if ( mGrayBandName == TRSTRING_NOT_SET )
       {
-        QgsDebugMsg( "MultiBandSingleGandGray Not Set detected..." + mGrayBandName );
+        QgsDebugMsg( "MultiBandSingleBandGray Not Set detected..." + mGrayBandName );
         break;
       }
       else
@@ -1842,8 +1841,8 @@ QString QgsRasterLayer::drawingStyleAsString() const
     case PalettedMultiBandColor:
       return QString( "PalettedMultiBandColor" );//no need to tr() this its not shown in ui
       break;
-    case MultiBandSingleGandGray:
-      return QString( "MultiBandSingleGandGray" );//no need to tr() this its not shown in ui
+    case MultiBandSingleBandGray:
+      return QString( "MultiBandSingleBandGray" );//no need to tr() this its not shown in ui
       break;
     case MultiBandSingleBandPseudoColor:
       return QString( "MultiBandSingleBandPseudoColor" );//no need to tr() this its not shown in ui
@@ -2078,7 +2077,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( bool theWithNameFlag )
     //
     // Create the legend pixmap - note it is generated on the preadjusted stats
     //
-    if ( mDrawingStyle == MultiBandSingleGandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
+    if ( mDrawingStyle == MultiBandSingleBandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
     {
 
       myLegendQPixmap = QPixmap( 100, 1 );
@@ -2284,7 +2283,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( bool theWithNameFlag )
     //
     // Overlay the layer name
     //
-    if ( mDrawingStyle == MultiBandSingleGandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
+    if ( mDrawingStyle == MultiBandSingleBandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
     {
       myQPainter.setPen( Qt::white );
     }
@@ -2333,7 +2332,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( int theLabelCount )
   //
   // Create the legend pixmap - note it is generated on the preadjusted stats
   //
-  if ( mDrawingStyle == MultiBandSingleGandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
+  if ( mDrawingStyle == MultiBandSingleBandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
   {
 
     myLegendQPixmap = QPixmap( 1, myImageHeight );
@@ -2516,7 +2515,7 @@ QPixmap QgsRasterLayer::legendAsPixmap( int theLabelCount )
   //
   // Overlay the layer name
   //
-  if ( mDrawingStyle == MultiBandSingleGandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
+  if ( mDrawingStyle == MultiBandSingleBandGray || mDrawingStyle == PalettedSingleBandGray || mDrawingStyle == SingleBandGray )
   {
     myQPainter2.setPen( Qt::white );
   }
@@ -2626,7 +2625,7 @@ QString QgsRasterLayer::metadata()
       }
       else
       {
-        QgsDebugMsg( "band " + QString::number( i ) + "has no metadata" );
+        QgsDebugMsg( "band " + QString::number( i ) + " has no metadata" );
       }
 
       char ** GDALcategories = GDALGetRasterCategoryNames( gdalBand );
@@ -3434,9 +3433,9 @@ void QgsRasterLayer::setDrawingStyle( QString const & theDrawingStyleQString )
   {
     mDrawingStyle = PalettedMultiBandColor;
   }
-  else if ( theDrawingStyleQString == "MultiBandSingleGandGray" )//no need to tr() this its not shown in ui
+  else if ( theDrawingStyleQString == "MultiBandSingleBandGray" )//no need to tr() this its not shown in ui
   {
-    mDrawingStyle = MultiBandSingleGandGray;
+    mDrawingStyle = MultiBandSingleBandGray;
   }
   else if ( theDrawingStyleQString == "MultiBandSingleBandPseudoColor" )//no need to tr() this its not shown in ui
   {
@@ -3493,7 +3492,7 @@ void QgsRasterLayer::setMaximumValue( QString theBand, double theValue, bool the
 void QgsRasterLayer::setMinimumMaximumUsingLastExtent()
 {
   double myMinMax[2];
-  if ( rasterType() == QgsRasterLayer::GrayOrUndefined || drawingStyle() == QgsRasterLayer::SingleBandGray || drawingStyle() == QgsRasterLayer::MultiBandSingleGandGray )
+  if ( rasterType() == QgsRasterLayer::GrayOrUndefined || drawingStyle() == QgsRasterLayer::SingleBandGray || drawingStyle() == QgsRasterLayer::MultiBandSingleBandGray )
   {
     computeMinimumMaximumFromLastExtent( grayBandName(), myMinMax );
     setMinimumValue( grayBandName(), myMinMax[0] );
@@ -3604,18 +3603,40 @@ void QgsRasterLayer::showStatusMessage( QString const & theMessage )
   emit statusChanged( theMessage );
 }
 
+QStringList QgsRasterLayer::subLayers( GDALDatasetH dataset )
+{
+  QStringList subLayers;
+
+  char **metadata = GDALGetMetadata( dataset, "SUBDATASETS" );
+  if ( metadata )
+  {
+    for ( int i = 0; metadata[i] != NULL; i++ )
+    {
+      QString layer = QString::fromUtf8( metadata[i] );
+
+      int pos = layer.indexOf( "_NAME=" );
+      if ( pos >= 0 )
+      {
+        subLayers << layer.mid( pos + 6 );
+      }
+    }
+  }
+
+  QgsDebugMsg( "sublayers:\n  " + subLayers.join( "\n  " ) );
+
+  return subLayers;
+}
+
 QStringList QgsRasterLayer::subLayers() const
 {
-
   if ( mDataProvider )
   {
     return mDataProvider->subLayers();
   }
   else
   {
-    return QStringList();   // Empty
+    return subLayers( mGdalDataset );
   }
-
 }
 
 void QgsRasterLayer::thumbnailAsPixmap( QPixmap * theQPixmap )
@@ -5258,6 +5279,13 @@ bool QgsRasterLayer::readFile( QString const &theFilename )
     GDALReferenceDataset( mGdalDataset );
   }
 
+  if ( subLayers().size() > 0 )
+  {
+    // just to get the sublayers
+    mValid = false;
+    return true;
+  }
+
   //check f this file has pyramids
   GDALRasterBandH myGDALBand = GDALGetRasterBand( mGdalDataset, 1 ); //just use the first band
   if ( myGDALBand == NULL )
@@ -5270,14 +5298,8 @@ bool QgsRasterLayer::readFile( QString const &theFilename )
     mValid = false;
     return false;
   }
-  if ( GDALGetOverviewCount( myGDALBand ) > 0 )
-  {
-    mHasPyramids = true;
-  }
-  else
-  {
-    mHasPyramids = false;
-  }
+
+  mHasPyramids = GDALGetOverviewCount( myGDALBand ) > 0;
 
   //populate the list of what pyramids exist
   buildPyramidList();

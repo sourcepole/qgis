@@ -201,6 +201,10 @@
 #include "qgsmaptoolnodetool.h"
 #include "qgsmaptoolpan.h"
 #include "qgsmaptoolselect.h"
+#include "qgsmaptoolselectrectangle.h"
+#include "qgsmaptoolselectfreehand.h"
+#include "qgsmaptoolselectpolygon.h"
+#include "qgsmaptoolselectradius.h"
 #include "qgsmaptoolreshape.h"
 #include "qgsmaptoolrotatepointsymbols.h"
 #include "qgsmaptoolsplitfeatures.h"
@@ -559,6 +563,10 @@ QgisApp::~QgisApp()
   delete mMapTools.mReshapeFeatures;
   delete mMapTools.mSplitFeatures;
   delete mMapTools.mSelect;
+  delete mMapTools.mSelectRectangle;
+  delete mMapTools.mSelectPolygon;
+  delete mMapTools.mSelectFreehand;
+  delete mMapTools.mSelectRadius;
 
 #if 0 //these three tools to be deprecated - use node tool rather
   delete mMapTools.mVertexAdd;
@@ -876,6 +884,30 @@ void QgisApp::createActions()
   mActionSelect->setStatusTip( tr( "Select Features" ) );
   connect( mActionSelect, SIGNAL( triggered() ), this, SLOT( select() ) );
   mActionSelect->setEnabled( false );
+
+  mActionSelectRectangle = new QAction( getThemeIcon( "mActionSelectRectangle.png" ), tr( "Select features by rectangle" ), this );
+  shortcuts->registerAction( mActionSelectRectangle );
+  mActionSelectRectangle->setStatusTip( tr( "Select features by rectangle" ) );
+  connect( mActionSelectRectangle, SIGNAL( triggered() ), this, SLOT( selectByRectangle() ) );
+  mActionSelectRectangle->setEnabled( false );
+
+  mActionSelectPolygon = new QAction( getThemeIcon( "mActionSelectPolygon.png" ), tr( "Select features by polygon" ), this );
+  shortcuts->registerAction( mActionSelectPolygon );
+  mActionSelectPolygon->setStatusTip( tr( "Select features by polygon" ) );
+  connect( mActionSelectPolygon, SIGNAL( triggered() ), this, SLOT( selectByPolygon() ) );
+  mActionSelectPolygon->setEnabled( false );
+
+  mActionSelectFreehand = new QAction( getThemeIcon( "mActionSelectFreehand.png" ), tr( "Select features by freehand" ), this );
+  shortcuts->registerAction( mActionSelectFreehand );
+  mActionSelectFreehand->setStatusTip( tr( "Select features by freehand" ) );
+  connect( mActionSelectFreehand, SIGNAL( triggered() ), this, SLOT( selectByFreehand() ) );
+  mActionSelectFreehand->setEnabled( false );
+
+  mActionSelectRadius = new QAction( getThemeIcon( "mActionSelectRadius.png" ), tr( "Select features by radius" ), this );
+  shortcuts->registerAction( mActionSelectRadius );
+  mActionSelectRadius->setStatusTip( tr( "Select features by radius" ) );
+  connect( mActionSelectRadius, SIGNAL( triggered() ), this, SLOT( selectByRadius() ) );
+  mActionSelectRadius->setEnabled( false );
 
   mActionDeselectAll = new QAction( getThemeIcon( "mActionDeselectAll.png" ), tr( "Deselect features from all layers" ), this );
   shortcuts->registerAction( mActionDeselectAll );
@@ -1254,6 +1286,14 @@ void QgisApp::createActionGroups()
   mMapToolGroup->addAction( mActionIdentify );
   mActionSelect->setCheckable( true );
   mMapToolGroup->addAction( mActionSelect );
+  mActionSelectRectangle->setCheckable( true );
+  mMapToolGroup->addAction( mActionSelectRectangle );
+  mActionSelectPolygon->setCheckable( true );
+  mMapToolGroup->addAction( mActionSelectPolygon );
+  mActionSelectFreehand->setCheckable( true );
+  mMapToolGroup->addAction( mActionSelectFreehand );
+  mActionSelectRadius->setCheckable( true );
+  mMapToolGroup->addAction( mActionSelectRadius );
   mActionDeselectAll->setCheckable( false );
   mMapToolGroup->addAction( mActionDeselectAll );
   mActionMeasure->setCheckable( true );
@@ -1419,13 +1459,19 @@ void QgisApp::createMenus()
   mViewMenu->addAction( mActionPan );
   mViewMenu->addAction( mActionZoomIn );
   mViewMenu->addAction( mActionZoomOut );
+  mActionViewSeparator1 = mViewMenu->addSeparator();
   mViewMenu->addAction( mActionSelect );
+  mViewMenu->addAction( mActionSelectRectangle );
+  mViewMenu->addAction( mActionSelectPolygon );
+  mViewMenu->addAction( mActionSelectFreehand );
+  mViewMenu->addAction( mActionSelectRadius );
   mViewMenu->addAction( mActionDeselectAll );
+  mActionViewSeparator2 = mViewMenu->addSeparator();
   mViewMenu->addAction( mActionIdentify );
   mViewMenu->addAction( mActionMeasure );
   mViewMenu->addAction( mActionMeasureArea );
   mViewMenu->addAction( mActionMeasureAngle );
-  mActionViewSeparator1 = mViewMenu->addSeparator();
+  mActionViewSeparator3 = mViewMenu->addSeparator();
 
   mViewMenu->addAction( mActionZoomFullExtent );
   mViewMenu->addAction( mActionZoomToLayer );
@@ -1433,7 +1479,7 @@ void QgisApp::createMenus()
   mViewMenu->addAction( mActionZoomLast );
   mViewMenu->addAction( mActionZoomNext );
   mViewMenu->addAction( mActionZoomActualSize );
-  mActionViewSeparator2 = mViewMenu->addSeparator();
+  mActionViewSeparator4 = mViewMenu->addSeparator();
 
   mViewMenu->addAction( mActionMapTips );
   mViewMenu->addAction( mActionNewBookmark );
@@ -1442,7 +1488,7 @@ void QgisApp::createMenus()
 
   if ( layout != QDialogButtonBox::KdeLayout )
   {
-    mActionViewSeparator3 = mViewMenu->addSeparator();
+    mActionViewSeparator5 = mViewMenu->addSeparator();
     mViewMenu->addMenu( mPanelMenu );
     mViewMenu->addMenu( mToolbarMenu );
     mViewMenu->addAction( mActionToggleFullScreen );
@@ -1650,14 +1696,25 @@ void QgisApp::createToolBars()
   mMapNavToolBar->addAction( mActionZoomNext );
   mMapNavToolBar->addAction( mActionDraw );
   mToolbarMenu->addAction( mMapNavToolBar->toggleViewAction() );
+
+  //
+  // Feature Select Toolbar
+  mFeatureSelectToolBar = addToolBar( tr( "Select Tools" ) );
+  mFeatureSelectToolBar->setIconSize( myIconSize );
+  mFeatureSelectToolBar->setObjectName( "Select Tools" );
+  mFeatureSelectToolBar->addAction( mActionIdentify );
+  mFeatureSelectToolBar->addAction( mActionSelect );
+  mFeatureSelectToolBar->addAction( mActionSelectRectangle );
+  mFeatureSelectToolBar->addAction( mActionSelectPolygon );
+  mFeatureSelectToolBar->addAction( mActionSelectFreehand );
+  mFeatureSelectToolBar->addAction( mActionSelectRadius );
+  mFeatureSelectToolBar->addAction( mActionDeselectAll );
+
   //
   // Attributes Toolbar
   mAttributesToolBar = addToolBar( tr( "Attributes" ) );
   mAttributesToolBar->setIconSize( myIconSize );
   mAttributesToolBar->setObjectName( "Attributes" );
-  mAttributesToolBar->addAction( mActionIdentify );
-  mAttributesToolBar->addAction( mActionSelect );
-  mAttributesToolBar->addAction( mActionDeselectAll );
   mAttributesToolBar->addAction( mActionOpenTable );
   mAttributesToolBar->addAction( mActionMeasure );
   mAttributesToolBar->addAction( mActionMeasureArea );
@@ -1918,6 +1975,10 @@ void QgisApp::setTheme( QString theThemeName )
   mActionZoomToLayer->setIcon( getThemeIcon( "/mActionZoomToLayer.png" ) );
   mActionIdentify->setIcon( getThemeIcon( "/mActionIdentify.png" ) );
   mActionSelect->setIcon( getThemeIcon( "/mActionSelect.png" ) );
+  mActionSelectRectangle->setIcon( getThemeIcon( "/mActionSelectRectangle.png" ) );
+  mActionSelectPolygon->setIcon( getThemeIcon( "/mActionSelectPolygon.png" ) );
+  mActionSelectFreehand->setIcon( getThemeIcon( "/mActionSelectFreehand.png" ) );
+  mActionSelectRadius->setIcon( getThemeIcon( "/mActionSelectRadius.png" ) );
   mActionDeselectAll->setIcon( getThemeIcon( "/mActionDeselectAll.png" ) );
   mActionOpenTable->setIcon( getThemeIcon( "/mActionOpenTable.png" ) );
   mActionMeasure->setIcon( getThemeIcon( "/mActionMeasure.png" ) );
@@ -2058,6 +2119,15 @@ void QgisApp::createCanvasTools()
   mMapTools.mSplitFeatures->setAction( mActionSplitFeatures );
   mMapTools.mSelect = new QgsMapToolSelect( mMapCanvas );
   mMapTools.mSelect->setAction( mActionSelect );
+  mMapTools.mSelectRectangle = new QgsMapToolSelectRectangle( mMapCanvas );
+  mMapTools.mSelectRectangle->setAction( mActionSelectRectangle );
+  mMapTools.mSelectPolygon = new QgsMapToolSelectPolygon( mMapCanvas );
+  mMapTools.mSelectPolygon->setAction( mActionSelectPolygon );
+  mMapTools.mSelectFreehand = new QgsMapToolSelectFreehand( mMapCanvas );
+  mMapTools.mSelectFreehand->setAction( mActionSelectFreehand );
+  mMapTools.mSelectRadius = new QgsMapToolSelectRadius( mMapCanvas );
+  mMapTools.mSelectRadius->setAction( mActionSelectRadius );
+
 #if 0 //these three tools to be deprecated - use node tool rather
   mMapTools.mVertexAdd = new QgsMapToolAddVertex( mMapCanvas );
   mMapTools.mVertexAdd->setAction( mActionAddVertex );
@@ -2621,7 +2691,7 @@ bool QgisApp::addVectorLayers( QStringList const & theLayerQStringList, const QS
       // sublayers selection dialog so the user can select the sublayers to actually load.
       if ( sublayers.count() > 1 )
       {
-        askUserForSublayers( layer );
+        askUserForOGRSublayers( layer );
 
         // The first layer loaded is not useful in that case. The user can select it in
         // the list if he wants to load it.
@@ -2674,17 +2744,48 @@ bool QgisApp::addVectorLayers( QStringList const & theLayerQStringList, const QS
   return true;
 } // QgisApp::addVectorLayer()
 
+void QgisApp::askUserForGDALSublayers( QgsRasterLayer *layer )
+{
+  if ( !layer )
+    return;
+
+  QStringList sublayers = layer->subLayers();
+
+  QgsDebugMsg( "sublayers:\n  " + sublayers.join( "  \n" ) + "\n" );
+
+  // We initialize a selection dialog and display it.
+  QgsOGRSublayersDialog chooseSublayersDialog( this );
+  chooseSublayersDialog.setWindowTitle( tr( "Select raster layers to add..." ) );
+
+  QStringList layers;
+  for ( int i = 0; i < sublayers.size(); i++ )
+  {
+    layers << QString( "%1|%2|1|%3" ).arg( i ).arg( sublayers[i] ).arg( tr( "Raster" ) );
+  }
+
+  chooseSublayersDialog.populateLayerTable( layers, "|" );
+
+  if ( chooseSublayersDialog.exec() )
+  {
+    foreach( QString layer, chooseSublayersDialog.getSelection() )
+    {
+      QgsRasterLayer *rlayer = new QgsRasterLayer( layer, layer );
+      if ( rlayer && rlayer->isValid() )
+      {
+        addRasterLayer( rlayer );
+      }
+    }
+  }
+}
+
 // This method is the method that does the real job. If the layer given in
 // parameter is NULL, then the method tries to act on the activeLayer.
-void QgisApp::askUserForSublayers( QgsVectorLayer *layer )
+void QgisApp::askUserForOGRSublayers( QgsVectorLayer *layer )
 {
   if ( layer == NULL )
   {
-    if ( activeLayer() == NULL || activeLayer()->type() != QgsMapLayer::VectorLayer )
-      return;
-
-    layer = ( QgsVectorLayer* ) activeLayer();
-    if ( layer->dataProvider()->name() != "ogr" )
+    layer = qobject_cast<QgsVectorLayer *>( activeLayer() );
+    if ( !layer || layer->dataProvider()->name() != "ogr" )
       return;
   }
 
@@ -2693,6 +2794,7 @@ void QgisApp::askUserForSublayers( QgsVectorLayer *layer )
 
   // We initialize a selection dialog and display it.
   QgsOGRSublayersDialog chooseSublayersDialog( this );
+  chooseSublayersDialog.setWindowTitle( tr( "Select vector layers to add..." ) );
   chooseSublayersDialog.populateLayerTable( sublayers );
 
   if ( chooseSublayersDialog.exec() )
@@ -4367,6 +4469,26 @@ void QgisApp::select()
   mMapCanvas->setMapTool( mMapTools.mSelect );
 }
 
+void QgisApp::selectByRectangle()
+{
+  mMapCanvas->setMapTool( mMapTools.mSelectRectangle );
+}
+
+void QgisApp::selectByPolygon()
+{
+  mMapCanvas->setMapTool( mMapTools.mSelectPolygon );
+}
+
+void QgisApp::selectByFreehand()
+{
+  mMapCanvas->setMapTool( mMapTools.mSelectFreehand );
+}
+
+void QgisApp::selectByRadius()
+{
+  mMapCanvas->setMapTool( mMapTools.mSelectRadius );
+}
+
 void QgisApp::deselectAll()
 {
   if ( !mMapCanvas || mMapCanvas->isDrawing() )
@@ -5761,6 +5883,10 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
   if ( !layer )
   {
     mActionSelect->setEnabled( false );
+    mActionSelectRectangle->setEnabled( false );
+    mActionSelectPolygon->setEnabled( false );
+    mActionSelectFreehand->setEnabled( false );
+    mActionSelectRadius->setEnabled( false );
     mActionIdentify->setEnabled( QSettings().value( "/Map/identifyMode", 0 ).toInt() != 0 );
     mActionZoomActualSize->setEnabled( false );
     mActionOpenTable->setEnabled( false );
@@ -5814,6 +5940,10 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
     bool layerHasSelection = vlayer->selectedFeatureCount() != 0;
 
     mActionSelect->setEnabled( true );
+    mActionSelectRectangle->setEnabled( true );
+    mActionSelectPolygon->setEnabled( true );
+    mActionSelectFreehand->setEnabled( true );
+    mActionSelectRadius->setEnabled( true );
     mActionIdentify->setEnabled( true );
     mActionZoomActualSize->setEnabled( false );
     mActionOpenTable->setEnabled( true );
@@ -6033,6 +6163,10 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer* layer )
   {
     mActionLayerSubsetString->setEnabled( false );
     mActionSelect->setEnabled( false );
+    mActionSelectRectangle->setEnabled( false );
+    mActionSelectPolygon->setEnabled( false );
+    mActionSelectFreehand->setEnabled( false );
+    mActionSelectRadius->setEnabled( false );
     mActionZoomActualSize->setEnabled( true );
     mActionOpenTable->setEnabled( false );
     mActionToggleEditing->setEnabled( false );
@@ -6350,16 +6484,28 @@ bool QgisApp::addRasterLayers( QStringList const &theFileNameQStringList, bool g
 
       // create the layer
       QgsRasterLayer *layer = new QgsRasterLayer( *myIterator, myBaseNameQString );
+      QStringList sublayers = layer->subLayers();
 
-      addRasterLayer( layer );
-
-      //only allow one copy of a ai grid file to be loaded at a
-      //time to prevent the user selecting all adfs in 1 dir which
-      //actually represent 1 coverate,
-
-      if ( myBaseNameQString.toLower().endsWith( ".adf" ) )
+      if ( sublayers.size() > 0 )
       {
-        break;
+        askUserForGDALSublayers( layer );
+
+        // The first layer loaded is not useful in that case. The user can select it in
+        // the list if he wants to load it.
+        delete layer;
+      }
+      else
+      {
+        addRasterLayer( layer );
+
+        //only allow one copy of a ai grid file to be loaded at a
+        //time to prevent the user selecting all adfs in 1 dir which
+        //actually represent 1 coverate,
+
+        if ( myBaseNameQString.toLower().endsWith( ".adf" ) )
+        {
+          break;
+        }
       }
     }
     else
