@@ -22,6 +22,7 @@
 #include "../qgisplugin.h"
 #include "qgsosgviewer.h"
 #include <QObject>
+#include <QDockWidget>
 
 class QAction;
 class QToolBar;
@@ -53,6 +54,8 @@ class GlobePlugin : public QObject, public QgisPlugin
     QAction * mQActionPointer;
     //! OSG Viewer
     QgsOsgViewer viewer;
+    //! Dock widget for viewer
+    QDockWidget mQDockWidget;
 };
 
 #endif // QGS_GLOBE_PLUGIN_H

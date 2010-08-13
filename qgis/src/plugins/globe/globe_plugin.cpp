@@ -18,9 +18,12 @@
 
 #include "globe_plugin.h"
 #include "globe_plugin_gui.h"
+#include "qgsosgearthtilesource.h"
 
 #include <qgisinterface.h>
 #include <qgisgui.h>
+#include <qgslogger.h>
+#include <qgsproject.h>
 
 #include <QAction>
 #include <QToolBar>
@@ -70,33 +73,6 @@ struct FlyToViewpointHandler : public osgGA::GUIEventHandler
     osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
 };
 
-namespace osgEarth { namespace Drivers
-{
-    class QGISOptions : public TileSourceOptions // NO EXPORT; header only
-    {
-    public:
-        optional<std::string>& project() { return _project; }
-        const optional<std::string>& project() const { return _project; }
-
-    public:
-        QGISOptions( const PluginOptions* opt =0L ) : TileSourceOptions( opt )
-        {
-            driver() = "qgis";
-            config().getIfSet( "project", _project );
-        }
-
-    protected:
-        Config toConfig() const {
-            Config conf = TileSourceOptions::toConfig();
-            conf.updateIfSet("project", _project);
-            return conf;
-        }
-
-        optional<std::string> _project;
-    };
-
-} } // namespace osgEarth::Drivers
-
 //static const char * const sIdent = "$Id: plugin.cpp 9327 2008-09-14 11:18:44Z jef $";
 static const QString sName = QObject::tr( "Globe" );
 static const QString sDescription = QObject::tr( "Overlay data on a 3D globe" );
@@ -107,7 +83,8 @@ GlobePlugin::GlobePlugin( QgisInterface* theQgisInterface )
   : QgisPlugin( sName, sDescription, sPluginVersion, sPluginType ),
     mQGisIface( theQgisInterface ),
     mQActionPointer( NULL ),
-    viewer()
+    viewer(),
+    mQDockWidget( tr( "Globe" ) )
 {
 }
 
@@ -126,6 +103,7 @@ void GlobePlugin::initGui()
   // Add the icon to the toolbar
   mQGisIface->addToolBarIcon( mQActionPointer );
   mQGisIface->addPluginToMenu( tr( "&Globe" ), mQActionPointer );
+  mQDockWidget.setWidget(&viewer);
 }
 
 void GlobePlugin::run()
@@ -142,14 +120,14 @@ void GlobePlugin::run()
   {
     osg::ref_ptr<GDALOptions> cfg = new GDALOptions();
     cfg->url() = "/home/pi/devel/gis/osgearth/data/world.tif";
-    map->addMapLayer( new ImageMapLayer( "World", cfg.get() ) );
+    //map->addMapLayer( new ImageMapLayer( "World", cfg.get() ) );
   }
 
   // Add QGIS layer to the map.
   {
-    osg::ref_ptr<QGISOptions> cfg = new QGISOptions();
-    cfg->project() = "/home/pi/devel/gis/osgearth/src/osgEarthDrivers/qgis/world.qgs";
-    map->addMapLayer( new ImageMapLayer( "QGIS", cfg.get() ) );
+    QgsOsgEarthTileSource* source = new QgsOsgEarthTileSource(mQGisIface);
+    source->initialize("", 0);
+    map->addMapLayer( new ImageMapLayer( "QGIS", source ) );
   }
 
   // Add a heightfield layer to the map. You can add any number of heightfields and
@@ -157,7 +135,7 @@ void GlobePlugin::run()
   {
     osg::ref_ptr<TMSOptions> cfg = new TMSOptions();
     cfg->url() = "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml";
-    map->addMapLayer( new HeightFieldMapLayer( "SRTM", cfg.get() ) );
+    //map->addMapLayer( new HeightFieldMapLayer( "SRTM", cfg.get() ) );
   }
 
   // The MapNode will render the Map object in the scene graph.
@@ -185,6 +163,7 @@ void GlobePlugin::run()
   viewer.addEventHandler(new osgViewer::WindowSizeHandler());
   viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
 
+  mQGisIface->addDockWidget(Qt::RightDockWidgetArea, &mQDockWidget );
   viewer.show();
 }
 

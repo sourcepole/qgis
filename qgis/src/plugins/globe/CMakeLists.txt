@@ -12,6 +12,7 @@ SET (globe_plugin_SRCS
      globe_plugin.cpp
      globe_plugin_gui.cpp
      qgsosgviewer.cpp
+     qgsosgearthtilesource.cpp
 )
 
 SET (globe_plugin_UIS globe_plugin_guibase.ui)
