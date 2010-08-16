@@ -1602,6 +1602,22 @@ Vai vēlies to apturēt?</translation>
         <source>Select the input directory with files</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Translate - srcwin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Image coordinates (pixels) must be integer numbers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translate - prjwin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Image coordinates (geographic) must be numbers.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>GdalToolsOptionsTable</name>
@@ -2115,6 +2131,68 @@ Vai vēlies to apturēt?</translation>
     </message>
     <message>
         <source>Use m&amp;ultithreaded warping implementation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Percentage to resize image. This will change pixel size/image resolution accordingly: 25% will create an image with pixels 4x larger.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Outsize:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%</source>
+        <translation type="unfinished">%</translation>
+    </message>
+    <message>
+        <source>Assign a specified nodata value to output bands.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To expose a dataset with 1 band with a color table as a dataset with 3 (RGB) or 4 (RGBA) bands. 
+Useful for output drivers such as JPEG, JPEG2000, MrSID, ECW that don&apos;t support color indexed datasets. 
+The &apos;gray&apos; value (from GDAL 1.7.0) enables to expand a dataset with a color table that only contains gray levels to a gray indexed dataset.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expand:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gray</source>
+        <translation type="unfinished">Pelēks</translation>
+    </message>
+    <message>
+        <source>RGB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RGBA</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Selects a subwindow from the source image for copying based on pixel/line location. (Enter Xoff Yoff Xsize Ysize)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Srcwin:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Selects a subwindow from the source image for copying (like -srcwin) but with the corners given in georeferenced coordinates. (Enter ulx uly lrx lry)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Prjwin:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy all subdatasets of this file to individual output files. Use with formats like HDF or OGDI that have subdatasets.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sds</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3053,6 +3131,20 @@ Vai vēlaties pievienot jauno slāni TOC?</translation>
     <message>
         <source>Couldn&apos;t load plugin &apos;%1&apos; from [&apos;%2&apos;]</source>
         <translation>Nevarēja ielādēt spraudni &apos;%1&apos; no [&apos;%2&apos;]</translation>
+    </message>
+</context>
+<context>
+    <name>PythonConsole</name>
+    <message>
+        <source>Python Console</source>
+        <translation type="unfinished">Python konsole</translation>
+    </message>
+    <message>
+        <source>To access Quantum GIS environment from this console
+use qgis.utils.iface object (instance of QgisInterface class).
+
+</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -4038,6 +4130,30 @@ You are seeing this message most likely because you have no DISPLAY environment 
     <message>
         <source>SVG fill</source>
         <translation>SVG pildījums</translation>
+    </message>
+    <message>
+        <source>No active vector layer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To select features, you must choose a vector layer by clicking on its name in the legend</source>
+        <translation type="unfinished">Lai izvēlētos objektus, jums vispirms ir jāzivēlas vektoru slānis uzklikšķinot uz tā nosaukuma leģendā</translation>
+    </message>
+    <message>
+        <source>CRS Exception</source>
+        <translation type="unfinished">CRS izņēmums</translation>
+    </message>
+    <message>
+        <source>Selection extends beyond layer&apos;s coordinate system.</source>
+        <translation type="unfinished">Izvēle iziet ārpus slāņa koordinātu sistēmas.</translation>
+    </message>
+    <message>
+        <source>created field %1 not found (OGR error: %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fitting a projective transform requires at least 4 corresponding points.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -5936,6 +6052,38 @@ This copy of QGIS writes debugging output.</source>
         <source>%1 doesn&apos;t have any layers</source>
         <translation>%1 nav slāņu</translation>
     </message>
+    <message>
+        <source>Select features by rectangle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select features by polygon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select features by freehand</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select features by radius</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select Tools</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select raster layers to add...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Raster</source>
+        <translation type="unfinished">Rastrs</translation>
+    </message>
+    <message>
+        <source>Select vector layers to add...</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgisAppBase</name>
@@ -6309,6 +6457,10 @@ p, li { white-space: pre-wrap; }
     <message>
         <source>Attributes - %1</source>
         <translation>Atribūti - %1</translation>
+    </message>
+    <message>
+        <source> (long)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -6920,6 +7072,10 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
         <source>The selected color ramp is not available.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Advanced</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgsComposer</name>
@@ -6997,7 +7153,7 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
     </message>
     <message>
         <source>To create image %1 x %2 requires circa %3 MB of memory</source>
-        <translation>Lai izveidotu attēlu %1 x %2 nepieciešamas %3 MB liels atmiņas apjoms</translation>
+        <translation type="obsolete">Lai izveidotu attēlu %1 x %2 nepieciešamas %3 MB liels atmiņas apjoms</translation>
     </message>
     <message>
         <source>If you require a vector-based output file from Qgis it is suggested that you try printing to PostScript if the SVG output is not satisfactory.&lt;/p&gt;</source>
@@ -7030,6 +7186,26 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
     <message>
         <source>Content of template file is not valid</source>
         <translation>Parauga faila saturs nav derīgs</translation>
+    </message>
+    <message>
+        <source>Image too large</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Creation of image with %1x%2 pixels failed.  Retry without &apos;Print As Raster&apos;?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To create image %1x%2 requires about %3 MB of memory. Proceed?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Image too big</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Creation of image with %1x%2 pixels failed.  Export aborted.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -7400,6 +7576,38 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
     <message>
         <source>Margin (mm)</source>
         <translation>Mala (mm)</translation>
+    </message>
+    <message>
+        <source>Horizontal Alignment:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left</source>
+        <translation type="unfinished">Pa kreisi</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Right</source>
+        <translation type="unfinished">Pa labi</translation>
+    </message>
+    <message>
+        <source>Vertical Alignment:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Top</source>
+        <translation type="unfinished">Augša</translation>
+    </message>
+    <message>
+        <source>Middle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bottom</source>
+        <translation type="unfinished">Apakša</translation>
     </message>
 </context>
 <context>
@@ -9372,6 +9580,10 @@ p, li { white-space: pre-wrap; }
         <source>Field calculator expression</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>rownum</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgsFormAnnotationDialog</name>
@@ -10378,6 +10590,10 @@ p, li { white-space: pre-wrap; }
         <source>World file exists</source>
         <translation type="unfinished">World fails jau eksistē</translation>
     </message>
+    <message>
+        <source>Projective</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgsGeorefPluginGuiBase</name>
@@ -10636,6 +10852,10 @@ p, li { white-space: pre-wrap; }
     </message>
     <message>
         <source>The selected color ramp is not available.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Advanced</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -13413,6 +13633,54 @@ This may be a problem in your network connection or at the WMS server.</source>
         <source>Engine settings</source>
         <translation type="unfinished">Dzinēja iestatījumi</translation>
     </message>
+    <message>
+        <source>Label settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>multiline labels</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Data defined settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Font properties</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Italic</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Font family</source>
+        <translation type="unfinished">Fontu saime</translation>
+    </message>
+    <message>
+        <source>Strikeout</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Buffer properties</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Buffer size</source>
+        <translation type="unfinished">Bufera izmērs</translation>
+    </message>
+    <message>
+        <source>Buffer color</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgsLegend</name>
@@ -13482,6 +13750,10 @@ This may be a problem in your network connection or at the WMS server.</source>
     <message>
         <source>&amp;Properties</source>
         <translation>Ī&amp;pašības</translation>
+    </message>
+    <message>
+        <source>&amp;Stretch using current extent</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -14114,19 +14386,19 @@ This may be a problem in your network connection or at the WMS server.</source>
     <name>QgsMapToolSelect</name>
     <message>
         <source>No active layer</source>
-        <translation>Nav aktīvā slāņa</translation>
+        <translation type="obsolete">Nav aktīvā slāņa</translation>
     </message>
     <message>
         <source>To select features, you must choose a vector layer by clicking on its name in the legend</source>
-        <translation>Lai izvēlētos objektus, jums vispirms ir jāzivēlas vektoru slānis uzklikšķinot uz tā nosaukuma leģendā</translation>
+        <translation type="obsolete">Lai izvēlētos objektus, jums vispirms ir jāzivēlas vektoru slānis uzklikšķinot uz tā nosaukuma leģendā</translation>
     </message>
     <message>
         <source>CRS Exception</source>
-        <translation>CRS izņēmums</translation>
+        <translation type="obsolete">CRS izņēmums</translation>
     </message>
     <message>
         <source>Selection extends beyond layer&apos;s coordinate system.</source>
-        <translation>Izvēle iziet ārpus slāņa koordinātu sistēmas.</translation>
+        <translation type="obsolete">Izvēle iziet ārpus slāņa koordinātu sistēmas.</translation>
     </message>
 </context>
 <context>
@@ -14540,7 +14812,7 @@ http://my.host.com/cgi-bin/mapserv.exe</source>
     </message>
     <message>
         <source>If the WMS requires basic authentication, enter a user name and optional password</source>
-        <translation>Ja WMS pieprasa vienkāršo autorizāciju, ievadiet lietotājvārdu un paroli</translation>
+        <translation type="obsolete">Ja WMS pieprasa vienkāršo autorizāciju, ievadiet lietotājvārdu un paroli</translation>
     </message>
     <message>
         <source>&amp;User name</source>
@@ -14549,6 +14821,10 @@ http://my.host.com/cgi-bin/mapserv.exe</source>
     <message>
         <source>Password</source>
         <translation>Parole</translation>
+    </message>
+    <message>
+        <source>If the service requires basic authentication, enter a user name and optional password</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -15038,26 +15314,19 @@ p, li { white-space: pre-wrap; }
     <name>QgsOGRSublayersDialogBase</name>
     <message>
         <source>Select OGR layers to load</source>
-        <translation>Izvēlieties ielādējamos OGR slāņus</translation>
+        <translation type="obsolete">Izvēlieties ielādējamos OGR slāņus</translation>
     </message>
     <message>
         <source>Sub layers list</source>
-        <translation>Apakšslāņu saraksts</translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;DejaVu Sans&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;Sans Serif&apos;;&quot;&gt;This is the list of all layers available in the datasource of the active layer. You can select the layers to load. The layers will be loaded when you press &quot;OK&quot;.&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;Sans Serif&apos;;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;Sans Serif&apos;;&quot;&gt;The layer name is format dependent. Consult the OGR documentation or the documentation of your data format to determine the nature of the included information.&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;Sans Serif&apos;;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;Sans Serif&apos;;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Be advised: &lt;/span&gt;selecting an already opened layer will not generate an error message and the layer will end up loaded twice!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">Apakšslāņu saraksts</translation>
     </message>
     <message>
         <source>1</source>
         <translation>1</translation>
+    </message>
+    <message>
+        <source>Select layers to load</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -15757,6 +16026,10 @@ p, li { white-space: pre-wrap; }
         <source>pixels</source>
         <translation>pikseļi</translation>
     </message>
+    <message>
+        <source>Create raster icons in legend</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QgsOraclePlugin</name>
@@ -16211,6 +16484,14 @@ geometry.</source>
         <translation>Savienojums ar datu bāzi tika izveidots sekmīgi, bet pieejamas tabulas netika atrastas. 
 
 Pārliecinieties, ka jums ir SELECT tiesības tai tabulai, kas satur PostGIS ģeometriju.</translation>
+    </message>
+    <message>
+        <source>Database connection was successful, but the accessible tables could not be determined.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -18995,6 +19276,21 @@ p, li { white-space: pre-wrap; }
     </message>
 </context>
 <context>
+    <name>QgsRendererV2DataDefinedMenus</name>
+    <message>
+        <source>Rotation field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size scale field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>- no field -</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>QgsRendererV2PropertiesDialog</name>
     <message>
         <source>Symbology</source>
@@ -19583,21 +19879,6 @@ Kļūda bija:
     <message>
         <source>Label</source>
         <translation>Birka</translation>
-    </message>
-</context>
-<context>
-    <name>QgsSingleSymbolRendererV2Widget</name>
-    <message>
-        <source>Rotation field</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Size scale field</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>- no field -</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -20800,22 +21081,6 @@ Do you want to overwrite the [%2] relation?</source>
         <translation type="unfinished">Kompresija:</translation>
     </message>
     <message>
-        <source>NONE</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>LZW</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>PACKBITS</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>DEFLATE</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Output raster:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -20853,6 +21118,10 @@ Do you want to overwrite the [%2] relation?</source>
     </message>
     <message>
         <source>Load in QGIS when done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Projective</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -21710,6 +21979,10 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
         <source>received %1 bytes from %2</source>
         <translation>saņemti %1 baiti no %2</translation>
     </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">Kļūda</translation>
+    </message>
 </context>
 <context>
     <name>QgsWFSSourceSelect</name>
@@ -21719,7 +21992,7 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
     </message>
     <message>
         <source>The capabilities document could not be retrieved from the server</source>
-        <translation>Īespēju dokumentu nebija iespējams saņemt no servera</translation>
+        <translation type="obsolete">Īespēju dokumentu nebija iespējams saņemt no servera</translation>
     </message>
     <message>
         <source>Create a new WFS connection</source>
@@ -21736,6 +22009,22 @@ Vai dzēst esošās klases pirms klasificēšanas?</translation>
     <message>
         <source>Are you sure you want to remove the %1 connection and all associated settings?</source>
         <translation>Vai tiešām vēlies dzēst %1 pieslēgumu un visus saitītos iestatījumus?</translation>
+    </message>
+    <message>
+        <source>No Layers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>capabilities document contained no layers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Capabilities document is not valid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GetCapabilities Error</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -21942,7 +22231,7 @@ This might be an server configuration error. Should the URL be used?</source>
         <source>Could not understand the response.  The %1 provider said:
 %2</source>
         <comment>COMMENTED OUT</comment>
-        <translation>Nebija iespējams saprast atbildi. Sniedzējs %1 ziņoja:
+        <translation type="obsolete">Nebija iespējams saprast atbildi. Sniedzējs %1 ziņoja:
 %2</translation>
     </message>
     <message>
@@ -22119,15 +22408,15 @@ This might be an server configuration error. Should the URL be used?</source>
     <name>QgsWmsProvider</name>
     <message>
         <source>This is probably due to an incorrect WMS Server URL.</source>
-        <translation>Tam par iemeslu, iespējams, ir kļūdains WMS servera URL.</translation>
+        <translation type="obsolete">Tam par iemeslu, iespējams, ir kļūdains WMS servera URL.</translation>
     </message>
     <message>
         <source>Could not get WMS Service Exception at %1: %2 at line %3 column %4</source>
-        <translation>Nebija iespējams saņemt WMS servisa izņēmumu. %1: %2 līnijā %3 kolonnā %4</translation>
+        <translation type="obsolete">Nebija iespējams saņemt WMS servisa izņēmumu. %1: %2 līnijā %3 kolonnā %4</translation>
     </message>
     <message>
         <source>Request contains a Format not offered by the server.</source>
-        <translation>Pieprasījums satur formātu, kādu serveris nepiedāvā.</translation>
+        <translation type="obsolete">Pieprasījums satur formātu, kādu serveris nepiedāvā.</translation>
     </message>
     <message>
         <source>Request contains a CRS not offered by the server for one or more of the Layers in the request.</source>
@@ -22430,13 +22719,13 @@ Tika mēģināts URL: %1</translation>
     <message>
         <source>Could not get WMS capabilities: %1 at line %2 column %3
 </source>
-        <translation>Nebija iespējams saņemt WMS iespējas: %1 rindā %2 kolonnā %3
+        <translation type="obsolete">Nebija iespējams saņemt WMS iespējas: %1 rindā %2 kolonnā %3
 </translation>
     </message>
     <message>
         <source>Could not get WMS capabilities in the expected format (DTD): no %1 or %2 found
 </source>
-        <translation>Nebija iespējams saņemt WMS iespējas gaidītajā formātā (DTD): ne %1, ne %2 netika atrasts
+        <translation type="obsolete">Nebija iespējams saņemt WMS iespējas gaidītajā formātā (DTD): ne %1, ne %2 netika atrasts
 </translation>
     </message>
     <message>
@@ -22500,6 +22789,38 @@ Tika mēģināts URL: %1</translation>
     <message>
         <source>Cache stats</source>
         <translation>Saglabāto datu statistika</translation>
+    </message>
+    <message>
+        <source>empty capabilities document</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not get WMS capabilities: %1 at line %2 column %3
+This is probably due to an incorrect WMS Server URL.
+Response was:
+
+%4</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not get WMS capabilities in the expected format (DTD): no %1 or %2 found.
+This might be due to an incorrect WMS Server URL.
+Tag:%3
+Response was:
+%4</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not get WMS Service Exception at %1: %2 at line %3 column %4
+
+Response was:
+
+%5</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Request contains a format not offered by the server.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
