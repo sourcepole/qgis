@@ -4233,31 +4233,17 @@ void QgisApp::reshapeFeatures()
 
 void QgisApp::capturePoint()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   // set current map tool to select
   mMapCanvas->setMapTool( mMapTools.mCapturePoint );
 }
 
 void QgisApp::captureLine()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   mMapCanvas->setMapTool( mMapTools.mCaptureLine );
 }
 
 void QgisApp::capturePolygon()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mCapturePolygon );
 }
 
@@ -4283,59 +4269,34 @@ void QgisApp::deselectAll()
 
 void QgisApp::addVertex()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mVertexAdd );
 
 }
 
 void QgisApp::moveVertex()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mVertexMove );
 }
 
 void QgisApp::addRing()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mAddRing );
 }
 
 void QgisApp::addIsland()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mAddIsland );
 }
 
 
 void QgisApp::deleteVertex()
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
   mMapCanvas->setMapTool( mMapTools.mVertexDelete );
 }
 
 
 void QgisApp::editCut( QgsMapLayer * layerContainingSelection )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsMapLayer *selectionLayer = layerContainingSelection ? layerContainingSelection : activeLayer();
 
   if ( selectionLayer )
@@ -4358,11 +4319,6 @@ void QgisApp::editCut( QgsMapLayer * layerContainingSelection )
 
 void QgisApp::editCopy( QgsMapLayer * layerContainingSelection )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsMapLayer *selectionLayer = layerContainingSelection ? layerContainingSelection : activeLayer();
 
   if ( selectionLayer )
@@ -4382,11 +4338,6 @@ void QgisApp::editCopy( QgsMapLayer * layerContainingSelection )
 
 void QgisApp::editPaste( QgsMapLayer *destinationLayer )
 {
-  if ( mMapCanvas && mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsMapLayer *pasteLayer = destinationLayer ? destinationLayer : activeLayer();
 
   if ( pasteLayer )

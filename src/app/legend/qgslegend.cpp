@@ -625,11 +625,6 @@ void QgsLegend::moveLayer( QgsMapLayer * ml, int groupIndex )
 
 void QgsLegend::legendLayerShowInOverview()
 {
-  if ( !mMapCanvas || mMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsLegendItem* li = dynamic_cast<QgsLegendItem *>( currentItem() );
   if ( !li )
     return;
