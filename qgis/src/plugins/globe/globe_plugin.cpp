@@ -23,7 +23,7 @@
 #include <qgisinterface.h>
 #include <qgisgui.h>
 #include <qgslogger.h>
-#include <qgsproject.h>
+#include <qgsmapcanvas.h>
 
 #include <QAction>
 #include <QToolBar>
@@ -108,46 +108,37 @@ void GlobePlugin::initGui()
 
 void GlobePlugin::run()
 {
+  mQGisIface->addDockWidget(Qt::RightDockWidgetArea, &mQDockWidget );
+
+  viewer.show();
+
   // install the programmable manipulator.
   osgEarthUtil::EarthManipulator* manip = new osgEarthUtil::EarthManipulator();
   viewer.setCameraManipulator( manip );
 
-  // The "Map" is the data model object that we will be visualizing. It will be
-  // geocentric by default, but you can specify a projected map in the constructor.
-  osgEarth::Map* map = new osgEarth::Map();
-
-  // Add an image layer to the map.
+  // read base layers from earth file
+  EarthFile earthFile;
+  if ( !earthFile.readXML( "/home/pi/devel/gis/qgis/qgis/src/plugins/globe/globe.earth" ) )
   {
-    osg::ref_ptr<GDALOptions> cfg = new GDALOptions();
-    cfg->url() = "/home/pi/devel/gis/osgearth/data/world.tif";
-    //map->addMapLayer( new ImageMapLayer( "World", cfg.get() ) );
+    return;
   }
+
+  while (mQGisIface->mapCanvas()->isDrawing())
+    viewer.frame(); //wait one frame cycle
 
   // Add QGIS layer to the map.
-  {
-    QgsOsgEarthTileSource* source = new QgsOsgEarthTileSource(mQGisIface);
-    source->initialize("", 0);
-    map->addMapLayer( new ImageMapLayer( "QGIS", source ) );
-  }
-
-  // Add a heightfield layer to the map. You can add any number of heightfields and
-  // osgEarth will composite them automatically.
-  {
-    osg::ref_ptr<TMSOptions> cfg = new TMSOptions();
-    cfg->url() = "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml";
-    //map->addMapLayer( new HeightFieldMapLayer( "SRTM", cfg.get() ) );
-  }
+  osg::ref_ptr<Map> map = earthFile.getMap();
+  QgsOsgEarthTileSource* source = new QgsOsgEarthTileSource(mQGisIface);
+  source->initialize("", 0);
+  map->addMapLayer( new ImageMapLayer( "QGIS", source ) );
 
   // The MapNode will render the Map object in the scene graph.
   osgEarth::MapNode* mapNode = new osgEarth::MapNode( map );
 
   // Set a home viewpoint
-  if ( mapNode && mapNode->getMap()->isGeocentric() )
-  {
-    manip->setHomeViewpoint( 
-      osgEarthUtil::Viewpoint( osg::Vec3d( -90, 0, 0 ), 0.0, -90.0, 4e7 ),
-      1.0 );
-  }
+  manip->setHomeViewpoint(
+    osgEarthUtil::Viewpoint( osg::Vec3d( -90, 0, 0 ), 0.0, -90.0, 4e7 ),
+    1.0 );
 
   viewer.setSceneData( mapNode );
 
@@ -162,9 +153,6 @@ void GlobePlugin::run()
   viewer.addEventHandler(new osgViewer::StatsHandler());
   viewer.addEventHandler(new osgViewer::WindowSizeHandler());
   viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
-
-  mQGisIface->addDockWidget(Qt::RightDockWidgetArea, &mQDockWidget );
-  viewer.show();
 }
 
 void GlobePlugin::unload()

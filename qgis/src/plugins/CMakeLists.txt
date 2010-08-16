@@ -13,7 +13,6 @@ SUBDIRS (copyright_label
   evis
   point_displacement_renderer
   spatialquery
-  globe
   )
 
 IF (POSTGRES_FOUND)
@@ -31,6 +30,10 @@ ENDIF (GSL_FOUND)
 IF (GRASS_FOUND)
   SUBDIRS (grass)
 ENDIF (GRASS_FOUND)
+
+IF (OSGEARTH_FOUND)
+  SUBDIRS (globe)
+ENDIF (OSGEARTH_FOUND)
 
 INSTALL(FILES qgisplugin.h qgsrendererplugin.h DESTINATION ${QGIS_INCLUDE_DIR})
 

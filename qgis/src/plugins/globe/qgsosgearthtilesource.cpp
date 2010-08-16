@@ -41,27 +41,12 @@ void QgsOsgEarthTileSource::initialize( const std::string& referenceURI, const P
     setProfile( osgEarth::Registry::instance()->getGlobalGeodeticProfile() );
     // the top LOD is a 2x2 tile set.
     //setProfile( Profile::create( "spherical-mercator", "", 2, 2 ) );
-
-    QGIS_SCOPED_LOCK;
-
-    QgsMapRenderer* mainRenderer = mQGisIface->mapCanvas()->mapRenderer();
-    mMapRenderer = new QgsMapRenderer();
-    mMapRenderer->setLayerSet(mainRenderer->layerSet());
-    mMapRenderer->setOutputUnits(mainRenderer->outputUnits());
 }
 
 osg::Image* QgsOsgEarthTileSource::createImage( const TileKey* key,
                           ProgressCallback* progress )
 {
-    if(!mMapRenderer)
-    {
-      QgsDebugMsg("Error: mMapRenderer is 0")
-      return 0;
-    }
-
     QGIS_SCOPED_LOCK;
-
-    int tileSize = getPixelsPerTile();
 
     osg::ref_ptr<osg::Image> image;
     if (intersects(key))
@@ -70,10 +55,11 @@ osg::Image* QgsOsgEarthTileSource::createImage( const TileKey* key,
         double xmin, ymin, xmax, ymax;
         key->getGeoExtent().getBounds(xmin, ymin, xmax, ymax);
 
+        int tileSize = getPixelsPerTile();
         int target_width = tileSize;
         int target_height = tileSize;
 
-        QgsDebugMsg("QGIS: xmin:" + QString::number(xmin) + " ymin:" + QString::number(ymin) + " ymax:" + QString::number(ymax) + " ymax " + QString::number(ymax))
+        QgsDebugMsg("QGIS: xmin:" + QString::number(xmin) + " ymin:" + QString::number(ymin) + " ymax:" + QString::number(ymax) + " ymax " + QString::number(ymax));
 
         //Return if parameters are out of range.
         if (target_width <= 0 || target_height <= 0)
@@ -87,6 +73,11 @@ osg::Image* QgsOsgEarthTileSource::createImage( const TileKey* key,
             return 0;
         }
 
+        QgsMapRenderer* mainRenderer = mQGisIface->mapCanvas()->mapRenderer();
+        mMapRenderer = new QgsMapRenderer();
+        mMapRenderer->setLayerSet(mainRenderer->layerSet());
+        mMapRenderer->setOutputUnits(mainRenderer->outputUnits());
+
         if(configureMapRender( qImage) != 0)
         {
             return 0;
@@ -97,7 +88,7 @@ osg::Image* QgsOsgEarthTileSource::createImage( const TileKey* key,
         mMapRenderer->setLabelingEngine( new QgsPalLabeling() );
 
         QPainter thePainter(qImage);
-        //thePainter.setRenderHint(QPainter::Antialiasing); //make it look nicer
+        //thePainter.setRenderHint(QPainter::Antialiasing); //make it look nicer        
         mMapRenderer->render(&thePainter);
 
         unsigned char* data = qImage->bits();
@@ -143,7 +134,7 @@ int QgsOsgEarthTileSource::configureMapRender( const QPaintDevice* paintDevice )
     else
     {
         //enable on the fly projection
-        QgsDebugMsg("enable on the fly projection")
+        QgsDebugMsg("enable on the fly projection");
         QgsProject::instance()->writeEntry("SpatialRefSys","/ProjectionsEnabled",1);
 
         long epsgId = 4326;
@@ -152,7 +143,7 @@ int QgsOsgEarthTileSource::configureMapRender( const QPaintDevice* paintDevice )
         //outputCRS = QgsEPSGCache::instance()->searchCRS( epsgId );
         if( !outputCRS.isValid() )
         {
-            QgsDebugMsg("Error, could not create output CRS from EPSG")
+            QgsDebugMsg("Error, could not create output CRS from EPSG");
             return 5;
         }
         mMapRenderer->setDestinationSrs(outputCRS);
