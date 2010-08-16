@@ -3,6 +3,7 @@
 
 #include "qgsrenderer.h"
 #include "qgsrendercontext.h"
+#include "qgsclipper.h"
 
 #include <QSize>
 #include <QPainter>
@@ -87,12 +88,20 @@ void QgsFillSymbolLayerV2::_renderPolygon( QPainter* p, const QPointF* points, i
     QPainterPath path;
     QPolygonF outer_ring( numPoints );
     memcpy( outer_ring.data(), points, sizeof(QPointF) * numPoints );
+
+    // clip polygon rings! Qt (as of version 4.6) has a slow algorithm for
+    // clipping painter paths: we will clip the rings by ourselves, so
+    // the clipping in Qt will not be triggered.
+    QgsClipper::trimFeature( outer_ring, false );
+
     path.addPolygon( outer_ring );
 
     QList<QPolygonF>::const_iterator it = rings->constBegin();
     for ( ; it != rings->constEnd(); ++it )
     {
-      path.addPolygon( *it );
+      QPolygonF ring = *it;
+      QgsClipper::trimFeature( ring, false );
+      path.addPolygon( ring );
     }
 
     p->drawPath( path );

@@ -25,9 +25,14 @@
 
 // But the static members must be initialised outside the class! (or GCC 4 dies)
 
-const double QgsClipper::MAX_X =  30000;
-const double QgsClipper::MIN_X = -30000;
-const double QgsClipper::MAX_Y =  30000;
-const double QgsClipper::MIN_Y = -30000;
+// Qt also does clipping when the coordinates go over +/- 32767
+// moreover from Qt 4.6, Qt clips also when the width/height of a painter path
+// is more than 32767. Since we want to avoid clipping by Qt (because it is slow)
+// we set coordinate limit to less than 32767 / 2
+static const double COORD_LIMIT = 16000;
+const double QgsClipper::MAX_X =  COORD_LIMIT;
+const double QgsClipper::MIN_X = -COORD_LIMIT;
+const double QgsClipper::MAX_Y =  COORD_LIMIT;
+const double QgsClipper::MIN_Y = -COORD_LIMIT;
 
 const double QgsClipper::SMALL_NUM = 1e-12;
