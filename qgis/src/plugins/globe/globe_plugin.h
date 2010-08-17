@@ -21,8 +21,11 @@
 
 #include "../qgisplugin.h"
 #include "qgsosgviewer.h"
+#include "qgsosgearthtilesource.h"
 #include <QObject>
 #include <QDockWidget>
+#include <osgEarth/MapNode>
+#include <osgEarth/MapLayer>
 
 class QAction;
 class QToolBar;
@@ -46,6 +49,15 @@ class GlobePlugin : public QObject, public QgisPlugin
     //! show the help document
     void help();
 
+    //!  Called when the main canvas is about to be rendered.
+    void renderStarting();
+    //!  Called when the main canvas has rendered.
+    void renderComplete( QPainter * );
+    //! Emitted when a new set of layers has been received
+    void layersChanged();
+    //! Called when the extents of the map change
+    void extentsChanged();
+
   private:
     int mPluginType;
     //! Pointer to the QGIS interface object
@@ -56,6 +68,12 @@ class GlobePlugin : public QObject, public QgisPlugin
     QgsOsgViewer viewer;
     //! Dock widget for viewer
     QDockWidget mQDockWidget;
+    //! Map node
+    osgEarth::MapNode* mMapNode;
+    //! QGIS maplayer
+    osgEarth::MapLayer* mQgisMapLayer;
+    //! Tile source
+    osgEarth::Drivers::QgsOsgEarthTileSource* mTileSource;
 };
 
 #endif // QGS_GLOBE_PLUGIN_H

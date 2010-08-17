@@ -88,8 +88,11 @@ osg::Image* QgsOsgEarthTileSource::createImage( const TileKey* key,
         mMapRenderer->setLabelingEngine( new QgsPalLabeling() );
 
         QPainter thePainter(qImage);
-        //thePainter.setRenderHint(QPainter::Antialiasing); //make it look nicer        
-        mMapRenderer->render(&thePainter);
+        //thePainter.setRenderHint(QPainter::Antialiasing); //make it look nicer
+        {
+            Threading::ScopedReadLock lock(mRenderMutex);
+            mMapRenderer->render(&thePainter);
+        }
 
         unsigned char* data = qImage->bits();
 

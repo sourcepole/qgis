@@ -84,7 +84,8 @@ GlobePlugin::GlobePlugin( QgisInterface* theQgisInterface )
     mQGisIface( theQgisInterface ),
     mQActionPointer( NULL ),
     viewer(),
-    mQDockWidget( tr( "Globe" ) )
+    mQDockWidget( tr( "Globe" ) ),
+    mTileSource(0)
 {
 }
 
@@ -104,6 +105,15 @@ void GlobePlugin::initGui()
   mQGisIface->addToolBarIcon( mQActionPointer );
   mQGisIface->addPluginToMenu( tr( "&Globe" ), mQActionPointer );
   mQDockWidget.setWidget(&viewer);
+
+  connect(mQGisIface->mapCanvas(), SIGNAL(renderStarting()),
+          this, SLOT( renderStarting() ) );
+  connect(mQGisIface->mapCanvas(), SIGNAL(renderComplete( QPainter * )),
+          this, SLOT( renderComplete( QPainter * ) ) );
+  connect(mQGisIface->mapCanvas() , SIGNAL(extentsChanged()),
+          this, SLOT( extentsChanged() ) );
+  connect(mQGisIface->mapCanvas(), SIGNAL(layersChanged()),
+          this, SLOT( layersChanged() ) );
 }
 
 void GlobePlugin::run()
@@ -123,24 +133,22 @@ void GlobePlugin::run()
     return;
   }
 
-  while (mQGisIface->mapCanvas()->isDrawing())
-    viewer.frame(); //wait one frame cycle
-
   // Add QGIS layer to the map.
   osg::ref_ptr<Map> map = earthFile.getMap();
-  QgsOsgEarthTileSource* source = new QgsOsgEarthTileSource(mQGisIface);
-  source->initialize("", 0);
-  map->addMapLayer( new ImageMapLayer( "QGIS", source ) );
+  mTileSource = new QgsOsgEarthTileSource(mQGisIface);
+  mTileSource->initialize("", 0);
+  mQgisMapLayer = new ImageMapLayer( "QGIS", mTileSource );
+  map->addMapLayer( mQgisMapLayer );
 
   // The MapNode will render the Map object in the scene graph.
-  osgEarth::MapNode* mapNode = new osgEarth::MapNode( map );
+  mMapNode = new osgEarth::MapNode( map );
 
   // Set a home viewpoint
   manip->setHomeViewpoint(
     osgEarthUtil::Viewpoint( osg::Vec3d( -90, 0, 0 ), 0.0, -90.0, 4e7 ),
     1.0 );
 
-  viewer.setSceneData( mapNode );
+  viewer.setSceneData( mMapNode );
 
   manip->getSettings()->bindMouseDoubleClick(
       osgEarthUtil::EarthManipulator::ACTION_GOTO,
@@ -153,6 +161,50 @@ void GlobePlugin::run()
   viewer.addEventHandler(new osgViewer::StatsHandler());
   viewer.addEventHandler(new osgViewer::WindowSizeHandler());
   viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+}
+
+void GlobePlugin::extentsChanged()
+{
+    QgsDebugMsg(">>>>>>>>>> extentsChanged: " + mQGisIface->mapCanvas()->extent().toString());
+}
+
+void GlobePlugin::renderStarting()
+{
+    if (mTileSource && mMapNode->getMap()->getImageMapLayers().size() > 1 ) { mTileSource->getRenderMutex().writeLock(); }
+    QgsDebugMsg(">>>>>>>>>> renderStarting");
+}
+
+void GlobePlugin::renderComplete( QPainter * )
+{
+    if (mTileSource && mMapNode->getMap()->getImageMapLayers().size() > 1) { mTileSource->getRenderMutex().writeUnlock(); }
+    QgsDebugMsg(">>>>>>>>>> renderComplete");
+}
+
+void GlobePlugin::layersChanged()
+{
+    QgsDebugMsg(">>>>>>>>>> layersChanged");
+    if (mTileSource && mMapNode->getMap()->getImageMapLayers().size() > 1)
+    {
+        {
+            Threading::ScopedReadLock lock(mTileSource->getRenderMutex());
+            viewer.getDatabasePager()->clear();
+        }
+        QgsDebugMsg(">>>>>>>>>> removeMapLayer");
+        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+        mMapNode->getMap()->removeMapLayer( mQgisMapLayer );
+        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+        //QgsDebugMsg(">>>>>>>>>> addMapLayer");
+        //mMapNode->getMap()->addMapLayer( mQgisMapLayer );
+        //QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+    } else if (mTileSource && mMapNode->getMap()->getImageMapLayers().size() == 1)
+    {
+        QgsDebugMsg(">>>>>>>>>> addMapLayer");
+        mTileSource = new QgsOsgEarthTileSource(mQGisIface);
+        mTileSource->initialize("", 0);
+        mQgisMapLayer = new ImageMapLayer( "QGIS", mTileSource );
+        mMapNode->getMap()->addMapLayer( mQgisMapLayer );
+        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+    }
 }
 
 void GlobePlugin::unload()
