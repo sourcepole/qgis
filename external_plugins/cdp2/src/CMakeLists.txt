@@ -1,0 +1,10 @@
+
+SUBDIRS(ui lib gui)
+
+#£IF (APPLE)
+#  SUBDIRS(mac)
+#ENDIF(APPLE)
+
+IF (ENABLE_TESTS)
+  SUBDIRS(tests)
+ENDIF (ENABLE_TESTS)

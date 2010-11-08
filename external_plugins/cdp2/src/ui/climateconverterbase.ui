@@ -1,0 +1,278 @@
+<ui version="4.0" >
+ <class>ClimateConverterBase</class>
+ <widget class="QDialog" name="ClimateConverterBase" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>513</width>
+    <height>451</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Climate Data Convertor</string>
+  </property>
+  <property name="windowIcon" >
+   <iconset/>
+  </property>
+  <layout class="QGridLayout" >
+   <item row="0" column="0" colspan="2" >
+    <widget class="QLabel" name="lblInputFormat" >
+     <property name="text" >
+      <string>Input format</string>
+     </property>
+     <property name="buddy" >
+      <cstring>lstInputFiles</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3" >
+    <widget class="QComboBox" name="cboInputFormat" >
+     <item>
+      <property name="text" >
+       <string>CRU</string>
+      </property>
+     </item>
+     <item>
+      <property name="text" >
+       <string>Hadley</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2" >
+    <widget class="QLabel" name="lblInputFile" >
+     <property name="text" >
+      <string>Input files</string>
+     </property>
+     <property name="buddy" >
+      <cstring>lstInputFiles</cstring>
+     </property>
+    </widget>
+   </item>
+   <item rowspan="2" row="3" column="0" colspan="3" >
+    <layout class="QHBoxLayout" >
+     <item>
+      <widget class="QListWidget" name="lstInputFiles" />
+     </item>
+     <item>
+      <layout class="QVBoxLayout" >
+       <item>
+        <widget class="QPushButton" name="pbnSelectFile" >
+         <property name="minimumSize" >
+          <size>
+           <width>30</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize" >
+          <size>
+           <width>30</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="text" >
+          <string/>
+         </property>
+         <property name="icon" >
+          <iconset/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pbnRemoveFile" >
+         <property name="sizePolicy" >
+          <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize" >
+          <size>
+           <width>30</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize" >
+          <size>
+           <width>30</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="text" >
+          <string/>
+         </property>
+         <property name="icon" >
+          <iconset/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>30</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0" >
+    <widget class="QLabel" name="lblOutputDir" >
+     <property name="text" >
+      <string>Output folder</string>
+     </property>
+     <property name="buddy" >
+      <cstring>leOutputDir</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2" >
+    <widget class="QLineEdit" name="leOutputDir" />
+   </item>
+   <item row="6" column="2" >
+    <widget class="QPushButton" name="pbnSelectDir" >
+     <property name="minimumSize" >
+      <size>
+       <width>30</width>
+       <height>26</height>
+      </size>
+     </property>
+     <property name="maximumSize" >
+      <size>
+       <width>30</width>
+       <height>26</height>
+      </size>
+     </property>
+     <property name="text" >
+      <string/>
+     </property>
+     <property name="icon" >
+      <iconset/>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2" >
+    <widget class="QLabel" name="lblCurrentTask" >
+     <property name="text" >
+      <string>Current task</string>
+     </property>
+     <property name="buddy" >
+      <cstring>leOutputDir</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="3" >
+    <widget class="QProgressBar" name="progressTask" >
+     <property name="value" >
+      <number>0</number>
+     </property>
+     <property name="orientation" >
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="2" >
+    <widget class="QLabel" name="lblTotalProgress" >
+     <property name="text" >
+      <string>Total progress</string>
+     </property>
+     <property name="buddy" >
+      <cstring>leOutputDir</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="3" >
+    <widget class="QProgressBar" name="progressTotal" >
+     <property name="value" >
+      <number>0</number>
+     </property>
+     <property name="orientation" >
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0" colspan="3" >
+    <layout class="QHBoxLayout" >
+     <item>
+      <spacer>
+       <property name="orientation" >
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" >
+        <size>
+         <width>131</width>
+         <height>31</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pbnProcess" >
+       <property name="text" >
+        <string>Process</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pbnClose" >
+       <property name="text" >
+        <string>Close</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="12" column="0" colspan="3" >
+    <widget class="QLabel" name="lblMessage" >
+     <property name="frameShape" >
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="frameShadow" >
+      <enum>QFrame::Sunken</enum>
+     </property>
+     <property name="text" >
+      <string>&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;/head>&lt;body style=" white-space: pre-wrap; font-family:Sans Serif; font-weight:400; font-style:normal; text-decoration:none;">&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Ready.&lt;/p>&lt;/body>&lt;/html></string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lstInputFiles</tabstop>
+  <tabstop>pbnSelectFile</tabstop>
+  <tabstop>pbnRemoveFile</tabstop>
+  <tabstop>leOutputDir</tabstop>
+  <tabstop>pbnSelectDir</tabstop>
+  <tabstop>pbnProcess</tabstop>
+  <tabstop>pbnClose</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../resources/resources.qrc" />
+ </resources>
+ <connections>
+  <connection>
+   <sender>pbnClose</sender>
+   <signal>clicked()</signal>
+   <receiver>ClimateConverterBase</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>446</x>
+     <y>264</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>226</x>
+     <y>267</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
