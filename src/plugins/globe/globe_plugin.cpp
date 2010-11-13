@@ -118,19 +118,28 @@ void GlobePlugin::run()
   osgViewer::Viewer viewer;
 #endif
 
+  setupProxy();
+
   // install the programmable manipulator.
   osgEarthUtil::EarthManipulator* manip = new osgEarthUtil::EarthManipulator();
   viewer.setCameraManipulator( manip );
 
   // read base layers from earth file
   EarthFile earthFile;
-  if ( !earthFile.readXML( QString("%1/%2").arg(QgsApplication::pkgDataPath()).arg("globe/globe.earth").toStdString() ) )
+  if ( !earthFile.readXML( QDir::cleanPath( QgsApplication::pkgDataPath() + "/globe/globe.earth" ).toStdString() ) )
   {
     return;
   }
 
-  // Add QGIS layer to the map.
   osg::ref_ptr<Map> map = earthFile.getMap();
+
+  // Add base image to the map
+  GDALOptions* opt = new GDALOptions();
+  opt->url() = QDir::cleanPath( QgsApplication::pkgDataPath() + "/globe/world.tif" ).toStdString();
+  osg::ref_ptr<MapLayer> layer = new ImageMapLayer( "World", opt );
+  map->addMapLayer( layer );
+
+  // Add QGIS layer to the map
   mTileSource = new QgsOsgEarthTileSource(mQGisIface);
   mTileSource->initialize("", 0);
   mQgisMapLayer = new ImageMapLayer( "QGIS", mTileSource );
@@ -239,16 +248,36 @@ void GlobePlugin::run()
 #endif
 }
 
+void GlobePlugin::setupProxy()
+{
+    QSettings settings;
+    settings.beginGroup( "proxy" );
+    if (settings.value("/proxyEnabled").toBool())
+    {
+      ProxySettings proxySettings(settings.value("/proxyHost").toString().toStdString(),
+        settings.value("/proxyPort").toInt());
+      if (!settings.value("/proxyUser").toString().isEmpty())
+      {
+        QString auth = settings.value("/proxyUser").toString() + ":" + settings.value("/proxyPassword").toString();
+        setenv("OSGEARTH_CURL_PROXYAUTH", auth.toStdString().c_str(), 0);
+      }
+      //TODO: settings.value("/proxyType")
+      //TODO: URL exlusions
+      HTTPClient::setProxySettings(proxySettings);
+    }
+    settings.endGroup();
+}
+
 void GlobePlugin::extentsChanged()
 {
-    QgsDebugMsg(">>>>>>>>>> extentsChanged: " + mQGisIface->mapCanvas()->extent().toString());
+    QgsDebugMsg("extentsChanged: " + mQGisIface->mapCanvas()->extent().toString());
 }
 
 typedef std::list< osg::ref_ptr<VersionedTile> > TileList;
 
 void GlobePlugin::layersChanged()
 {
-    QgsDebugMsg(">>>>>>>>>> layersChanged");
+    QgsDebugMsg("layersChanged");
     if (mTileSource) {
       /*
         //viewer.getDatabasePager()->clear();
@@ -263,16 +292,16 @@ void GlobePlugin::layersChanged()
     }
    if (mTileSource && mMapNode->getMap()->getImageMapLayers().size() > 1)
     {
-        QgsDebugMsg(">>>>>>>>>> removeMapLayer");
-        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+        QgsDebugMsg("removeMapLayer");
+        QgsDebugMsg(QString("getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
         mMapNode->getMap()->removeMapLayer( mQgisMapLayer );
-        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
-        QgsDebugMsg(">>>>>>>>>> addMapLayer");
+        QgsDebugMsg(QString("getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+        QgsDebugMsg("addMapLayer");
         mTileSource = new QgsOsgEarthTileSource(mQGisIface);
         mTileSource->initialize("", 0);
         mQgisMapLayer = new ImageMapLayer( "QGIS", mTileSource );
         mMapNode->getMap()->addMapLayer( mQgisMapLayer );
-        QgsDebugMsg(QString(">>>>>>>>>> getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
+        QgsDebugMsg(QString("getImageMapLayers().size = %1").arg(mMapNode->getMap()->getImageMapLayers().size() ));
     }
 }
 
