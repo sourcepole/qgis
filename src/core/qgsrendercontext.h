@@ -36,6 +36,7 @@ class CORE_EXPORT QgsRenderContext
 {
   public:
     QgsRenderContext();
+    QgsRenderContext(const QgsRenderContext& other);
     ~QgsRenderContext();
 
     //getters
