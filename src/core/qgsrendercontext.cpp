@@ -31,6 +31,20 @@ QgsRenderContext::QgsRenderContext()
 
 }
 
+QgsRenderContext::QgsRenderContext(const QgsRenderContext& other)
+  : mPainter( 0 ),
+  mCoordTransform( 0 ),
+  mDrawEditingInformation( false ),
+  mForceVectorOutput( false ),
+  mRenderingStopped( false ),
+  mScaleFactor( 1.0 ),
+  mRasterScaleFactor( 1.0 ),
+  mLabelingEngine( NULL )
+{
+  *this = other;
+}
+
+
 QgsRenderContext::~QgsRenderContext()
 {
   delete mCoordTransform;
