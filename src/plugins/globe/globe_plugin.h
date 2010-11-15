@@ -22,15 +22,19 @@
 #include "../qgisplugin.h"
 #include "qgsosgviewer.h"
 #include "qgsosgearthtilesource.h"
+#include "Controls"
 #include <QObject>
 #include <QDockWidget>
 #include <osgEarth/MapNode>
 #include <osgEarth/MapLayer>
 #include <osgEarthUtil/EarthManipulator>
+#include <osgEarthUtil/ElevationManager>
+#include <osgEarthUtil/ObjectPlacer>
 
 class QAction;
 class QToolBar;
 class QgisInterface;
+
 
 class GlobePlugin : public QObject, public QgisPlugin
 {
@@ -50,7 +54,7 @@ class GlobePlugin : public QObject, public QgisPlugin
     //! show the help document
     void help();
 
-    //!  Called when the main canvas is about to be rendered.
+    //!  Called when the main canvas is about to be rendered
     void renderStarting();
     //!  Called when the main canvas has rendered.
     void renderComplete( QPainter * );
@@ -58,6 +62,20 @@ class GlobePlugin : public QObject, public QgisPlugin
     void layersChanged();
     //! Called when the extents of the map change
     void extentsChanged();
+
+    //! Place an OSG model on the globe
+    void placeNode( osg::Node* node, double lat, double lon, double alt = 0.0 );
+
+    //! Recursive copy folder
+    static void copyFolder(QString sourceFolder, QString destFolder);
+
+  private:
+    //!  Set HTTP proxy settings
+    void setupProxy();
+    //!  Setup map
+    void setupMap();
+    //!  Setup map controls
+    void setupControls();
 
   private:
     int mPluginType;
@@ -69,12 +87,20 @@ class GlobePlugin : public QObject, public QgisPlugin
     QgsOsgViewer viewer;
     //! Dock widget for viewer
     QDockWidget mQDockWidget;
+    //! OSG root node
+    osg::Group* mRootNode;
     //! Map node
     osgEarth::MapNode* mMapNode;
     //! QGIS maplayer
     osgEarth::MapLayer* mQgisMapLayer;
     //! Tile source
     osgEarth::Drivers::QgsOsgEarthTileSource* mTileSource;
+    //! Control Canvas
+    osgEarthUtil::Controls2::ControlCanvas* mControlCanvas;
+    //! Elevation manager
+    osgEarthUtil::ElevationManager* mElevationManager;
+    //! Object placer
+    osgEarthUtil::ObjectPlacer* mObjectPlacer;
 };
 
 

@@ -2,16 +2,21 @@
 
     <loading_policy mode="sequential"/>
 
+    <cache type="tilecache">
+      <path>/home/pi/devel/gis/qgis/.qgis/cache/globe</path>
+    </cache>
+
     <image name="world" driver="gdal">
-        <url>/usr/share/osgearth/data/world.tif</url>
+      <url>/usr/share/osgearth/data/world.tif</url>
+      <cache_enabled>false</cache_enabled>
     </image>
 
     <!--
-    <image name="tileservice" driver="tileservice">
+    <image name="worldwind" driver="tileservice">
         <url>http://s0.tileservice.worldwindcentral.com/getTile?</url>
         <dataset>bmng.topo.bathy.200401</dataset>
         <format>jpg</format>
-            <max_level>7</max_level>
+        <max_level>7</max_level>
     </image>
     -->
 
@@ -20,14 +25,18 @@
       <url>http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml</url>
     </heightfield>
     -->
-    <!--
+
     <heightfield name="WorldWind bil" driver="worldwind">
-      <worldwind_cache>worldwind_SRTM</worldwind_cache>
+      <worldwind_cache>/home/pi/devel/gis/qgis/.qgis/cache/globe/worldwind_srtm</worldwind_cache>
+      <cache_enabled>false</cache_enabled>
     </heightfield>
-    -->
+
+    <!--
     <heightfield name="aster_dem" driver="gdal">
       <url>/home/pi/data/geodata/Lech/ASTGTM_N47E010/ASTGTM_N47E010_dem.tif</url>
+      <cache_enabled>false</cache_enabled>
     </heightfield>
+    -->
 
     <!--
     <vertical_scale>2</vertical_scale>
