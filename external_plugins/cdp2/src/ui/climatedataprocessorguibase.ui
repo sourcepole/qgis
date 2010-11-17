@@ -1,0 +1,428 @@
+<ui version="4.0" >
+ <class>ClimateDataProcessorGuiBase</class>
+ <widget class="QDialog" name="ClimateDataProcessorGuiBase" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>990</width>
+    <height>468</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Climate Processor</string>
+  </property>
+  <property name="windowIcon" >
+   <iconset/>
+  </property>
+  <layout class="QGridLayout" >
+   <item row="0" column="0" >
+    <widget class="QGroupBox" name="grpInput" >
+     <property name="title" >
+      <string>Select raw data files</string>
+     </property>
+     <layout class="QGridLayout" >
+      <item row="0" column="0" >
+       <widget class="QLabel" name="lblMeanTemp" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Preferred" hsizetype="Minimum" >
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text" >
+         <string>Mean temperature:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leMeanTemp</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" >
+       <widget class="QLineEdit" name="leMeanTemp" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text" >
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QLabel" name="lblMinTemp" >
+        <property name="text" >
+         <string>Minimum temperature:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leMinTemp</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QLineEdit" name="leMinTemp" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" >
+       <widget class="QLabel" name="lblMaxTemp" >
+        <property name="text" >
+         <string>Maximum temperature:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leMaxTemp</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1" >
+       <widget class="QLineEdit" name="leMaxTemp" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" >
+       <widget class="QLabel" name="lblDiurnalTemperature" >
+        <property name="text" >
+         <string>Diurnal temperature:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leDiurnalTemp</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" >
+       <widget class="QLineEdit" name="leDiurnalTemp" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" >
+       <widget class="QLabel" name="lblMeanPrecipitation" >
+        <property name="text" >
+         <string>Mean precipitation:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leMeanPrecipitation</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1" >
+       <widget class="QLineEdit" name="leMeanPrecipitation" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" >
+       <widget class="QLabel" name="lblFrostDays" >
+        <property name="text" >
+         <string>Frost days:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leFrostDays</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1" >
+       <widget class="QLineEdit" name="leFrostDays" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0" >
+       <widget class="QLabel" name="lblSolarRadiation" >
+        <property name="text" >
+         <string>Total solar radiation:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leTotalSolarRadiation</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1" >
+       <widget class="QLineEdit" name="leTotalSolarRadiation" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" >
+       <widget class="QToolButton" name="pbnMeanTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2" >
+       <widget class="QToolButton" name="pbnMinTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2" >
+       <widget class="QToolButton" name="pbnMaxTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2" >
+       <widget class="QToolButton" name="pbnDiurnalTemp" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2" >
+       <widget class="QToolButton" name="pbnMeanPrecipitation" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2" >
+       <widget class="QToolButton" name="pbnFrostDays" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2" >
+       <widget class="QToolButton" name="pbnTotalSolarRad" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="1" >
+    <widget class="QGroupBox" name="grpVars" >
+     <property name="title" >
+      <string>Select variables to calculate</string>
+     </property>
+     <layout class="QGridLayout" >
+      <item row="0" column="0" colspan="2" >
+       <widget class="QListWidget" name="lstVariablesToCalc" >
+        <property name="alternatingRowColors" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QCheckBox" name="cbxSelectAllVars" >
+        <property name="text" >
+         <string>(select / deselect all)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QLabel" name="lblVariableCount" >
+        <property name="text" >
+         <string>&lt;p align="right">(0) Variables selected &lt;/p></string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item rowspan="4" row="1" column="0" >
+    <widget class="QGroupBox" name="grpOutput" >
+     <property name="title" >
+      <string>Output options</string>
+     </property>
+     <layout class="QGridLayout" >
+      <item row="0" column="0" >
+       <widget class="QLabel" name="lblFormat" >
+        <property name="text" >
+         <string>Format:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>cboOutputFormat</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="2" >
+       <widget class="QComboBox" name="cboOutputFormat" />
+      </item>
+      <item row="1" column="0" >
+       <widget class="QLabel" name="lblPath" >
+        <property name="text" >
+         <string>Path:</string>
+        </property>
+        <property name="buddy" >
+         <cstring>leOutputPath</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QLineEdit" name="leOutputPath" >
+        <property name="text" >
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1" colspan="2" >
+       <widget class="QCheckBox" name="cbxSwitchMeridian" >
+        <property name="text" >
+         <string>Switch meridian (for datasets where 0' longitude is in first column)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" colspan="2" >
+       <widget class="QCheckBox" name="cbxPseudoColour" >
+        <property name="text" >
+         <string>Create pseudocoloured image of each output file</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2" >
+       <widget class="QToolButton" name="pbnOutputPath" >
+        <property name="text" >
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="1" >
+    <spacer>
+     <property name="orientation" >
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" >
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="1" >
+    <widget class="QLabel" name="lblCurrentTask" >
+     <property name="font" >
+      <font>
+       <family>Verdana</family>
+       <pointsize>10</pointsize>
+       <weight>75</weight>
+       <italic>false</italic>
+       <bold>true</bold>
+       <underline>false</underline>
+       <strikeout>false</strikeout>
+      </font>
+     </property>
+     <property name="text" >
+      <string>Loading minimum temperature data</string>
+     </property>
+     <property name="alignment" >
+      <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1" >
+    <widget class="QProgressBar" name="progressTotalJob" >
+     <property name="value" >
+      <number>24</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" >
+    <widget class="QDialogButtonBox" name="buttonBox" >
+     <property name="standardButtons" >
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::NoButton|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="6" margin="11" />
+ <tabstops>
+  <tabstop>leMeanTemp</tabstop>
+  <tabstop>pbnMeanTemp</tabstop>
+  <tabstop>leMinTemp</tabstop>
+  <tabstop>pbnMinTemp</tabstop>
+  <tabstop>leMaxTemp</tabstop>
+  <tabstop>pbnMaxTemp</tabstop>
+  <tabstop>leDiurnalTemp</tabstop>
+  <tabstop>pbnDiurnalTemp</tabstop>
+  <tabstop>leMeanPrecipitation</tabstop>
+  <tabstop>pbnMeanPrecipitation</tabstop>
+  <tabstop>leFrostDays</tabstop>
+  <tabstop>pbnFrostDays</tabstop>
+  <tabstop>leTotalSolarRadiation</tabstop>
+  <tabstop>pbnTotalSolarRad</tabstop>
+  <tabstop>lstVariablesToCalc</tabstop>
+  <tabstop>cbxSelectAllVars</tabstop>
+  <tabstop>cboOutputFormat</tabstop>
+  <tabstop>leOutputPath</tabstop>
+  <tabstop>pbnOutputPath</tabstop>
+  <tabstop>cbxSwitchMeridian</tabstop>
+  <tabstop>cbxPseudoColour</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../resources/resources.qrc" />
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ClimateDataProcessorGuiBase</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>444</x>
+     <y>668</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>582</x>
+     <y>621</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ClimateDataProcessorGuiBase</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>538</x>
+     <y>677</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>582</x>
+     <y>663</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
