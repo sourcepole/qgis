@@ -163,11 +163,13 @@ void GlobePlugin::settings()
 {
   QgsGlobePluginDialog* settingsDialog = new QgsGlobePluginDialog( mQGisIface->mainWindow(), QgisGui::ModalDialogFlags );
   settingsDialog->setAttribute( Qt::WA_DeleteOnClose );
-  settingsDialog->exec();
-  
-  //QMessageBox msgBox;
-  //msgBox.setText(settingsDialog->stereoMode);
-  //msgBox.exec();
+  if (settingsDialog->exec())
+  {
+    viewer.QgsGLWidgetAdapter::setStereoMode("ANAGLYPHIC");
+    //above works
+    //this second would be needed but causes a segmentation fault
+    //viewer.QgsGLWidgetAdapter::setStereoMode(settingsDialog->stereoMode);
+  }
 }
 
 void GlobePlugin::setupMap()
