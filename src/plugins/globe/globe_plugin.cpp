@@ -67,6 +67,7 @@ GlobePlugin::GlobePlugin( QgisInterface* theQgisInterface )
     mQActionSettingsPointer( NULL ),
     viewer(),
     mQDockWidget( tr( "Globe" ) ),
+    mSettingsDialog( theQgisInterface->mainWindow(), QgisGui::ModalDialogFlags ),
     mTileSource(0),
     mElevationManager( NULL ),
     mObjectPlacer( NULL )
@@ -161,14 +162,9 @@ void GlobePlugin::run()
 
 void GlobePlugin::settings()
 {
-  QgsGlobePluginDialog* settingsDialog = new QgsGlobePluginDialog( mQGisIface->mainWindow(), QgisGui::ModalDialogFlags );
-  settingsDialog->setAttribute( Qt::WA_DeleteOnClose );
-  if (settingsDialog->exec())
+  if (mSettingsDialog.exec())
   {
-    viewer.QgsGLWidgetAdapter::setStereoMode("ANAGLYPHIC");
-    //above works
-    //this second would be needed but causes a segmentation fault
-    //viewer.QgsGLWidgetAdapter::setStereoMode(settingsDialog->stereoMode);
+    viewer.QgsGLWidgetAdapter::setStereoMode(mSettingsDialog.stereoMode);
   }
 }
 
