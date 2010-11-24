@@ -279,7 +279,7 @@ void GlobePlugin::setupControls()
   
   //Move Left
   osg::Image* moveLeftImg = osgDB::readImageFile( imgDir + "/move-left.png" );
-  ImageControl* moveLeft = new ImageControl( moveLeftImg );
+  ImageControl* moveLeft = new NavigationControl( moveLeftImg );
   moveLeft->addEventHandler( new MyClickHandler );
   
   //Move Right
@@ -434,6 +434,8 @@ void GlobePlugin::copyFolder(QString sourceFolder, QString destFolder)
   }
 }
 
+// ----------
+
 bool FlyToExtentHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
 {
   if ( ea.getEventType() == ea.KEYDOWN && ea.getKey() == '1' )
@@ -445,6 +447,21 @@ bool FlyToExtentHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIAct
   return false;
 }
 
+// ----------
+
+bool
+NavigationControl::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx )
+{
+    if ( ea.getEventType() == osgGA::GUIEventAdapter::PUSH )
+    {
+        OE_NOTICE << "Thank you for pushing " << std::endl;
+        aa.requestContinuousUpdate(true);
+    }
+        OE_NOTICE << "getEventType " << ea.getEventType() << std::endl;
+    return Control::handle( ea, aa, cx );
+}
+
+// ----------
 
 /**
  * Required extern functions needed  for every plugin
