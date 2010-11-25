@@ -113,6 +113,22 @@ struct MyClickHandler : public ControlEventHandler
     }
 };
 
+struct PanControlHandler : public NavigationControlHandler
+{
+  PanControlHandler( osgEarthUtil::EarthManipulator* manip, double dx, double dy ) : _manip(manip), _dx(dx), _dy(dy) { }
+  virtual void onMouseDown( Control* control, int mouseButtonMask )
+  {
+         OE_NOTICE << "Thank you for clicking on " << typeid(control).name() << mouseButtonMask
+                  << std::endl;
+   _manip->pan( _dx, _dy );
+  }
+private:
+  osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
+  double _dx;
+  double _dy;
+};
+
+
 void GlobePlugin::run()
 {
 #ifdef QGISDEBUG
@@ -277,15 +293,16 @@ void GlobePlugin::setupControls()
   moveHControls->setHorizAlign( Control::ALIGN_CENTER );
   moveHControls->setPosition( 20, 40 );
   
+  osgEarthUtil::EarthManipulator* manip = dynamic_cast<osgEarthUtil::EarthManipulator*>(viewer.getCameraManipulator());
   //Move Left
   osg::Image* moveLeftImg = osgDB::readImageFile( imgDir + "/move-left.png" );
   ImageControl* moveLeft = new NavigationControl( moveLeftImg );
-  moveLeft->addEventHandler( new MyClickHandler );
+  moveLeft->addEventHandler( new PanControlHandler( manip, -0.05, 0 ) );
   
   //Move Right
   osg::Image* moveRightImg = osgDB::readImageFile( imgDir + "/move-right.png" );
-  ImageControl* moveRight = new ImageControl( moveRightImg );
-  moveRight->addEventHandler( new MyClickHandler );
+  ImageControl* moveRight = new NavigationControl( moveRightImg );
+  moveRight->addEventHandler( new PanControlHandler( manip, 0.05, 0 ) );
   
   
   //Vertical container
@@ -300,13 +317,13 @@ void GlobePlugin::setupControls()
   
   //Move Up
   osg::Image* moveUpImg = osgDB::readImageFile( imgDir + "/move-up.png" );
-  ImageControl* moveUp = new ImageControl( moveUpImg );
-  moveUp->addEventHandler( new MyClickHandler );
+  ImageControl* moveUp = new NavigationControl( moveUpImg );
+  moveUp->addEventHandler( new PanControlHandler( manip, 0, 0.05 ) );
   
   //Move Down
   osg::Image* moveDownImg = osgDB::readImageFile( imgDir + "/move-down.png" );
-  ImageControl* moveDown = new ImageControl( moveDownImg );
-  moveDown->addEventHandler( new MyClickHandler );
+  ImageControl* moveDown = new NavigationControl( moveDownImg );
+  moveDown->addEventHandler( new PanControlHandler( manip, 0, -0.05 ) );
   
   //add controls to moveControls group
   moveHControls->addControl( moveLeft );
@@ -452,13 +469,31 @@ bool FlyToExtentHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIAct
 bool
 NavigationControl::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx )
 {
-    if ( ea.getEventType() == osgGA::GUIEventAdapter::PUSH )
+  switch ( ea.getEventType() )
+  {
+    case osgGA::GUIEventAdapter::PUSH:
+      _mouse_down_event = &ea;
+      break;
+    case osgGA::GUIEventAdapter::FRAME:
+      if ( _mouse_down_event )
+      {
+        _mouse_down_event = &ea;
+      }
+      break;
+    case osgGA::GUIEventAdapter::RELEASE:
+      _mouse_down_event = NULL;
+      break;
+  }
+  if ( _mouse_down_event )
+  {
+    //OE_NOTICE << "NavigationControl::handle getEventType " << ea.getEventType() << std::endl;
+    for( ControlEventHandlerList::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i )
     {
-        OE_NOTICE << "Thank you for pushing " << std::endl;
-        aa.requestContinuousUpdate(true);
+      NavigationControlHandler* handler = dynamic_cast<NavigationControlHandler*>(i->get());
+      if ( handler ) handler->onMouseDown( this, ea.getButtonMask() );
     }
-        OE_NOTICE << "getEventType " << ea.getEventType() << std::endl;
-    return Control::handle( ea, aa, cx );
+  }
+  return Control::handle( ea, aa, cx );
 }
 
 // ----------
