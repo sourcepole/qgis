@@ -110,18 +110,54 @@ class GlobePlugin : public QObject, public QgisPlugin
     osgEarthUtil::ObjectPlacer* mObjectPlacer;
 };
 
-class ControlsHandler : public osgGA::GUIEventHandler 
+class FlyToExtentHandler : public osgGA::GUIEventHandler 
 {
   public:
-    ControlsHandler( osgEarthUtil::EarthManipulator* manip, QgisInterface *qGisIface ) : _manip(manip), mQGisIface(qGisIface) { }
+    FlyToExtentHandler( osgEarthUtil::EarthManipulator* manip, QgisInterface *qGisIface ) : _manip(manip), mQGisIface(qGisIface) { }
 
     bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
 
   private:
     osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
-    osgEarthUtil::EarthManipulator::Settings* _manipSettings;
+
     //! Pointer to the QGIS interface object
     QgisInterface *mQGisIface;
 };
+
+class KeyboardControlHandler : public osgGA::GUIEventHandler 
+{
+  public:
+    KeyboardControlHandler( osgEarthUtil::EarthManipulator* manip, QgisInterface *qGisIface ) : _manip(manip), mQGisIface(qGisIface) { }
+
+    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
+
+  private:
+    osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
+
+    //! Pointer to the QGIS interface object
+    QgisInterface *mQGisIface;
+};
+
+namespace osgEarthUtil { namespace Controls2
+{
+class NavigationControlHandler : public ControlEventHandler
+{
+public:
+    virtual void onMouseDown( class Control* control, int mouseButtonMask ) { }
+};
+
+class NavigationControl : public ImageControl
+{
+public:
+    NavigationControl( osg::Image* image = 0L ) : ImageControl( image ),  _mouse_down_event( NULL ) {}
+
+protected:
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx );
+
+private:
+    osg::ref_ptr<const osgGA::GUIEventAdapter> _mouse_down_event;
+};
+}
+}
 
 #endif // QGS_GLOBE_PLUGIN_H

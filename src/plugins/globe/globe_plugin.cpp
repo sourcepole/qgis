@@ -104,14 +104,6 @@ void GlobePlugin::initGui()
           this, SLOT( layersChanged() ) );
 }
 
-struct MyClickHandler : public ControlEventHandler
-{
-    void onClick( Control* control, int mouseButtonMask)
-    {
-        OE_NOTICE << "Thank you for clicking on " << typeid(control).name()
-                  << std::endl;
-    }
-};
 
 void GlobePlugin::run()
 {
@@ -147,8 +139,9 @@ void GlobePlugin::run()
   mRootNode->addChild( mControlCanvas );
   setupControls();
 
-  // add our controls handler
-  viewer.addEventHandler(new ControlsHandler( manip, mQGisIface ));
+  // add our handlers
+  viewer.addEventHandler(new FlyToExtentHandler( manip, mQGisIface ));
+  viewer.addEventHandler(new KeyboardControlHandler( manip, mQGisIface ));
 
   // add some stock OSG handlers:
   viewer.addEventHandler(new osgViewer::StatsHandler());
@@ -260,6 +253,28 @@ void GlobePlugin::setupMap()
 #endif
 }
 
+struct MyClickHandler : public ControlEventHandler
+{
+    void onClick( Control* control, int mouseButtonMask)
+    {
+        OE_NOTICE << "Thank you for clicking on " << typeid(control).name()
+                  << std::endl;
+    }
+};
+
+struct PanControlHandler : public NavigationControlHandler
+{
+  PanControlHandler( osgEarthUtil::EarthManipulator* manip, double dx, double dy ) : _manip(manip), _dx(dx), _dy(dy) { }
+  virtual void onMouseDown( Control* control, int mouseButtonMask )
+  {
+    _manip->pan( _dx, _dy );
+  }
+private:
+  osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
+  double _dx;
+  double _dy;
+};
+
 void GlobePlugin::setupControls()
 {
  
@@ -276,15 +291,16 @@ void GlobePlugin::setupControls()
   moveHControls->setHorizAlign( Control::ALIGN_CENTER );
   moveHControls->setPosition( 5, 35 );
   
+  osgEarthUtil::EarthManipulator* manip = dynamic_cast<osgEarthUtil::EarthManipulator*>(viewer.getCameraManipulator());
   //Move Left
   osg::Image* moveLeftImg = osgDB::readImageFile( imgDir + "/move-left.png" );
-  ImageControl* moveLeft = new ImageControl( moveLeftImg );
-  moveLeft->addEventHandler( new MyClickHandler );
+  ImageControl* moveLeft = new NavigationControl( moveLeftImg );
+  moveLeft->addEventHandler( new PanControlHandler( manip, -0.05, 0 ) );
   
   //Move Right
   osg::Image* moveRightImg = osgDB::readImageFile( imgDir + "/move-right.png" );
-  ImageControl* moveRight = new ImageControl( moveRightImg );
-  moveRight->addEventHandler( new MyClickHandler );
+  ImageControl* moveRight = new NavigationControl( moveRightImg );
+  moveRight->addEventHandler( new PanControlHandler( manip, 0.05, 0 ) );
   
   //Move Reset
   osg::Image* moveResetImg = osgDB::readImageFile( imgDir + "/move-reset.png" );
@@ -304,13 +320,13 @@ void GlobePlugin::setupControls()
   
   //Move Up
   osg::Image* moveUpImg = osgDB::readImageFile( imgDir + "/move-up.png" );
-  ImageControl* moveUp = new ImageControl( moveUpImg );
-  moveUp->addEventHandler( new MyClickHandler );
+  ImageControl* moveUp = new NavigationControl( moveUpImg );
+  moveUp->addEventHandler( new PanControlHandler( manip, 0, 0.05 ) );
   
   //Move Down
   osg::Image* moveDownImg = osgDB::readImageFile( imgDir + "/move-down.png" );
-  ImageControl* moveDown = new ImageControl( moveDownImg );
-  moveDown->addEventHandler( new MyClickHandler );
+  ImageControl* moveDown = new NavigationControl( moveDownImg );
+  moveDown->addEventHandler( new PanControlHandler( manip, 0, -0.05 ) );
   
   //add controls to moveControls group
   moveHControls->addControl( moveLeft );
@@ -535,7 +551,47 @@ void GlobePlugin::copyFolder(QString sourceFolder, QString destFolder)
   }
 }
 
-bool ControlsHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
+bool FlyToExtentHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
+{ 
+  if ( ea.getEventType() == ea.KEYDOWN && ea.getKey() == '1' )
+  {
+    QgsPoint center = mQGisIface->mapCanvas()->extent().center();
+    osgEarthUtil::Viewpoint viewpoint( osg::Vec3d(  center.x(), center.y(), 0.0 ), 0.0, -90.0, 1e4 );
+    _manip->setViewpoint( viewpoint, 4.0 );
+  }
+  return false;
+}
+
+bool NavigationControl::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx )
+{
+  switch ( ea.getEventType() )
+  {
+    case osgGA::GUIEventAdapter::PUSH:
+      _mouse_down_event = &ea;
+      break;
+    case osgGA::GUIEventAdapter::FRAME:
+      if ( _mouse_down_event )
+      {
+        _mouse_down_event = &ea;
+      }
+      break;
+    case osgGA::GUIEventAdapter::RELEASE:
+      _mouse_down_event = NULL;
+      break;
+  }
+  if ( _mouse_down_event )
+  {
+    //OE_NOTICE << "NavigationControl::handle getEventType " << ea.getEventType() << std::endl;
+    for( ControlEventHandlerList::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i )
+    {
+      NavigationControlHandler* handler = dynamic_cast<NavigationControlHandler*>(i->get());
+      if ( handler ) handler->onMouseDown( this, ea.getButtonMask() );
+    }
+  }
+  return Control::handle( ea, aa, cx );
+}
+
+bool KeyboardControlHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
 { 
   float deg = 3.14159 / 180;
   /*
@@ -585,12 +641,6 @@ bool ControlsHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIAction
   {
     case(osgGA::GUIEventAdapter::KEYDOWN):
     {
-      if (ea.getKey() == '1' )
-      {
-        QgsPoint center = mQGisIface->mapCanvas()->extent().center();
-        osgEarthUtil::Viewpoint viewpoint( osg::Vec3d(  center.x(), center.y(), 0.0 ), 0.0, -90.0, 1e4 );
-        _manip->setViewpoint( viewpoint, 4.0 );
-      }
       //move map
       if (ea.getKey() == '4' )
       {
@@ -648,7 +698,6 @@ bool ControlsHandler::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIAction
   }
   return false;
 }
-
 
 /**
  * Required extern functions needed  for every plugin
