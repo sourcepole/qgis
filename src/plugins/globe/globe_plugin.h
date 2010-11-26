@@ -119,9 +119,31 @@ class FlyToExtentHandler : public osgGA::GUIEventHandler
 
   private:
     osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
-    //osgEarthUtil::EarthManipulator::Settings* _manipSettings;
+
     //! Pointer to the QGIS interface object
     QgisInterface *mQGisIface;
 };
+
+namespace osgEarthUtil { namespace Controls2
+{
+class NavigationControlHandler : public ControlEventHandler
+{
+public:
+    virtual void onMouseDown( class Control* control, int mouseButtonMask ) { }
+};
+
+class NavigationControl : public ImageControl
+{
+public:
+    NavigationControl( osg::Image* image = 0L ) : ImageControl( image ),  _mouse_down_event( NULL ) {}
+
+protected:
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx );
+
+private:
+    osg::ref_ptr<const osgGA::GUIEventAdapter> _mouse_down_event;
+};
+}
+}
 
 #endif // QGS_GLOBE_PLUGIN_H
