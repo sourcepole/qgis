@@ -124,6 +124,20 @@ class FlyToExtentHandler : public osgGA::GUIEventHandler
     QgisInterface *mQGisIface;
 };
 
+class KeyboardControlHandler : public osgGA::GUIEventHandler 
+{
+  public:
+    KeyboardControlHandler( osgEarthUtil::EarthManipulator* manip, QgisInterface *qGisIface ) : _manip(manip), mQGisIface(qGisIface) { }
+
+    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
+
+  private:
+    osg::observer_ptr<osgEarthUtil::EarthManipulator> _manip;
+
+    //! Pointer to the QGIS interface object
+    QgisInterface *mQGisIface;
+};
+
 namespace osgEarthUtil { namespace Controls2
 {
 class NavigationControlHandler : public ControlEventHandler
