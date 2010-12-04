@@ -56,6 +56,8 @@ QgsOgrFeatureIterator::QgsOgrFeatureIterator( QgsOgrProvider* p,
     OGR_G_DestroyGeometry( filter );
   }
 
+  P->setIgnoredFields( fetchGeometry, fetchAttributes );
+
   //start with first feature
   OGR_L_ResetReading( P->ogrLayer );
 
