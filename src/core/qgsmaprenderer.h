@@ -23,6 +23,7 @@
 #include <QFutureWatcher>
 #include <QTime>
 #include <QImage>
+#include <QFlags>
 
 #include "qgis.h"
 #include "qgsrectangle.h"
@@ -227,6 +228,22 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Added in QGIS v1.4
     void setLabelingEngine( QgsLabelingEngineInterface* iface );
 
+    enum RenderHint {
+        Antialiasing = 0x01,
+        ForceVectorOutput = 0x02,
+        DrawEditingInformation = 0x04,
+        NoLabeling = 0x08,
+        IgnoreScaleBasedVisibility = 0x10,
+        MultipleThreads = 0x20
+        // ??? Caching = 0x10,
+    };
+
+    Q_DECLARE_FLAGS(RenderHints, RenderHint)
+
+    void setRenderHint( RenderHint hint, bool on = true );
+    void setRenderHints( RenderHints hints, bool on = true );
+    bool testRenderHint( RenderHint hint ) const;
+
     //! Enable or disable rendering in multiple threads on multiprocessor computers
     //! Added in QGIS v1.6
     void setThreadingEnabled( bool use );
@@ -242,12 +259,6 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     //! Determine whether the rendered layers are cached
     //! Added in QGIS v1.6
     bool isCachingEnabled() const { return mCache != NULL; }
-
-    //! Added in QGIS v1.6
-    void setAntialiasingEnabled( bool enabled );
-
-    //! Added in QGIS v1.6
-    bool isAntialiasingEnabled() const;
 
     //! Schedule a redraw of the layers.
     //! This function returns immediately after starting the asynchronous rendering process.
@@ -369,9 +380,6 @@ class CORE_EXPORT QgsMapRenderer : public QObject
       //! current extent to be drawn
       QgsRectangle extent;
 
-      //! indicates whether it's map image for overview
-      bool overview;
-
       QSize size;
 
       //! detemines whether on the fly projection support is enabled
@@ -389,7 +397,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
       //! Labeling engine (NULL by default)
       QgsLabelingEngineInterface* labelingEngine;
 
-      bool antialiasingEnabled;
+      RenderHints hints;
 
     } Parameters;
 
@@ -423,6 +431,8 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     QList<ThreadedRenderContext> mThreadedJobs;
 };
 
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(QgsMapRenderer::RenderHints)
 
 #endif
 

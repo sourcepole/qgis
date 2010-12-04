@@ -135,15 +135,7 @@ void QgsComposerMap::draw( QPainter *painter, const QgsRectangle& extent, const 
     painter->setRenderHint( QPainter::Antialiasing );
   }
 
-  QgsRenderContext* theRendererContext = theMapRenderer.rendererContext();
-  if ( theRendererContext )
-  {
-    theRendererContext->setDrawEditingInformation( false );
-    theRendererContext->setRenderingStopped( false );
-  }
-
-  // force vector output (no caching of marker images etc.)
-  theRendererContext->setForceVectorOutput( true );
+  theMapRenderer.setRenderHint( QgsMapRenderer::ForceVectorOutput );
 
   //force composer map scale for scale dependent visibility
   double bk_scale = theMapRenderer.scale();
