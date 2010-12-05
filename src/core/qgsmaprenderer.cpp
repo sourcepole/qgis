@@ -152,12 +152,9 @@ void QgsMapRenderer::adjustExtentToSize()
   int myHeight = next.size.height();
   int myWidth = next.size.width();
 
-  QgsMapToPixel newCoordXForm;
-
   if ( !myWidth || !myHeight )
   {
     next.scale = 1;
-    newCoordXForm.setParameters( 0, 0, 0, 0 );
     return;
   }
 
@@ -204,10 +201,6 @@ void QgsMapRenderer::adjustExtentToSize()
   updateScale();
 
   QgsDebugMsg( QString( "Scale (assuming meters as map units) = 1:%1" ).arg( next.scale ) );
-
-  newCoordXForm.setParameters( next.mapUnitsPerPixel, dxmin, dymin, myHeight );
-  mRenderContext.setMapToPixel( newCoordXForm );
-  mRenderContext.setExtent( next.extent );
 }
 
 
@@ -226,6 +219,11 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   mRenderTime.start();
 #endif
 
+  QgsMapToPixel coordXForm;
+  coordXForm.setParameters( next.mapUnitsPerPixel, curr.extent.xMinimum(), curr.extent.yMinimum(), curr.size.height() );
+  mRenderContext.setMapToPixel( coordXForm );
+
+  mRenderContext.setExtent( curr.extent );
   mRenderContext.setDrawEditingInformation( !curr.hints.testFlag( DrawEditingInformation ) );
   mRenderContext.setPainter( painter );
   mRenderContext.setCoordinateTransform( 0 );
