@@ -281,7 +281,13 @@ QgsPostgresProvider::Conn *QgsPostgresProvider::Conn::connectDb( const QString &
     return NULL;
   }
 
-  connections.insert( conninfo, conn );
+  // do not insert the newly created connection to the list of shared connections
+  // because they can't be used together with threading: if one thread calls SendQuery
+  // when iterating over the layer, no other SendQuery shall be issued for another
+  // layer. A solution would be to have a pool of connections: when a connection
+  // is used, it is temporarily removed from the pool, when finished it returns back.
+  // If there are no unused connections, new connection would be started. [MD]
+  //connections.insert( conninfo, conn );
 
   /* Check to see if we have GEOS support and if not, warn the user about
      the problems they will see :) */
@@ -328,6 +334,7 @@ void QgsPostgresProvider::Conn::disconnectRO( Conn *&connection )
 
 void QgsPostgresProvider::Conn::disconnect( QMap<QString, Conn *>& connections, Conn *&conn )
 {
+  /*
   QMap<QString, Conn *>::iterator i;
   for ( i = connections.begin(); i != connections.end() && i.value() != conn; i++ )
     ;
@@ -341,7 +348,9 @@ void QgsPostgresProvider::Conn::disconnect( QMap<QString, Conn *>& connections, 
     delete i.value();
     connections.remove( i.key() );
   }
+  */
 
+  delete conn;
   conn = NULL;
 }
 
@@ -3159,10 +3168,11 @@ int QgsPostgresProvider::Conn::PQsendQuery( QString query )
 
 void QgsPostgresProvider::showMessageBox( const QString& title, const QString& text )
 {
-  QgsMessageOutput* message = QgsMessageOutput::createMessageOutput();
+  QgsDebugMsg("ERROR:"+text);
+/*  QgsMessageOutput* message = QgsMessageOutput::createMessageOutput();
   message->setTitle( title );
   message->setMessage( text, QgsMessageOutput::MessageText );
-  message->showMessage();
+  message->showMessage();*/
 }
 
 void QgsPostgresProvider::showMessageBox( const QString& title, const QStringList& text )
