@@ -118,6 +118,7 @@ bool QgsPostgresFeatureIterator::nextFeature( QgsFeature& feature )
 
   // Now return the next feature from the queue
   feature = mFeatureQueue.front();
+  feature.setValid( true );
   mFeatureQueue.pop();
   mFetched++;
 

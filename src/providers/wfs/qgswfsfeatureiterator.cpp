@@ -50,7 +50,7 @@ bool QgsWFSFeatureIterator::nextFeature(QgsFeature& feature)
     }
 
     feature = *origFeature; // copy feature
-
+    feature.setValid( true );
     ++mFeatureIterator;
     return true;
   }
