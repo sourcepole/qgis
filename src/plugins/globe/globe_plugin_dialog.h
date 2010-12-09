@@ -30,6 +30,7 @@ class QgsGlobePluginDialog:public QDialog, private Ui::QgsGlobePluginDialogGuiBa
   public:
     QgsGlobePluginDialog( QWidget * parent = 0, Qt::WFlags fl = 0 );
     ~QgsGlobePluginDialog();
+    QTableWidget *elevationDatasources() { return elevationDatasourcesWidget; }
 
   private:
     QSettings settings;

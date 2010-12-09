@@ -170,7 +170,7 @@ void QgsGlobePluginDialog::on_elevationCombo_currentIndexChanged(QString type)
     }
     if ( "TMS" == type )
     {
-      elevationPath->setText("http://");
+      elevationPath->setText("http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml");
     }
   }
 }
