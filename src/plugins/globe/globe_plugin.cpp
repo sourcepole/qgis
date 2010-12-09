@@ -159,6 +159,7 @@ void GlobePlugin::run()
 
 void GlobePlugin::settings()
 {
+  mSettingsDialog.readElevationDatasources();
   if( mSettingsDialog.exec() )
   {
     //viewer stereo settings set by mSettingsDialog and stored in QSettings
