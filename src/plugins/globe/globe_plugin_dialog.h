@@ -21,6 +21,7 @@
 #include <ui_globe_plugin_dialog_guibase.h>
 #include <QDialog>
 #include <QSettings>
+#include "qgsosgviewer.h"
 #include "qgscontexthelp.h"
 #include <qgsproject.h>
 
@@ -29,13 +30,15 @@ class QgsGlobePluginDialog:public QDialog, private Ui::QgsGlobePluginDialogGuiBa
   Q_OBJECT
 
   public:
-    QgsGlobePluginDialog( QWidget * parent = 0, Qt::WFlags fl = 0 );
+    QgsGlobePluginDialog( QgsOsgViewer* viewer, QWidget * parent = 0, Qt::WFlags fl = 0 );
     ~QgsGlobePluginDialog();
     void readElevationDatasources();
     QTableWidget *elevationDatasources() { return elevationDatasourcesWidget; }
 
   private:
+    QgsOsgViewer* mViewer;
     QSettings settings;
+  private:
     QString openFile();
     void updateStereoDialog();
     void restartGlobe();
