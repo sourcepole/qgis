@@ -21,6 +21,7 @@
 #include <ui_globe_plugin_dialog_guibase.h>
 #include <QDialog>
 #include <QSettings>
+#include <QCheckBox>
 #include "qgsosgviewer.h"
 #include "qgscontexthelp.h"
 #include <qgsproject.h>
