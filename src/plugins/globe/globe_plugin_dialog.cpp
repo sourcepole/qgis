@@ -120,26 +120,10 @@ void QgsGlobePluginDialog::showMessageBox( QString text )
   msgBox.exec();
 }
 
-void QgsGlobePluginDialog::restartGlobe()
-{
-  //showMessageBox("TODO: restart globe");
-}
-
-bool QgsGlobePluginDialog::globeRunning()
-{
-  //TODO: method that tells if the globe plugin is running
-  return true;
-}
-
 void QgsGlobePluginDialog::on_buttonBox_accepted()
 {
   setStereoConfig();
   saveStereoConfig();
-
-  if ( globeRunning() )
-  {
-    restartGlobe();
-  }
 
   saveElevationDatasources();
   accept();
@@ -293,19 +277,50 @@ void QgsGlobePluginDialog::readElevationDatasources()
 
 void QgsGlobePluginDialog::saveElevationDatasources()
 {
-  QgsProject::instance()->removeEntry("Globe-Plugin", "/elevationDatasources/");
-  for(int i = 0; i < elevationDatasourcesWidget->rowCount(); ++i)
-  {
-    QString type = elevationDatasourcesWidget->item(i, 0)->text();
-    bool cache = elevationDatasourcesWidget->item(i, 1)->checkState();
-    QString uri = elevationDatasourcesWidget->item(i, 2)->text();
+  bool somethingChanged = false;
+  int keysCount = QgsProject::instance()->subkeyList("Globe-Plugin", "/elevationDatasources/").count();
+  int rowsCount = elevationDatasourcesWidget->rowCount();
 
+  for (int i = 0; i < rowsCount; ++i) {
     QString iNum;
     iNum.setNum(i);
+    QString typeKey   = QgsProject::instance()->readEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/type");
+    QString uriKey    =  QgsProject::instance()->readEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/uri");
+    bool    cacheKey  = QgsProject::instance()->readBoolEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/cache");
 
-    QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/type", type);
-    QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/uri", uri);
-    QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/cache", cache);
+    QString type  = elevationDatasourcesWidget->item(i, 0)->text();
+    QString uri   = elevationDatasourcesWidget->item(i, 2)->text();
+    bool    cache = elevationDatasourcesWidget->item(i, 1)->checkState();
+
+    if ( typeKey != type || uriKey != uri || cacheKey != cache )
+    {
+      somethingChanged = true;
+      QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/type", type);
+      QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/uri", uri);
+      QgsProject::instance()->writeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/cache", cache);
+      QgsDebugMsg( "editing at "+iNum );
+    }
+    else
+    {
+      QgsDebugMsg( "nothing to do at "+iNum );
+    }
+  }
+
+  if (keysCount > rowsCount )
+  {
+    //elminate superfluous keys
+    for (int i = rowsCount; i < keysCount; ++i) {
+      QString iNum;
+      iNum.setNum(i);
+      QgsDebugMsg( "deleting "+iNum );
+      QgsProject::instance()->removeEntry("Globe-Plugin", "/elevationDatasources/L"+iNum+"/");
+    }
+  }
+
+  if ( somethingChanged )
+  {
+    QgsDebugMsg( "emitting elevationDatasourcesChanged" );
+    emit elevationDatasourcesChanged();
   }
 }
 //END ELEVATION

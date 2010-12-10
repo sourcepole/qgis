@@ -42,8 +42,6 @@ class QgsGlobePluginDialog:public QDialog, private Ui::QgsGlobePluginDialogGuiBa
   private:
     QString openFile();
     void updateStereoDialog();
-    void restartGlobe();
-    bool globeRunning();
     bool validateResource( QString type, QString uri, QString& error);
     void saveElevationDatasources();
     void moveRow( QTableWidget* widget, bool up);
@@ -82,6 +80,9 @@ class QgsGlobePluginDialog:public QDialog, private Ui::QgsGlobePluginDialogGuiBa
     void on_elevationRemove_clicked();
     void on_elevationUp_clicked();
     void on_elevationDown_clicked();
+
+  signals:
+    void elevationDatasourcesChanged();
 };
 
 #endif				// QGIS_GLOBE_PLUGIN_DIALOG_H
