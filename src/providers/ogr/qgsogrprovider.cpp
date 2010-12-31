@@ -413,6 +413,31 @@ QgsFeatureIterator QgsOgrProvider::getFeatures( QgsAttributeList fetchAttributes
   return QgsFeatureIterator( new QgsOgrFeatureIterator( this, fetchAttributes, rect, fetchGeometry, useIntersect ) );
 }
 
+void QgsOgrProvider::setIgnoredFields( bool fetchGeometry, const QgsAttributeList& fetchAttributes )
+{
+#if GDAL_VERSION_NUM >= 1800 // from GDAL 1.8
+  if ( OGR_L_TestCapability( ogrLayer, OLCIgnoreFields ) )
+  {
+    QVector<const char*> ignoredFields;
+    OGRFeatureDefnH featDefn = OGR_L_GetLayerDefn( ogrLayer );
+    for ( int i = 0; i < mAttributeVector.size(); i++ )
+    {
+      if ( !fetchAttributes.contains( i ) )
+      {
+        // add to ignored fields
+        ignoredFields.append( OGR_Fld_GetNameRef( OGR_FD_GetFieldDefn( featDefn, i ) ) );
+      }
+    }
+
+    if ( !fetchGeometry )
+      ignoredFields.append( "OGR_GEOMETRY" );
+    ignoredFields.append( "OGR_STYLE" ); // not used by QGIS
+    ignoredFields.append( NULL );
+
+    OGR_L_SetIgnoredFields( ogrLayer, ignoredFields.data() );
+  }
+#endif
+}
 
 bool QgsOgrProvider::featureAtId( int featureId,
                                   QgsFeature& feature,
@@ -421,6 +446,8 @@ bool QgsOgrProvider::featureAtId( int featureId,
 {
   // make sure no other thread is accessing the layer right now
   QMutexLocker layerLocker( &mLayerMutex );
+
+  setIgnoredFields( fetchGeometry, fetchAttributes );
 
   OGRFeatureH fet = OGR_L_GetFeature( ogrLayer, featureId );
   if ( fet == NULL )

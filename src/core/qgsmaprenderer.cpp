@@ -54,7 +54,7 @@ QgsMapRenderer::QgsMapRenderer()
   mThreadingEnabled = false;
   mCache = NULL;
 
-  next.overview = false;
+  next.hints = 0;
   next.dpi = 96;
   next.size = QSize( 0, 0 );
   next.projectionsEnabled = false;
@@ -152,12 +152,9 @@ void QgsMapRenderer::adjustExtentToSize()
   int myHeight = next.size.height();
   int myWidth = next.size.width();
 
-  QgsMapToPixel newCoordXForm;
-
   if ( !myWidth || !myHeight )
   {
     next.scale = 1;
-    newCoordXForm.setParameters( 0, 0, 0, 0 );
     return;
   }
 
@@ -204,10 +201,6 @@ void QgsMapRenderer::adjustExtentToSize()
   updateScale();
 
   QgsDebugMsg( QString( "Scale (assuming meters as map units) = 1:%1" ).arg( next.scale ) );
-
-  newCoordXForm.setParameters( next.mapUnitsPerPixel, dxmin, dymin, myHeight );
-  mRenderContext.setMapToPixel( newCoordXForm );
-  mRenderContext.setExtent( next.extent );
 }
 
 
@@ -226,7 +219,12 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
   mRenderTime.start();
 #endif
 
-  mRenderContext.setDrawEditingInformation( !curr.overview );
+  QgsMapToPixel coordXForm;
+  coordXForm.setParameters( next.mapUnitsPerPixel, curr.extent.xMinimum(), curr.extent.yMinimum(), curr.size.height() );
+  mRenderContext.setMapToPixel( coordXForm );
+
+  mRenderContext.setExtent( curr.extent );
+  mRenderContext.setDrawEditingInformation( !curr.hints.testFlag( DrawEditingInformation ) );
   mRenderContext.setPainter( painter );
   mRenderContext.setCoordinateTransform( 0 );
   //this flag is only for stopping during the current rendering progress,
@@ -266,7 +264,7 @@ void QgsMapRenderer::initRendering( QPainter* painter, double deviceDpi )
 void QgsMapRenderer::finishRendering()
 {
   // render labels for vector layers (not using PAL)
-  if ( !curr.overview )
+  if ( !curr.hints.testFlag( NoLabeling ) )
   {
     renderLabels();
   }
@@ -362,7 +360,9 @@ void QgsMapRenderer::renderLayers()
     //QgsDebugMsg( "  Scale dep. visibility enabled? " + QString( "%1" ).arg( ml->hasScaleBasedVisibility() ) );
     //QgsDebugMsg( "  Input extent: " + ml->extent().toString() );
 
-    if ( ml->hasScaleBasedVisibility() && ( ml->minimumScale() > curr.scale || ml->maximumScale() < curr.scale ) && ! curr.overview )
+    if ( ! ( curr.hints & IgnoreScaleBasedVisibility ) &&
+         ml->hasScaleBasedVisibility() &&
+         ( ml->minimumScale() > curr.scale || ml->maximumScale() < curr.scale ) )
     {
       QgsDebugMsg( "Layer not rendered because it is not within the defined "
                    "visibility scale range" );
@@ -586,7 +586,7 @@ void QgsMapRenderer::renderLayerThreading( QgsMapLayer* ml )
   tctx.ctx = mRenderContext;
 
   QPainter* painter = new QPainter(tctx.img);
-  painter->setRenderHint( QPainter::Antialiasing, curr.antialiasingEnabled );
+  painter->setRenderHint( QPainter::Antialiasing, curr.hints.testFlag( Antialiasing ) );
   tctx.ctx.setPainter( painter );
 
   // schedule DRAW to a list
@@ -614,7 +614,7 @@ void QgsMapRenderer::renderLayerNoThreading( QgsMapLayer* ml )
 
       // alter painter
       QPainter * mypPainter = new QPainter( &cacheImage );
-      mypPainter->setRenderHint( QPainter::Antialiasing, curr.antialiasingEnabled );
+      mypPainter->setRenderHint( QPainter::Antialiasing, curr.hints.testFlag( Antialiasing ) );
       mRenderContext.setPainter( mypPainter );
 
       // DRAW!
@@ -1290,7 +1290,8 @@ void QgsMapRenderer::setScale( double scale )
 
 void QgsMapRenderer::enableOverviewMode( bool isOverview )
 {
-  next.overview = isOverview;
+  setRenderHints( NoLabeling | IgnoreScaleBasedVisibility, isOverview );
+  setRenderHints( DrawEditingInformation, !isOverview );
 }
 
 void QgsMapRenderer::setOutputUnits( OutputUnits u )
@@ -1323,11 +1324,6 @@ void QgsMapRenderer::setCachingEnabled( bool enabled )
 
 }
 
-void QgsMapRenderer::setAntialiasingEnabled( bool enabled )
-{
-  next.antialiasingEnabled = enabled;
-}
-
 double QgsMapRenderer::scale() const
 {
   return next.scale;
@@ -1358,11 +1354,6 @@ QgsLabelingEngineInterface* QgsMapRenderer::labelingEngine()
   return next.labelingEngine;
 }
 
-bool QgsMapRenderer::isAntialiasingEnabled() const
-{
-  return next.antialiasingEnabled;
-}
-
 void QgsMapRenderer::clearCache()
 {
   if ( mDrawing )
@@ -1386,6 +1377,27 @@ void QgsMapRenderer::handleLayerRemoval(QString layerId)
     if (isDrawing())
       cancelThreadedRendering();
   }
+}
+
+void QgsMapRenderer::setRenderHint( RenderHint hint, bool on )
+{
+  if ( on )
+    next.hints |= hint;
+  else
+    next.hints &= ~hint;
+}
+
+void QgsMapRenderer::setRenderHints( RenderHints hints, bool on )
+{
+  if ( on )
+    next.hints |= hints;
+  else
+    next.hints &= ~hints;
+}
+
+bool QgsMapRenderer::testRenderHint( RenderHint hint ) const
+{
+  return next.hints.testFlag( hint );
 }
 
 // ------------------------

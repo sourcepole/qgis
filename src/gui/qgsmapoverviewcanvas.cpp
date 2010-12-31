@@ -253,7 +253,7 @@ void QgsMapOverviewCanvas::refresh()
   painter.begin( &mPixmap );
 
   // antialiasing
-  mMapRenderer->setAntialiasingEnabled( mAntiAliasing );
+  mMapRenderer->setRenderHint( QgsMapRenderer::Antialiasing, mAntiAliasing );
 
   // render image
   mMapRenderer->render( &painter );

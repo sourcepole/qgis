@@ -102,6 +102,7 @@ QgsMapCanvas::QgsMapCanvas( QWidget * parent, const char *name )
   setFocusPolicy( Qt::StrongFocus );
 
   mMapRenderer = new QgsMapRenderer;
+  mMapRenderer->setRenderHint( QgsMapRenderer::DrawEditingInformation, true );
 
   // create map canvas item which will show the map
   mMap = new QgsMapCanvasMap( this );
@@ -156,7 +157,7 @@ QgsMapCanvas::~QgsMapCanvas()
 
 void QgsMapCanvas::enableAntiAliasing( bool theFlag )
 {
-  mMapRenderer->setAntialiasingEnabled( theFlag );
+  mMapRenderer->setRenderHint( QgsMapRenderer::Antialiasing, theFlag );
 
   if ( mMapOverview )
     mMapOverview->enableAntiAliasing( theFlag );
