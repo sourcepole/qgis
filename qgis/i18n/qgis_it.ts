@@ -739,7 +739,7 @@ sono stati ridotti a %2 dopo la semplificazione</translation>
     <message>
         <location filename="../python/plugins/fTools/tools/frmRegPoints.ui" line="111"/>
         <source>Grid Spacing</source>
-        <translation>Spaziatura griglia</translation>
+        <translation>Spaziatura reticolato</translation>
     </message>
     <message>
         <location filename="../python/plugins/fTools/tools/frmRegPoints.ui" line="119"/>
@@ -775,7 +775,7 @@ sono stati ridotti a %2 dopo la semplificazione</translation>
     </message>
     <message>
         <source>Vector grid</source>
-        <translation>Griglia vettoriale</translation>
+        <translation>Reticolato vettoriale</translation>
     </message>
     <message>
         <source>Split vector layer</source>
@@ -882,7 +882,7 @@ sono stati ridotti a %2 dopo la semplificazione</translation>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorGrid.ui" line="26"/>
         <source>Grid extent</source>
-        <translation>Estensione griglia</translation>
+        <translation>Estensione reticolato</translation>
     </message>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorGrid.ui" line="41"/>
@@ -917,12 +917,12 @@ sono stati ridotti a %2 dopo la semplificazione</translation>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorGrid.ui" line="279"/>
         <source>Output grid as polygons</source>
-        <translation>Griglia di output come poligoni</translation>
+        <translation>Reticolato di output come poligoni</translation>
     </message>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorGrid.ui" line="289"/>
         <source>Output grid as lines</source>
-        <translation>Griglia di output come linee</translation>
+        <translation>Reticolato di output come linee</translation>
     </message>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorSplit.ui" line="16"/>
@@ -1269,7 +1269,7 @@ Questo può provocare risultati inattesi.</translation>
     <message>
         <location filename="../python/plugins/fTools/tools/frmVectorGrid.ui" line="17"/>
         <source>Generate Vector Grid</source>
-        <translation>Genera una griglia vettoriale</translation>
+        <translation>Genera un reticolato vettoriale</translation>
     </message>
     <message>
         <source>No input shapefile specified</source>
@@ -1320,11 +1320,11 @@ Sicuro di voler proseguire?</translation>
     </message>
     <message>
         <source>Please specify output length field</source>
-        <translation>Specifica la lunghezza del campo di output</translation>
+        <translation>Specifica il campo di output per la lunghezza</translation>
     </message>
     <message>
         <source>length field</source>
-        <translation>lunghezza del campo</translation>
+        <translation>campo della lunghezza</translation>
     </message>
     <message>
         <source>Please specify an input field</source>
@@ -5832,7 +5832,7 @@ Stai vedendo questo messaggio perché probabilmente non hai settato la variabile
     <message>
         <location filename="../src/app/qgisapp.cpp" line="1975"/>
         <source>Render</source>
-        <translation>Visualizza</translation>
+        <translation type="unfinished">Aggiorna</translation>
     </message>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="2363"/>
@@ -7392,7 +7392,7 @@ This copy of QGIS has been built with GDAL/OGR %1.</source>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="694"/>
         <source>&amp;New Print Composer</source>
-        <translation>&amp;Nuovo sistema di stampa</translation>
+        <translation>&amp;Nuova composizione di stampa</translation>
     </message>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="695"/>
@@ -7709,12 +7709,12 @@ This copy of QGIS has been built with QWT %1.</source>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="2639"/>
         <source>Added gpsd support to live gps tracking.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aggiunto il supporto a gpsd al tracking dinamico del gps.</translation>
     </message>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="2640"/>
         <source>A new plugin has been included that allows for offline editing.</source>
-        <translation type="unfinished"></translation>
+        <translation>E&apos; stato incluso un nuovo plugin per l&apos;editing offline.</translation>
     </message>
     <message>
         <location filename="../src/app/qgisapp.cpp" line="2641"/>
@@ -8580,7 +8580,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/ui/qgsaddattrdialogbase.ui" line="72"/>
         <source>Width</source>
-        <translation>Larghezza</translation>
+        <translation>Lunghezza</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsaddattrdialogbase.ui" line="85"/>
@@ -9755,7 +9755,7 @@ Questo è il widget predefinito per le operazioni di modifica.</translation>
     <message>
         <location filename="../src/gui/symbology-ng/qgscategorizedsymbolrendererv2widget.cpp" line="261"/>
         <source>The selected color ramp is not available.</source>
-        <translation>La rampa colori selezionata non è disponibile.</translation>
+        <translation>La scala di colori selezionata non è disponibile.</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgscategorizedsymbolrendererv2widget.cpp" line="273"/>
@@ -9788,7 +9788,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscategorizedsymbolrendererv2widget.ui" line="76"/>
         <source>Color ramp</source>
-        <translation>Rampa di colore</translation>
+        <translation>Scala di colori</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscategorizedsymbolrendererv2widget.ui" line="113"/>
@@ -9826,7 +9826,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/gui/symbology-ng/qgscolorrampcombobox.cpp" line="40"/>
         <source>New color ramp...</source>
-        <translation>Nuova rampa colore...</translation>
+        <translation>Nuova scala di colori...</translation>
     </message>
 </context>
 <context>
@@ -10106,12 +10106,12 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="226"/>
         <source>Add new map</source>
-        <translation>Aggiungi nuova mappa</translation>
+        <translation>Aggiungi mappa</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="238"/>
         <source>Add new label</source>
-        <translation>Aggiungi nuova etichetta</translation>
+        <translation>Aggiungi etichetta</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="250"/>
@@ -10166,7 +10166,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="235"/>
         <source>Add Label</source>
-        <translation>Aggiungi etichetta</translation>
+        <translation>Aggiungi testo</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="247"/>
@@ -10241,7 +10241,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="354"/>
         <source>Raise selected items</source>
-        <translation>Muove sopra gli oggetti selezionati</translation>
+        <translation>Muovi gli oggetti selezionati</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="359"/>
@@ -10291,12 +10291,12 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="396"/>
         <source>Align selected items left</source>
-        <translation>Allinea gli oggetti selezionati a sinistra</translation>
+        <translation>Allinea gli oggetti selezionati</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="401"/>
         <source>Align center</source>
-        <translation>Allinea al centro</translation>
+        <translation>Allinea su asse verticale</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="404"/>
@@ -10327,7 +10327,7 @@ Should the existing classes be deleted before classification?</source>
         <location filename="../src/ui/qgscomposerbase.ui" line="425"/>
         <location filename="../src/ui/qgscomposerbase.ui" line="428"/>
         <source>Align center vertical</source>
-        <translation>Allinea al centro verticalmente</translation>
+        <translation>Allinea su asse orizzontale</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerbase.ui" line="433"/>
@@ -10834,7 +10834,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="216"/>
         <source>Extents</source>
-        <translation>Estensioni</translation>
+        <translation>Estensione mappa</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="231"/>
@@ -10849,17 +10849,17 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="333"/>
         <source>Grid</source>
-        <translation>Griglia</translation>
+        <translation>Reticolato</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="339"/>
         <source>Show grid?</source>
-        <translation>Mostra griglia?</translation>
+        <translation>Mostra reticolato?</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="354"/>
         <source>Grid &amp;type</source>
-        <translation>&amp;Tipo griglia</translation>
+        <translation>&amp;Tipo reticolato</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="370"/>
@@ -10929,7 +10929,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="436"/>
         <source>Draw annotation</source>
-        <translation>Scrivi le annotazioni</translation>
+        <translation>Scrivi le coordinate</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposermapwidgetbase.ui" line="478"/>
@@ -11056,7 +11056,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerpicturewidgetbase.ui" line="267"/>
         <source>Sync from map</source>
-        <translation>Sincronizza dalla mappa</translation>
+        <translation>Sincronizza alla mappa</translation>
     </message>
 </context>
 <context>
@@ -11135,12 +11135,12 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="90"/>
         <source> Right segments</source>
-        <translation>Segmenti di destra</translation>
+        <translation> segmenti di destra</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="97"/>
         <source> Left segments</source>
-        <translation>Segmenti di sinistra</translation>
+        <translation> segmenti di sinistra</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="149"/>
@@ -11153,12 +11153,12 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="152"/>
         <source>Height </source>
-        <translation>Altezza</translation>
+        <translation>Altezza </translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="165"/>
         <source>Line width </source>
-        <translation>Larghezza linea</translation>
+        <translation>Larghezza linea </translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="184"/>
@@ -11183,7 +11183,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="204"/>
         <source>Unit label</source>
-        <translation>Unità etichetta</translation>
+        <translation>Etichetta dell&apos;unità di misura</translation>
     </message>
     <message>
         <location filename="../src/ui/qgscomposerscalebarwidgetbase.ui" line="226"/>
@@ -11272,7 +11272,7 @@ Should the existing classes be deleted before classification?</source>
         <source>Rotation </source>
         <comment>Rotation</comment>
         <extracomment>Rotation</extracomment>
-        <translation>Rotazione</translation>
+        <translation>Rotazione </translation>
     </message>
 </context>
 <context>
@@ -11297,7 +11297,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/app/composer/qgscomposertablewidget.cpp" line="217"/>
         <source>Select grid color</source>
-        <translation>Scegli il colore della griglia</translation>
+        <translation>Scegli il colore del reticolato</translation>
     </message>
 </context>
 <context>
@@ -12567,12 +12567,12 @@ Per selezionare il file da caricare utilizzare il bottone Sfoglia.</translation>
     <message>
         <location filename="../src/plugins/delimited_text/qgsdelimitedtextpluginguibase.ui" line="180"/>
         <source>Delimiter to use when splitting fields in the text file. The delimiter can be more than one character.</source>
-        <translation>Delimitatore utilizzato per dividere in campi il file di testo. Il delimitatore può essere di 1 o più caratteri di lunghezza.</translation>
+        <translation>Delimitatore utilizzato per dividere in campi il file di testo. Il delimitatore può essere di 1 o più caratteri.</translation>
     </message>
     <message>
         <location filename="../src/plugins/delimited_text/qgsdelimitedtextpluginguibase.ui" line="183"/>
         <source>Delimiter to use when splitting fields in the delimited text file. The delimiter can be 1 or more characters in length.</source>
-        <translation>Delimitatore utilizzato per dividere in campi il file di testo. Il delimitatore può essere di 1 o più caratteri di lunghezza.</translation>
+        <translation>Delimitatore utilizzato per dividere in campi il file di testo. Il delimitatore può essere di 1 o più caratteri.</translation>
     </message>
     <message>
         <source>Geometry</source>
@@ -12972,7 +12972,7 @@ Per selezionare il file da caricare utilizzare il bottone Sfoglia.</translation>
     <message>
         <location filename="../src/ui/qgsfieldcalculatorbase.ui" line="82"/>
         <source>Width of complete output. For example 123,456 means 6 as field width.</source>
-        <translation>Larghezza dell&apos;output completo. Ad es. 123,456 equivale ad un&apos;ampiezza di 6.</translation>
+        <translation>Larghezza dell&apos;output completo. Ad es. 123,456 equivale ad una larghezza di 6.</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsfieldcalculatorbase.ui" line="95"/>
@@ -14880,7 +14880,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/gui/symbology-ng/qgsgraduatedsymbolrendererv2widget.cpp" line="162"/>
         <source>The selected color ramp is not available.</source>
-        <translation>La rampa colore selezionata non è disponibile.</translation>
+        <translation>La scala di colori selezionata non è disponibile.</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsgraduatedsymbolrendererv2widget.ui" line="48"/>
@@ -14906,7 +14906,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/ui/qgsgraduatedsymbolrendererv2widget.ui" line="81"/>
         <source>Color ramp</source>
-        <translation>Rampa di colore</translation>
+        <translation>Scala di colori</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsgraduatedsymbolrendererv2widget.ui" line="94"/>
@@ -18871,7 +18871,7 @@ Può essere o un problema della propria connessione di rete o sul lato del serve
     <message>
         <location filename="../src/app/legend/qgslegend.cpp" line="546"/>
         <source>&amp;Make to toplevel item</source>
-        <translation>Crea all&apos;oggetto in ci&amp;ma</translation>
+        <translation>&amp;Muovi fuori dal gruppo</translation>
     </message>
     <message>
         <location filename="../src/app/legend/qgslegend.cpp" line="558"/>
@@ -20520,7 +20520,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/app/qgsnewspatialitelayerdialog.cpp" line="325"/>
         <source>Error Creating Geometry Column</source>
-        <translation>Errore nella creazione della Colonna Geometria</translation>
+        <translation>Errore nella creazione della colonna geometrica</translation>
     </message>
     <message>
         <location filename="../src/app/qgsnewspatialitelayerdialog.cpp" line="326"/>
@@ -20532,7 +20532,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/app/qgsnewspatialitelayerdialog.cpp" line="336"/>
         <source>Error Creating Spatial Index</source>
-        <translation>Errore nella creazione dell&apos;Indice Spaziale</translation>
+        <translation>Errore nella creazione dell&apos;indice spaziale</translation>
     </message>
     <message>
         <location filename="../src/app/qgsnewspatialitelayerdialog.cpp" line="337"/>
@@ -21547,7 +21547,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/ui/qgsoptionsbase.ui" line="414"/>
         <source>Make lines appear less jagged at the expense of some drawing performance</source>
-        <translation>Disegna le linee meno dettagliate in favore di migliori prestazioni di disegno</translation>
+        <translation>Rendi le linee meno irregolari a spese delle prestazioni</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsoptionsbase.ui" line="361"/>
@@ -22060,7 +22060,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/ui/qgsoptionsbase.ui" line="1155"/>
         <source>Suppress attributes pop-up windows after each created feature</source>
-        <translation>Chiudi finestra di pop-up degli attributi dopo la creazione di ogni geometria</translation>
+        <translation>Non aprire la finestra degli attributi dopo la creazione di ogni geometria</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsoptionsbase.ui" line="1461"/>
@@ -22238,7 +22238,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/gui/symbology-ng/qgspenstylecombobox.cpp" line="16"/>
         <source>Solid Line</source>
-        <translation>Linea solida</translation>
+        <translation>Linea continua</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgspenstylecombobox.cpp" line="17"/>
@@ -24098,7 +24098,7 @@ SQL: %3</translation>
     <message>
         <location filename="../src/providers/postgres/qgspostgresprovider.cpp" line="174"/>
         <source>Text, limited variable length (varchar)</source>
-        <translation>Testo a lunghezza limitata (varchar)</translation>
+        <translation>Testo a lunghezza variabile limitata (varchar)</translation>
     </message>
     <message>
         <location filename="../src/providers/postgres/qgspostgresprovider.cpp" line="175"/>
@@ -25521,7 +25521,7 @@ p, li { white-space: pre-wrap; }(new line)
     <message>
         <location filename="../src/app/qgsrasterlayerproperties.cpp" line="2076"/>
         <source>Color Ramp</source>
-        <translation>Rampa colore</translation>
+        <translation>Scala di colori</translation>
     </message>
     <message>
         <location filename="../src/app/qgsrasterlayerproperties.cpp" line="2853"/>
@@ -25627,7 +25627,7 @@ p, li { white-space: pre-wrap; }(new line)
         <location filename="../src/app/qgsrasterlayerproperties.cpp" line="564"/>
         <source>&lt;h3&gt;Grayscale Image Notes&lt;/h3&gt; &lt;p&gt;You can remap these grayscale colors to a pseudocolor image using an automatically generated color ramp.&lt;/p&gt;</source>
         <comment>COMMENTED OUT</comment>
-        <translation>&lt;h3&gt;Note immagine scala di grigi&lt;/h3&gt;&lt;p&gt;È possibile rimappare queste scale di grigio con pseudocolori utilizzando una rampa colori automatica.&lt;/p&gt;</translation>
+        <translation>&lt;h3&gt;Note immagine scala di grigi&lt;/h3&gt;&lt;p&gt;È possibile rimappare queste scale di grigio con pseudocolori utilizzando una scala di colori automatica.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/app/qgsrasterlayerproperties.cpp" line="734"/>
@@ -26077,7 +26077,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/ui/qgsrasterlayerpropertiesbase.ui" line="1203"/>
         <source>Reset to file defined null</source>
-        <translation>Reimposta ad un nullo definito da file</translation>
+        <translation>Annulla</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsrasterlayerpropertiesbase.ui" line="1240"/>
@@ -28381,7 +28381,7 @@ Si vuole realmente sovrascrivere la tabella [%2]?</translation>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="85"/>
         <source>Color ramp (%1)</source>
-        <translation>Rampa colore (%1)</translation>
+        <translation>Scala di colore (%1)</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="214"/>
@@ -28419,27 +28419,27 @@ Si vuole realmente sovrascrivere la tabella [%2]?</translation>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="235"/>
         <source>Color ramp type</source>
-        <translation>Tipo di rampa colore</translation>
+        <translation>Tipo di scala di colori</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="236"/>
         <source>Please select color ramp type:</source>
-        <translation>Seleziona il tipo di rampa colore:</translation>
+        <translation>Seleziona il tipo di scala di colori:</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="280"/>
         <source>Color ramp name</source>
-        <translation>Nome rampa colore</translation>
+        <translation>Nome scala di colori</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="281"/>
         <source>Please enter name for new color ramp:</source>
-        <translation>Inserire un nome per la nuova rampa colore:</translation>
+        <translation>Inserire un nome per la nuova scala di colori:</translation>
     </message>
     <message>
         <location filename="../src/gui/symbology-ng/qgsstylev2managerdialog.cpp" line="281"/>
         <source>new color ramp</source>
-        <translation>nuova rampa colore</translation>
+        <translation>nuova scala di colori</translation>
     </message>
 </context>
 <context>
@@ -28816,7 +28816,7 @@ Si vuole realmente sovrascrivere la tabella [%2]?</translation>
     <message>
         <location filename="../src/plugins/georeferencer/qgstransformsettingsdialog.cpp" line="168"/>
         <source>%1 requires at least %2 GCPs. Please define more</source>
-        <translation>%1 rrichiede almeno %2 GCP. E&apos; necessario specificare ulteriori punti</translation>
+        <translation>%1 richiede almeno %2 GCP. E&apos; necessario specificare ulteriori punti</translation>
     </message>
     <message>
         <location filename="../src/plugins/georeferencer/qgstransformsettingsdialog.cpp" line="182"/>
@@ -29028,7 +29028,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgsvectorcolorbrewercolorrampv2dialogbase.ui" line="14"/>
         <source>ColorBrewer ramp</source>
-        <translation>Rampa ColoriBrewer</translation>
+        <translation>Scala ColorBrewer</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsvectorcolorbrewercolorrampv2dialogbase.ui" line="22"/>
@@ -29113,7 +29113,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgsvectorgradientcolorrampv2dialogbase.ui" line="14"/>
         <source>Gradient color ramp</source>
-        <translation>Gradiente rampa colore</translation>
+        <translation>Scala di colori a gradiente</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsvectorgradientcolorrampv2dialogbase.ui" line="32"/>
@@ -29574,7 +29574,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/app/qgsvectorlayerproperties.cpp" line="541"/>
         <source>Value map</source>
-        <translation>Valore mappa</translation>
+        <translation>Mappa valori</translation>
     </message>
     <message>
         <location filename="../src/app/qgsvectorlayerproperties.cpp" line="542"/>
@@ -29849,7 +29849,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgsvectorlayerpropertiesbase.ui" line="419"/>
         <source>Edit UI</source>
-        <translation>Modifica UI</translation>
+        <translation>Modulo di inserimento</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsvectorlayerpropertiesbase.ui" line="431"/>
@@ -29989,7 +29989,7 @@ Should the existing classes be deleted before classification?</source>
     <message>
         <location filename="../src/ui/qgsvectorrandomcolorrampv2dialogbase.ui" line="14"/>
         <source>Random color ramp</source>
-        <translation>Rampa colore casuale</translation>
+        <translation>Scala di colori casuale</translation>
     </message>
     <message>
         <location filename="../src/ui/qgsvectorrandomcolorrampv2dialogbase.ui" line="22"/>
@@ -32672,7 +32672,7 @@ Il plugin non sarà abilitato.</translation>
     </message>
     <message>
         <source>Vector grid</source>
-        <translation>Griglia vettoriale</translation>
+        <translation>Reticolato vettoriale</translation>
     </message>
     <message>
         <source>Select by location</source>
@@ -33302,7 +33302,7 @@ Il plugin non sarà abilitato.</translation>
     <message>
         <location filename="../src/plugins/grass/grasslabels-i18n.cpp" line="102"/>
         <source>Create grid in current region</source>
-        <translation>Crea una griglia nella regione attuale</translation>
+        <translation>Crea un reticolato nella regione attuale</translation>
     </message>
     <message>
         <location filename="../src/plugins/grass/grasslabels-i18n.cpp" line="103"/>

@@ -127,6 +127,7 @@ bool QgsComposerLabel::writeXML( QDomElement& elem, QDomDocument & doc ) const
 
   composerLabelElem.setAttribute( "halign", mHAlignment );
   composerLabelElem.setAttribute( "valign", mVAlignment );
+  composerLabelElem.setAttribute( "id", mId );
 
 
   //font
@@ -167,6 +168,9 @@ bool QgsComposerLabel::readXML( const QDomElement& itemElem, const QDomDocument&
 
   //Vertical alignment
   mVAlignment = ( Qt::AlignmentFlag )( itemElem.attribute( "valign" ).toInt() );
+
+  //id
+  mId = itemElem.attribute( "id", "" );
 
   //font
   QDomNodeList labelFontList = itemElem.elementsByTagName( "LabelFont" );

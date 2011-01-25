@@ -19,6 +19,7 @@
 #include "qgsepsgcache.h"
 #include "qgsmslayercache.h"
 #include "qgsmapserverlogger.h"
+#include "qgsmapserviceexception.h"
 #include "qgsrasterlayer.h"
 #include "qgsvectorlayer.h"
 
@@ -31,6 +32,7 @@
 #include "qgscomposerpicture.h"
 #include "qgscomposerscalebar.h"
 #include "qgscomposershape.h"
+
 
 QgsProjectParser::QgsProjectParser( QDomDocument* xmlDoc ): QgsConfigParser(), mXMLDoc( xmlDoc )
 {
@@ -308,16 +310,16 @@ QList<QgsMapLayer*> QgsProjectParser::mapLayerFromStyle( const QString& lName, c
   //maybe the layer is a goup. Check if lName is contained in the group list
   QMap< QString, QDomElement > idLayerMap = projectLayerElementsById();
 
-  QList< GroupLayerInfo > groupInfo = groupLayerRelationshipFromProject();
-  QList< GroupLayerInfo >::const_iterator groupIt = groupInfo.constBegin();
-  for ( ; groupIt != groupInfo.constEnd(); ++groupIt )
+  QList<QDomElement> legendGroups = legendGroupElements();
+  QList<QDomElement>::const_iterator groupIt = legendGroups.constBegin();
+  for ( ; groupIt != legendGroups.constEnd(); ++groupIt )
   {
-    if ( groupIt->first == lName )
+    if ( groupIt->attribute( "name" ) == lName )
     {
-      QList< QString >::const_iterator layerIdIt = groupIt->second.constBegin();
-      for ( ; layerIdIt != groupIt->second.constEnd(); ++layerIdIt )
+      QDomNodeList layerFileList = groupIt->elementsByTagName( "legendlayerfile" );
+      for ( int i = 0; i < layerFileList.size(); ++i )
       {
-        QMap< QString, QDomElement >::const_iterator layerEntry = idLayerMap.find( *layerIdIt );
+        QMap< QString, QDomElement >::const_iterator layerEntry = idLayerMap.find( layerFileList.at( i ).toElement().attribute( "layerid" ) );
         if ( layerEntry != idLayerMap.constEnd() )
         {
           layerList.push_back( createLayerFromElement( layerEntry.value() ) );
@@ -325,6 +327,7 @@ QList<QgsMapLayer*> QgsProjectParser::mapLayerFromStyle( const QString& lName, c
       }
     }
   }
+
   return layerList;
 }
 
@@ -420,7 +423,7 @@ QSet<int> QgsProjectParser::supportedOutputCrsSet() const
   {
     return epsgSet;
   }
-  QDomNodeList valueList = propertiesElem.elementsByTagName( "value" );
+  QDomNodeList valueList = wmsEpsgElem.elementsByTagName( "value" );
   bool conversionOk;
   for ( int i = 0; i < valueList.size(); ++i )
   {
@@ -605,6 +608,29 @@ QList<QDomElement> QgsProjectParser::projectLayerElements() const
     layerElemList.push_back( layerNodeList.at( i ).toElement() );
   }
   return layerElemList;
+}
+
+QList<QDomElement> QgsProjectParser::legendGroupElements() const
+{
+  QList<QDomElement> groupList;
+  if ( !mXMLDoc )
+  {
+    return groupList;
+  }
+
+  QDomElement legendElement = mXMLDoc->documentElement().firstChildElement( "legend" );
+  if ( legendElement.isNull() )
+  {
+    return groupList;
+  }
+
+  QDomNodeList groupNodeList = legendElement.elementsByTagName( "legendgroup" );
+  for ( int i = 0; i < groupNodeList.size(); ++i )
+  {
+    groupList.push_back( groupNodeList.at( i ).toElement() );
+  }
+
+  return groupList;
 }
 
 QMap< QString, QDomElement > QgsProjectParser::projectLayerElementsById() const
@@ -824,13 +850,13 @@ QString QgsProjectParser::layerIdFromLegendLayer( const QDomElement& legendLayer
   return legendLayerFileList.at( 0 ).toElement().attribute( "layerid" );
 }
 
-QgsComposition* QgsProjectParser::initComposition( const QString& composerTemplate, QgsMapRenderer* mapRenderer, QList< QgsComposerMap*>& mapList, QList< QgsComposerLabel* > labelList ) const
+QgsComposition* QgsProjectParser::initComposition( const QString& composerTemplate, QgsMapRenderer* mapRenderer, QList< QgsComposerMap*>& mapList, QList< QgsComposerLabel* >& labelList ) const
 {
   //Create composition from xml
   QDomElement composerElem = composerByName( composerTemplate );
   if ( composerElem.isNull() )
   {
-    return 0;
+    throw QgsMapServiceException( "Error", "Composer template not found" );
   }
 
   QDomElement compositionElem = composerElem.firstChildElement( "Composition" );
@@ -845,8 +871,6 @@ QgsComposition* QgsProjectParser::initComposition( const QString& composerTempla
     delete composition;
     return 0;
   }
-
-  QList<QDomElement> scaleBarElemList;
 
   //go through all the item elements and add them to the composition (and to the lists)
   QDomNodeList itemNodes = composerElem.childNodes();
@@ -870,20 +894,12 @@ QgsComposition* QgsProjectParser::initComposition( const QString& composerTempla
     }
     else if ( elemName == "ComposerLegend" )
     {
+      //legend needs to be loaded indirectly to have generic content
+      //and to avoid usage of x-server with pixmap icons
       QgsComposerLegend* legend = new QgsComposerLegend( composition );
-      legend->readXML( currentElem, *mXMLDoc );
+      legend->_readXML( currentElem.firstChildElement( "ComposerItem" ), *mXMLDoc );
+      legend->updateLegend();
       composition->addItem( legend );
-    }
-    else if ( elemName == "ComposerPicture" )
-    {
-      QgsComposerPicture* picture = new QgsComposerPicture( composition );
-      picture->readXML( currentElem, *mXMLDoc );
-      composition->addItem( picture );
-    }
-    else if ( elemName == "ComposerScaleBar" )
-    {
-      //scalebars need to be loaded after the composer maps
-      scaleBarElemList.push_back( currentElem );
     }
     else if ( elemName == "ComposerShape" )
     {
@@ -905,13 +921,23 @@ QgsComposition* QgsProjectParser::initComposition( const QString& composerTempla
     }
   }
 
-  //scalebars need to be loaded after the composer maps to receive the correct size
-  QList<QDomElement>::const_iterator scaleBarIt = scaleBarElemList.constBegin();
-  for ( ; scaleBarIt != scaleBarElemList.constEnd(); ++scaleBarIt )
+  //scalebars and pictures need to be loaded after the maps to receive the correct size / rotation
+  for ( int i = 0; i < itemNodes.size(); ++i )
   {
-    QgsComposerScaleBar* bar = new QgsComposerScaleBar( composition );
-    bar->readXML( *scaleBarIt, *mXMLDoc );
-    composition->addItem( bar );
+    QDomElement currentElem = itemNodes.at( i ).toElement();
+    QString elemName = currentElem.tagName();
+    if ( elemName == "ComposerPicture" )
+    {
+      QgsComposerPicture* picture = new QgsComposerPicture( composition );
+      picture->readXML( currentElem, *mXMLDoc );
+      composition->addItem( picture );
+    }
+    else if ( elemName == "ComposerScaleBar" )
+    {
+      QgsComposerScaleBar* bar = new QgsComposerScaleBar( composition );
+      bar->readXML( currentElem, *mXMLDoc );
+      composition->addItem( bar );
+    }
   }
 
   return composition;
@@ -939,6 +965,16 @@ void QgsProjectParser::printCapabilities( QDomElement& parentElement, QDomDocume
     composerTemplateElem.setAttribute( "xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance" );
     composerTemplateElem.setAttribute( "xsi:type", "wms:_ExtendedCapabilities" );
 
+    //get paper width and hight in mm from composition
+    QDomElement compositionElem = currentComposerElem.firstChildElement( "Composition" );
+    if ( compositionElem.isNull() )
+    {
+      continue;
+    }
+    composerTemplateElem.setAttribute( "width", compositionElem.attribute( "paperWidth" ) );
+    composerTemplateElem.setAttribute( "height", compositionElem.attribute( "paperHeight" ) );
+
+
     //add available composer maps and their size in mm
     QDomNodeList composerMapList = currentComposerElem.elementsByTagName( "ComposerMap" );
     for ( int j = 0; j < composerMapList.size(); ++j )
@@ -955,6 +991,21 @@ void QgsProjectParser::printCapabilities( QDomElement& parentElement, QDomDocume
       composerMapElem.setAttribute( "width", citem.attribute( "width" ) );
       composerMapElem.setAttribute( "height", citem.attribute( "height" ) );
       composerTemplateElem.appendChild( composerMapElem );
+    }
+
+    //add available composer labels
+    QDomNodeList composerLabelList = currentComposerElem.elementsByTagName( "ComposerLabel" );
+    for ( int j = 0; j < composerLabelList.size(); ++j )
+    {
+      QDomElement clabel = composerLabelList.at( j ).toElement();
+      QString id = clabel.attribute( "id" );
+      if ( id.isEmpty() ) //only export labels with ids for text replacement
+      {
+        continue;
+      }
+      QDomElement composerLabelElem = doc.createElement( "ComposerLabel" );
+      composerLabelElem.setAttribute( "name", id );
+      composerTemplateElem.appendChild( composerLabelElem );
     }
 
     parentElement.appendChild( composerTemplateElem );
@@ -980,5 +1031,102 @@ QDomElement QgsProjectParser::composerByName( const QString& composerName ) cons
   }
 
   return composerElem;
+}
+
+void QgsProjectParser::serviceCapabilities( QDomElement& parentElement, QDomDocument& doc ) const
+{
+  QDomElement propertiesElem = mXMLDoc->documentElement().firstChildElement( "properties" );
+  if ( propertiesElem.isNull() )
+  {
+    QgsConfigParser::serviceCapabilities( parentElement, doc );
+    return;
+  }
+
+  QDomElement serviceCapabilityElem = propertiesElem.firstChildElement( "WMSServiceCapabilities" );
+  if ( serviceCapabilityElem.isNull() || serviceCapabilityElem.text().compare( "true", Qt::CaseInsensitive ) != 0 )
+  {
+    QgsConfigParser::serviceCapabilities( parentElement, doc );
+    return;
+  }
+
+  //Service name is always WMS
+  QDomElement wmsNameElem = doc.createElement( "Name" );
+  QDomText wmsNameText = doc.createTextNode( "WMS" );
+  wmsNameElem.appendChild( wmsNameText );
+  parentElement.appendChild( wmsNameElem );
+
+  //WMS title
+  QDomElement titleElem = propertiesElem.firstChildElement( "WMSServiceTitle" );
+  if ( !titleElem.isNull() )
+  {
+    QDomElement wmsTitleElem = doc.createElement( "Title" );
+    QDomText wmsTitleText = doc.createTextNode( titleElem.text() );
+    wmsTitleElem.appendChild( wmsTitleText );
+    parentElement.appendChild( wmsTitleElem );
+  }
+
+  //WMS abstract
+  QDomElement abstractElem = propertiesElem.firstChildElement( "WMSServiceAbstract" );
+  if ( !abstractElem.isNull() )
+  {
+    QDomElement wmsAbstractElem = doc.createElement( "Abstract" );
+    QDomText wmsAbstractText = doc.createTextNode( abstractElem.text() );
+    wmsAbstractElem.appendChild( wmsAbstractText );
+    parentElement.appendChild( wmsAbstractElem );
+  }
+
+  //Contact information
+  QDomElement contactInfoElem = doc.createElement( "ContactInformation" );
+
+  //Contact person primary
+  QDomElement contactPersonPrimaryElem = doc.createElement( "ContactPersonPrimary" );
+
+  //Contact person
+  QDomElement contactPersonElem = propertiesElem.firstChildElement( "WMSContactPerson" );
+  if ( !contactPersonElem.isNull() )
+  {
+    QDomElement wmsContactPersonElem = doc.createElement( "ContactPerson" );
+    QDomText contactPersonText = doc.createTextNode( contactPersonElem.text() );
+    wmsContactPersonElem.appendChild( contactPersonText );
+    contactPersonPrimaryElem.appendChild( wmsContactPersonElem );
+  }
+
+  //Contact organisation
+  QDomElement contactOrganisationElem = propertiesElem.firstChildElement( "WMSContactOrganisation" );
+  if ( !contactOrganisationElem.isNull() )
+  {
+    QDomElement wmsContactOrganisationElem = doc.createElement( "ContactOrganization" );
+    QDomText contactOrganisationText = doc.createTextNode( contactOrganisationElem.text() );
+    wmsContactOrganisationElem.appendChild( contactOrganisationText );
+    contactPersonPrimaryElem.appendChild( wmsContactOrganisationElem );
+  }
+
+  contactInfoElem.appendChild( contactPersonPrimaryElem );
+
+  //Contact address
+  //QDomElement contactAddressElem = doc.createElement( "ContactAddress" );
+  //contactInfoElem.appendChild( contactAddressElem );
+
+  //phone
+  QDomElement phoneElem = propertiesElem.firstChildElement( "WMSContactPhone" );
+  if ( !phoneElem.isNull() )
+  {
+    QDomElement wmsPhoneElem = doc.createElement( "ContactVoiceTelephone" );
+    QDomText wmsPhoneText = doc.createTextNode( phoneElem.text() );
+    wmsPhoneElem.appendChild( wmsPhoneText );
+    contactInfoElem.appendChild( wmsPhoneElem );
+  }
+
+  //mail
+  QDomElement mailElem = propertiesElem.firstChildElement( "WMSContactMail" );
+  if ( !mailElem.isNull() )
+  {
+    QDomElement wmsMailElem = doc.createElement( "ContactElectronicMailAddress" );
+    QDomText wmsMailText = doc.createTextNode( mailElem.text() );
+    wmsMailElem.appendChild( wmsMailText );
+    contactInfoElem.appendChild( wmsMailElem );
+  }
+
+  parentElement.appendChild( contactInfoElem );
 }
 

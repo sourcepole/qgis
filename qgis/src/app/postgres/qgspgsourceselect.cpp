@@ -328,15 +328,15 @@ QString QgsPgSourceSelect::layerURI( const QModelIndex &index )
 
     if ( typeName == "POINT" )
     {
-      geomFilter = QString( "GeometryType(\"%1\") IN ('POINT','MULTIPOINT')" ).arg( geomColumnName );
+      geomFilter = QString( "geometrytype(\"%1\") IN ('POINT','MULTIPOINT')" ).arg( geomColumnName );
     }
     else if ( typeName == "LINESTRING" )
     {
-      geomFilter = QString( "GeometryType(\"%1\") IN ('LINESTRING','MULTILINESTRING')" ).arg( geomColumnName );
+      geomFilter = QString( "geometrytype(\"%1\") IN ('LINESTRING','MULTILINESTRING')" ).arg( geomColumnName );
     }
     else if ( typeName == "POLYGON" )
     {
-      geomFilter = QString( "GeometryType(\"%1\") IN ('POLYGON','MULTIPOLYGON')" ).arg( geomColumnName );
+      geomFilter = QString( "geometrytype(\"%1\") IN ('POLYGON','MULTIPOLYGON')" ).arg( geomColumnName );
     }
 
     if ( !geomFilter.isEmpty() && !sql.contains( geomFilter ) )
@@ -732,8 +732,8 @@ bool QgsPgSourceSelect::getTableInfo( PGconn *pg, bool searchGeometryColumnsOnly
                   "pg_namespace.oid=pg_class.relnamespace"
                   " and pg_attribute.attrelid = pg_class.oid"
                   " and ("
-                  "pg_attribute.atttypid::regtype::text IN ('geometry','geography')"
-                  " or pg_attribute.atttypid IN (select oid FROM pg_type WHERE typbasetype::regtype::text IN ('geometry','geography'))"
+                  " exists (select * from pg_type WHERE pg_type.oid=pg_attribute.atttypid AND pg_type.typname IN ('geometry','geography'))"
+                  " or pg_attribute.atttypid IN (select oid FROM pg_type a WHERE EXISTS (SELECT * FROM pg_type b WHERE a.typbasetype=b.oid AND b.typname IN ('geometry','geography')))"
                   ")"
                   " and has_schema_privilege( pg_namespace.nspname, 'usage' )"
                   " and has_table_privilege( '\"' || pg_namespace.nspname || '\".\"' || pg_class.relname || '\"', 'select' )";

@@ -17,11 +17,13 @@
 
 #include "qgsconfigparser.h"
 #include "qgsapplication.h"
+#include "qgscomposerlabel.h"
 #include "qgscomposermap.h"
 #include "qgscomposition.h"
 #include "qgsrasterlayer.h"
 #include "qgsvectorlayer.h"
 #include <sqlite3.h>
+#include <QFile>
 
 
 QgsConfigParser::QgsConfigParser()
@@ -304,6 +306,9 @@ QgsComposition* QgsConfigParser::createPrintComposition( const QString& composer
     QMap< QString, QString >::const_iterator titleIt = parameterMap.find( "MAP" + QString::number( currentMap->id() ) );
     if ( titleIt == parameterMap.constEnd() )
     {
+      //remove map from composition if not referenced by the request
+      c->removeItem( *mapIt );
+      delete( *mapIt );
       continue;
     }
     QString replaceString = titleIt.value();
@@ -372,7 +377,45 @@ QgsComposition* QgsConfigParser::createPrintComposition( const QString& composer
     }
   }
 
-  //replace composer label text
+  //replace label text
+  QList<QgsComposerLabel*>::const_iterator labelIt = composerLabels.constBegin();
+  QgsComposerLabel* currentLabel = 0;
+
+  for ( ; labelIt != composerLabels.constEnd(); ++labelIt )
+  {
+    currentLabel = *labelIt;
+    QMap< QString, QString >::const_iterator titleIt = parameterMap.find( currentLabel->id().toUpper() );
+    if ( titleIt == parameterMap.constEnd() )
+    {
+      //remove exported labels not referenced in the request
+      if ( !currentLabel->id().isEmpty() )
+      {
+        c->removeItem( currentLabel );
+        delete( currentLabel );
+      }
+      continue;
+    }
+
+    currentLabel->setText( titleIt.value() );
+    currentLabel->adjustSizeToText();
+  }
 
   return c;
+}
+
+void QgsConfigParser::serviceCapabilities( QDomElement& parentElement, QDomDocument& doc ) const
+{
+  QFile wmsService( "wms_metadata.xml" );
+  if ( wmsService.open( QIODevice::ReadOnly ) )
+  {
+    QDomDocument externServiceDoc;
+    QString parseError;
+    int errorLineNo;
+    if ( externServiceDoc.setContent( &wmsService, false, &parseError, &errorLineNo ) )
+    {
+      wmsService.close();
+      QDomElement service = externServiceDoc.firstChildElement();
+      parentElement.appendChild( service );
+    }
+  }
 }

@@ -381,7 +381,8 @@ int main( int argc, char * argv[] )
       }
       else
       {
-        QgsMSDebugMsg( "Error, 0 image in GetLegendGraphics" )
+        //do some error handling
+        QgsMSDebugMsg( "result image is 0" )
       }
       delete result;
       delete theRequestHandler;
@@ -392,10 +393,9 @@ int main( int argc, char * argv[] )
     else if ( requestIt->second == "GetPrint" )
     {
       QByteArray* printOutput = 0;
-      QString formatString;
       try
       {
-        printOutput = theServer->getPrint( formatString );
+        printOutput = theServer->getPrint( theRequestHandler->format() );
       }
       catch ( QgsMapServiceException& ex )
       {
@@ -404,7 +404,7 @@ int main( int argc, char * argv[] )
 
       if ( printOutput )
       {
-        theRequestHandler->sendGetPrintResponse( printOutput, formatString );
+        theRequestHandler->sendGetPrintResponse( printOutput );
       }
       delete printOutput;
       delete theRequestHandler;

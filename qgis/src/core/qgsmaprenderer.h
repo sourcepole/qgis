@@ -134,6 +134,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
     void updateScale();
 
     //! Return the measuring object
+    //! @note deprecated.
     QgsDistanceArea* distanceArea() { return mDistArea; }
     QGis::UnitType mapUnits() const;
     void setMapUnits( QGis::UnitType u );
@@ -248,7 +249,7 @@ class CORE_EXPORT QgsMapRenderer : public QObject
   protected:
 
     //! indicates drawing in progress
-    bool mDrawing;
+    static bool mDrawing;
 
     //! map units per pixel
     double mMapUnitsPerPixel;

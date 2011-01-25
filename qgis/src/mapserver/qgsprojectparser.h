@@ -88,10 +88,13 @@ class QgsProjectParser: public QgsConfigParser
     const QDomDocument* xmlDoc() const { return mXMLDoc; }
 
     /**Creates a composition from the project file (probably delegated to the fallback parser)*/
-    QgsComposition* initComposition( const QString& composerTemplate, QgsMapRenderer* mapRenderer, QList< QgsComposerMap*>& mapList, QList< QgsComposerLabel* > labelList ) const;
+    QgsComposition* initComposition( const QString& composerTemplate, QgsMapRenderer* mapRenderer, QList< QgsComposerMap*>& mapList, QList< QgsComposerLabel* >& labelList ) const;
 
     /**Adds print capabilities to xml document. ParentElem usually is the <Capabilities> element*/
     void printCapabilities( QDomElement& parentElement, QDomDocument& doc ) const;
+
+    /**Reads service metadata from projectfile or falls back to parent class method if not there*/
+    void serviceCapabilities( QDomElement& parentElement, QDomDocument& doc ) const;
 
   private:
     /**Content of project file*/
@@ -99,6 +102,8 @@ class QgsProjectParser: public QgsConfigParser
 
     /**Get all layers of the project (ordered same as in the project file)*/
     QList<QDomElement> projectLayerElements() const;
+    /**Returns all legend group elements*/
+    QList<QDomElement> legendGroupElements() const;
     /**Get all layers of the project, accessible by layer id*/
     QMap< QString, QDomElement > projectLayerElementsById() const;
     /**Get all layers of the project, accessible by layer name*/

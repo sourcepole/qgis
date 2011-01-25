@@ -63,7 +63,7 @@ class QgsWMSServer
     /**Returns printed page as binary
       @param formatString out: format of the print output (e.g. pdf, svg, png, ...)
       @return printed page as binary or 0 in case of error*/
-    QByteArray* getPrint( QString& formatString );
+    QByteArray* getPrint( const QString& formatString );
 
     /**Creates an xml document that describes the result of the getFeatureInfo request.
        @return 0 in case of success*/
@@ -80,9 +80,8 @@ class QgsWMSServer
       @param layersList out: list with WMS layer names
       @param stylesList out: list with WMS style names
       @param layerIdList out: list with QGIS layer ids
-      @param outputFormat out: name of requested output format
       @return image configured together with mMapRenderer (or 0 in case of error). The calling function takes ownership of the image*/
-    QImage* initializeRendering( QStringList& layersList, QStringList& stylesList, QStringList& layerIdList, QString& outputFormat );
+    QImage* initializeRendering( QStringList& layersList, QStringList& stylesList, QStringList& layerIdList );
 
     /**Creates a QImage from the HEIGHT and WIDTH parameters
      @param width image width (or -1 if width should be taken from WIDTH wms parameter)
@@ -119,7 +118,12 @@ class QgsWMSServer
     QStringList layerSet( const QStringList& layersList, const QStringList& stylesList, const QgsCoordinateReferenceSystem& destCRS ) const;
 
     //helper functions for GetLegendGraphics
-    void drawLegendLayerItem( QgsComposerLayerItem* item, QPainter* p, double& maxX, double& currentY, const QFont& layerFont,
+    /**Draws layer item and subitems
+       @param p painter if the item should be drawn, if 0 the size parameters are calculated only
+       @param maxTextWidth Includes boxSpace (on the right side). If p==0: maximumTextWidth is calculated, if p: maxTextWidth parameter is used for rendering
+       @param maxSymbolWidth Includes boxSpace and iconLabelSpace. If p==0: maximum Symbol width is calculated, if p: maxSymbolWidth is input parameter
+      */
+    void drawLegendLayerItem( QgsComposerLayerItem* item, QPainter* p, double& maxTextWidth, double& maxSymbolWidth, double& currentY, const QFont& layerFont,
                               const QFont& itemFont, double boxSpace, double layerSpace, double symbolSpace, double iconLabelSpace,
                               double symbolWidth, double symbolHeight, double fontOversamplingFactor, double dpi ) const;
     /**Draws a (old generation) symbol. Optionally, maxHeight is adapted (e.g. for large point markers) */
@@ -128,7 +132,7 @@ class QgsWMSServer
     void drawPointSymbol( QPainter* p, QgsSymbol* s, double boxSpace, double currentY, double& symbolWidth, double& symbolHeight, double layerOpacity, double dpi ) const;
     void drawLineSymbol( QPainter* p, QgsSymbol* s, double boxSpace, double currentY, double symbolWidth, double symbolHeight, double layerOpacity, double yDownShift ) const;
     void drawPolygonSymbol( QPainter* p, QgsSymbol* s, double boxSpace, double currentY, double symbolWidth, double symbolHeight, double layerOpacity, double yDownShift ) const;
-    void drawLegendSymbolV2( QgsComposerLegendItem* item, QPainter* p, double boxSpace, double currentY, double symbolWidth, double symbolHeight, double dpi, double yDownShift ) const;
+    void drawLegendSymbolV2( QgsComposerLegendItem* item, QPainter* p, double boxSpace, double currentY, double& symbolWidth, double& symbolHeight, double dpi, double yDownShift ) const;
     void drawRasterSymbol( QgsComposerLegendItem* item, QPainter* p, double boxSpace, double currentY, double symbolWidth, double symbolHeight, double yDownShift ) const;
 
     /**Map containing the WMS parameters*/
