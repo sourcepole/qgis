@@ -28,6 +28,7 @@ map service syntax for SOAP/HTTP POST
 #include "qgsmapserviceexception.h"
 #include "qgsprojectparser.h"
 #include "qgssldparser.h"
+#include "qgsumnwrapper.h"
 #include <QDomDocument>
 #include <QImage>
 #include <QSettings>
@@ -101,8 +102,6 @@ QFileInfo defaultAdminSLD()
 {
   return QFileInfo( "admin.sld" );
 }
-
-
 
 int main( int argc, char * argv[] )
 {
@@ -204,6 +203,14 @@ int main( int argc, char * argv[] )
     if ( mapFileIt != parameterMap.end() )
     {
       configFilePath = mapFileIt->second;
+    }
+
+    //check for UMN map file
+    if ( configFilePath.endsWith( ".map", Qt::CaseInsensitive ) )
+    {
+      UmnWrapper umnWrapper;
+      umnWrapper.executeRequest();
+      continue;
     }
 
     QgsConfigParser* adminConfigParser = configCache.searchConfiguration( configFilePath );

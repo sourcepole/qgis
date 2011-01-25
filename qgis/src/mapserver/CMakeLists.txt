@@ -46,6 +46,7 @@ SET ( qgis_mapserv_SRCS
   qgsremotedatasourcebuilder.cpp
   qgssentdatasourcebuilder.cpp
   qgsmsutils.cpp
+  qgsumnwrapper.cpp
 
   ../plugins/diagram_overlay/qgsdiagramcategory.cpp
   ../plugins/diagram_overlay/qgsdiagramfactory.cpp
@@ -111,6 +112,8 @@ TARGET_LINK_LIBRARIES(qgis_mapserv.fcgi
   qgis_core 
   qgis_analysis
   mapserver
+  gd
+  # -L/usr/lib64 -ljpeg -lfreetype -lz -L/usr/lib64 -lpng -L/usr/lib64 -lz -L/usr/lib64 -lXpm -lX11      -L/usr/lib64 -ljpeg -lfreetype -lz -L/usr/lib64 -lpng -L/usr/lib64 -lz -L/usr/lib64 -lXpm -lX11  -lproj -L/usr/lib64 -ljpeg -L/usr/lib64 -lpng  -L/usr/lib -lgdal1.7.0 -lproj -L/usr/lib -lgeos_c -lodbc -lodbcinst -L/usr/lib -lexpat -L/usr/lib -lxerces-c -lpthread -ljasper -lhdf5 -lmfhdfalt -ldfalt -logdi -lgif -ljpeg -lpng -lnetcdf -lpq -L/usr/lib -lpq -lz -lpthread -lm -lrt -ldl -L/usr/lib -ldap -ldapserver -ldapclient -lcurl -lidn -llber -lldap -lrt -lgssapi_krb5 -lz -lgnutls -lgcrypt -lxml2 -lz -lm -lpthread -L/usr/lib -lspatialite -lcurl -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -rdynamic -L/usr/lib/mysql -lmysqlclient  -L/usr/lib -lpq -lpgport -lxslt -lxml2 -lpam -lssl -lcrypto -lkrb5 -lcom_err -lgssapi_krb5 -lz -lreadline -lcrypt -ldl -lm   -lcurl -Wl,-Bsymbolic-functions  -L/usr/lib -lgeos_c -lpthread -lc -lfcgi -L/usr/lib64 -lz -lxml2  -lm -lstdc++    -o mapserv
   ${PROJ_LIBRARY}
   ${FCGI_LIBRARY}
   ${POSTGRES_LIBRARY}
