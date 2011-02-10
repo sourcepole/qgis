@@ -35,6 +35,9 @@
 #include <QDir>
 
 
+PyThreadState* _mainState;
+
+
 QgsPythonUtilsImpl::QgsPythonUtilsImpl()
 {
   mMainModule = NULL;
@@ -50,6 +53,9 @@ void QgsPythonUtilsImpl::initPython( QgisInterface* interface )
 {
   // initialize python
   Py_Initialize();
+
+  // initialize threading AND acquire GIL
+  PyEval_InitThreads();
 
   mPythonEnabled = true;
 
@@ -105,6 +111,13 @@ void QgsPythonUtilsImpl::initPython( QgisInterface* interface )
 
   // initialize 'iface' object
   runString( "qgis.utils.initInterface(" + QString::number(( unsigned long ) interface ) + ")" );
+
+  // release GIL!
+  // Later on, we acquire GIL just before doing some Python calls and
+  // release GIL again when the work with Python API is done.
+  // (i.e. there must be PyGILState_Ensure + PyGILState_Release pair
+  // around any calls to Python API, otherwise we may segfault!)
+  _mainState = PyEval_SaveThread();
 }
 
 void QgsPythonUtilsImpl::exitPython()
@@ -135,11 +148,18 @@ void QgsPythonUtilsImpl::uninstallErrorHook()
 
 bool QgsPythonUtilsImpl::runStringUnsafe( const QString& command, bool single )
 {
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
+
   // TODO: convert special characters from unicode strings u"..." to \uXXXX
   // so that they're not mangled to utf-8
   // (non-unicode strings can be mangled)
   PyRun_String( command.toUtf8().data(), single ? Py_single_input : Py_file_input, mMainDict, mMainDict );
-  return ( PyErr_Occurred() == 0 );
+  bool res = ( PyErr_Occurred() == 0 );
+
+PyGILState_Release( gstate );
+
+  return res;
 }
 
 bool QgsPythonUtilsImpl::runString( const QString& command, QString msgOnError )
@@ -180,6 +200,8 @@ QString QgsPythonUtilsImpl::getTraceback()
 {
 #define TRACEBACK_FETCH_ERROR(what) {errMsg = what; goto done;}
 
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
 
   QString errMsg;
   QString result;
@@ -244,6 +266,8 @@ done:
   Py_XDECREF( value );
   Py_XDECREF( traceback );
   Py_XDECREF( type );
+
+  PyGILState_Release( gstate );
 
   return result;
 }
@@ -365,16 +389,20 @@ QString QgsPythonUtilsImpl::PyObjectToQString( PyObject* obj )
 
 bool QgsPythonUtilsImpl::evalString( const QString& command, QString& result )
 {
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
+
   PyObject* res = PyRun_String( command.toUtf8().data(), Py_eval_input, mMainDict, mMainDict );
+  bool success = ( res != NULL );
 
   // TODO: error handling
 
-  if ( res != NULL )
-  {
+  if ( success )
     result = PyObjectToQString( res );
-    return true;
-  }
-  return false;
+
+  PyGILState_Release( gstate );
+
+  return success;
 }
 
 
