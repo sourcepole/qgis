@@ -41,6 +41,9 @@ QgisAppInterface::QgisAppInterface( QgisApp * _qgis )
            this, SIGNAL( currentThemeChanged( QString ) ) );
   connect( qgis, SIGNAL( composerAdded( QgsComposerView* ) ), this, SIGNAL( composerAdded( QgsComposerView* ) ) );
   connect( qgis, SIGNAL( composerWillBeRemoved( QgsComposerView* ) ), this, SIGNAL( composerWillBeRemoved( QgsComposerView* ) ) );
+  
+  connect( qgis, SIGNAL( newProject() ), this, SIGNAL( newProjectCreated() ) );
+  connect( qgis, SIGNAL( projectRead() ), this, SIGNAL( projectRead() ) );
 }
 
 QgisAppInterface::~QgisAppInterface()
